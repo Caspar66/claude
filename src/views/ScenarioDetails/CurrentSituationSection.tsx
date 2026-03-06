@@ -1,6 +1,12 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu';
 import { PlatformRow } from './PlatformRow';
 import { cn } from '@/lib/utils';
 import type { Entity, EntityOwner } from '@/types/domain';
@@ -76,13 +82,24 @@ export function CurrentSituationSection({ entities }: Props) {
           <Settings size={14} />
           Current Situation
         </span>
-        <Button
-          size="sm"
-          variant="secondary"
-          className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
-        >
-          Add Existing ▾
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="sm"
+              variant="secondary"
+              className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
+            >
+              Add Existing <ChevronDown size={11} className="ml-1" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>Super</DropdownMenuItem>
+            <DropdownMenuItem>Pension</DropdownMenuItem>
+            <DropdownMenuItem>Investment</DropdownMenuItem>
+            <DropdownMenuItem>SMSF</DropdownMenuItem>
+            <DropdownMenuItem>Insurance</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       <div className="border border-border border-t-0 rounded-b overflow-hidden">

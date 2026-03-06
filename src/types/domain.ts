@@ -8,6 +8,13 @@ export interface Investment {
   apirCode: string;
   amount: number;
   allocation: Partial<Record<string, number>>;
+  investCosts?: number;
+  transactionCost?: number;
+  buyCost?: number;
+  sellCost?: number;
+  perfFee?: number;
+  fundType?: 'SMA' | '';
+  isSMAHighlight?: boolean;
 }
 
 export interface Platform {

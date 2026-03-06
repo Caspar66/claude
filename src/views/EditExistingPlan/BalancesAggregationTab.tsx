@@ -81,7 +81,7 @@ export function BalancesAggregationTab({ scenarioId, platform }: Props) {
         value={otherClient}
         onChange={(v) => setOtherClient(v)}
         withLink
-        note="Includes superannuation, pension and investment accounts"
+        note="* This applies to Administration Fees and should only include balances that are eligible to be linked to this plan."
       />
 
       <BalanceRow
@@ -89,7 +89,7 @@ export function BalancesAggregationTab({ scenarioId, platform }: Props) {
         value={otherFamily}
         onChange={(v) => setOtherFamily(v)}
         withLink
-        note="Family group members include spouse, children, and dependants"
+        note="* This applies to Administration Fees and should only include balances that are eligible to be linked to this plan."
       />
 
       <div className="mt-4 flex gap-2">

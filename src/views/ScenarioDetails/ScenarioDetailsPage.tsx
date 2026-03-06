@@ -2,6 +2,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, CheckCircle2, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
+} from '@/components/ui/dropdown-menu';
 import { useAppContext } from '@/context/AppContext';
 import { PersonalDetailsSection } from './PersonalDetailsSection';
 import { CurrentSituationSection } from './CurrentSituationSection';
@@ -63,9 +72,36 @@ export function ScenarioDetailsPage() {
           <span className="text-xs font-semibold text-muted-foreground border border-border rounded px-2 py-1">
             CURRENT DATA
           </span>
-          <Button size="sm" variant="outline">
-            Actions <ChevronDown size={12} className="ml-1" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button size="sm" variant="outline">
+                Actions <ChevronDown size={12} className="ml-1" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Add related entity</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem>Super fund</DropdownMenuItem>
+                  <DropdownMenuItem>Investment account</DropdownMenuItem>
+                  <DropdownMenuItem>Pension account</DropdownMenuItem>
+                  <DropdownMenuItem>SMSF</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuItem>Fact Find</DropdownMenuItem>
+              <DropdownMenuItem>Recommendation Reason</DropdownMenuItem>
+              <DropdownMenuItem>Insurance Needs</DropdownMenuItem>
+              <DropdownMenuItem>Check for updated data</DropdownMenuItem>
+              <DropdownMenuSub>
+                <DropdownMenuSubTrigger>Quick Merge</DropdownMenuSubTrigger>
+                <DropdownMenuSubContent>
+                  <DropdownMenuItem>Merge client data</DropdownMenuItem>
+                  <DropdownMenuItem>Merge partner data</DropdownMenuItem>
+                </DropdownMenuSubContent>
+              </DropdownMenuSub>
+              <DropdownMenuItem>Compliance</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

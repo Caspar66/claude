@@ -7,6 +7,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import type { Proposal } from '@/types/domain';
 
@@ -40,9 +43,32 @@ function ProposalTable({ proposal }: { proposal: Proposal }) {
         {proposal.rows.map((row) => (
           <tr key={row.id} className="border-b border-border last:border-0 hover:bg-slate-50">
             <td className="pl-2 py-2">
-              <button className="text-muted-foreground hover:text-foreground">
-                <ChevronDown size={13} />
-              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="text-muted-foreground hover:text-foreground p-0.5 rounded">
+                    <ChevronDown size={13} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  <DropdownMenuItem>Edit Proposal</DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>Edit Plan Fees</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem>Administration Fees</DropdownMenuItem>
+                      <DropdownMenuItem>Adviser Fees</DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuItem>Insurance Review</DropdownMenuItem>
+                  <DropdownMenuItem>Replacement Advice</DropdownMenuItem>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger>View Plan Summary &amp; PDS</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem>Plan Summary</DropdownMenuItem>
+                      <DropdownMenuItem>PDS Document</DropdownMenuItem>
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </td>
             <td className="px-3 py-2">{row.owner}</td>
             <td className="px-3 py-2">

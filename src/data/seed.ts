@@ -1,4 +1,24 @@
-import type { ClientFile, Platform, Entity, Proposal, Scenario } from '@/types/domain';
+import type { ClientFile, Platform, Entity, Proposal, Scenario, Investment } from '@/types/domain';
+
+// ── Investment Catalogue (for Add Investment search) ──────────────────────────
+
+export const investmentCatalogue: Omit<Investment, 'id' | 'amount'>[] = [
+  { name: '4 Dimensions Global Infrastructure Fund', apirCode: 'BFL0019AU', allocation: {}, fundType: '', investCosts: 1.00, transactionCost: 0.00, buyCost: 0.20, sellCost: 0.20, perfFee: 0.08 },
+  { name: '4D Global Infrastructure Fund (AUD Hedged)', apirCode: 'BFL3306AU', allocation: {}, fundType: '', investCosts: 1.00, transactionCost: 0.05, buyCost: 0.20, sellCost: 0.20, perfFee: 0.08 },
+  { name: 'AAL001 - Altair Concentrated Portfolio', apirCode: 'FC52336AU', allocation: {}, fundType: 'SMA', isSMAHighlight: true, investCosts: 0.88, transactionCost: 0.00, buyCost: 0.00, sellCost: 0.00, perfFee: 0.00 },
+  { name: 'AAL002 - Altair Income Portfolio', apirCode: 'FC52337AU', allocation: {}, fundType: 'SMA', isSMAHighlight: false, investCosts: 1.10, transactionCost: 0.00, buyCost: 0.00, sellCost: 0.00, perfFee: 0.00 },
+  { name: 'AAP001 - Ausbil Australian Active Equity', apirCode: 'FC56212AU', allocation: {}, fundType: 'SMA', isSMAHighlight: false, investCosts: 0.8298, transactionCost: 0.0604, buyCost: 0.00, sellCost: 0.00, perfFee: 0.00 },
+  { name: 'AAP002 - Ausbil Australian Emerging Leaders', apirCode: 'FC56213AU', allocation: {}, fundType: 'SMA', isSMAHighlight: true, investCosts: 0.8112, transactionCost: 0.2207, buyCost: 0.00, sellCost: 0.00, perfFee: 0.00 },
+  { name: 'AB Global Strategic Core Equities Fund', apirCode: 'ACM3679AU', allocation: {}, fundType: '', investCosts: 0.70, transactionCost: 0.20, buyCost: 0.20, sellCost: 0.20, perfFee: 0.00 },
+  { name: 'AB Managed Volatility Equities Fund - MVE Class', apirCode: 'ACM0006AU', allocation: {}, fundType: '', investCosts: 0.55, transactionCost: 0.00, buyCost: 0.25, sellCost: 0.25, perfFee: 0.00 },
+  { name: 'AB Sustainable Global Thematic Equities Fund', apirCode: 'ACM8902AU', allocation: {}, fundType: '', investCosts: 1.05, transactionCost: 0.00, buyCost: 0.20, sellCost: 0.20, perfFee: 0.00 },
+  { name: 'ABA001 - AB Concentrated US Growth Equities', apirCode: 'FC55713AU', allocation: {}, fundType: 'SMA', isSMAHighlight: true, investCosts: 0.65, transactionCost: 0.00, buyCost: 0.00, sellCost: 0.00, perfFee: 0.00 },
+  { name: 'ABA002 - AB Concentrated Global Growth Equities', apirCode: 'FC55712AU', allocation: {}, fundType: 'SMA', isSMAHighlight: false, investCosts: 0.753, transactionCost: 0.0607, buyCost: 0.00, sellCost: 0.00, perfFee: 0.00 },
+  { name: 'abrdn Emerging Markets Equity Fund', apirCode: 'ETL0032AU', allocation: {}, fundType: '', investCosts: 0.99, transactionCost: 0.01, buyCost: 0.22, sellCost: 0.22, perfFee: 0.00 },
+  { name: 'abrdn Global Corporate Bond Fund (Class A)', apirCode: 'ETL0132AU', allocation: {}, fundType: '', investCosts: 0.50, transactionCost: 0.00, buyCost: 0.16, sellCost: 0.16, perfFee: 0.00 },
+  { name: 'abrdn Sustainable Asian Opportunities Fund', apirCode: 'EQI0028AU', allocation: {}, fundType: '', investCosts: 1.18, transactionCost: 0.01, buyCost: 0.28, sellCost: 0.28, perfFee: 0.00 },
+  { name: 'abrdn Sustainable International Equities Fund', apirCode: 'CRS0005AU', allocation: {}, fundType: '', investCosts: 0.98, transactionCost: 0.02, buyCost: 0.15, sellCost: 0.15, perfFee: 0.00 },
+];
 
 // ── Reusable investment fund definitions ──────────────────────────────────────
 

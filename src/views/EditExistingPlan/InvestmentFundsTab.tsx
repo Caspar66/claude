@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { X, Copy, Plus } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
 import { formatCurrency } from '@/lib/utils';
-import type { Platform, Investment } from '@/types/domain';
+import type { Platform } from '@/types/domain';
 
 interface Props {
   scenarioId: string;
@@ -13,6 +14,7 @@ interface Props {
 
 export function InvestmentFundsTab({ scenarioId, platform }: Props) {
   const { dispatch } = useAppContext();
+  const navigate = useNavigate();
   const [amounts, setAmounts] = useState<Record<string, string>>(
     Object.fromEntries(platform.investments.map((inv) => [inv.id, String(inv.amount)]))
   );
@@ -38,15 +40,7 @@ export function InvestmentFundsTab({ scenarioId, platform }: Props) {
   }
 
   function handleAddRow() {
-    const newInv: Investment = {
-      id: `inv-${Date.now()}`,
-      name: 'New Investment Fund',
-      apirCode: '',
-      amount: 0,
-      allocation: {},
-    };
-    dispatch({ type: 'ADD_INVESTMENT', scenarioId, platformId: platform.id, investment: newInv });
-    setAmounts((prev) => ({ ...prev, [newInv.id]: '0' }));
+    navigate(`/scenarios/${scenarioId}/plan/${platform.id}/investments/add`);
   }
 
   const total = platform.investments.reduce((sum, inv) => {
