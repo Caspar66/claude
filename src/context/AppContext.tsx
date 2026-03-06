@@ -1,0 +1,157 @@
+import React, { createContext, useContext, useReducer } from 'react';
+import type { ClientFile, Platform, Investment, Scenario } from '@/types/domain';
+import { clientFile as seedData } from '@/data/seed';
+
+interface AppState {
+  clientFile: ClientFile;
+  activeScenarioId: string | null;
+}
+
+type Action =
+  | { type: 'CREATE_SCENARIO'; name: string }
+  | { type: 'DELETE_SCENARIO'; id: string }
+  | { type: 'LOCK_SCENARIO'; id: string }
+  | { type: 'SET_ACTIVE_SCENARIO'; id: string }
+  | { type: 'UPDATE_PLATFORM'; scenarioId: string; platformId: string; patch: Partial<Platform> }
+  | { type: 'ADD_INVESTMENT'; scenarioId: string; platformId: string; investment: Investment }
+  | { type: 'DELETE_INVESTMENT'; scenarioId: string; platformId: string; investmentId: string };
+
+function patchPlatformInScenario(scenario: Scenario, platformId: string, patch: Partial<Platform>): Scenario {
+  return {
+    ...scenario,
+    entities: scenario.entities.map((entity) => ({
+      ...entity,
+      platforms: entity.platforms.map((p) =>
+        p.id === platformId ? { ...p, ...patch } : p
+      ),
+    })),
+  };
+}
+
+function reducer(state: AppState, action: Action): AppState {
+  switch (action.type) {
+    case 'SET_ACTIVE_SCENARIO':
+      return { ...state, activeScenarioId: action.id };
+
+    case 'CREATE_SCENARIO': {
+      const newScenario: Scenario = {
+        id: `scenario-${Date.now()}`,
+        name: action.name,
+        created: { date: new Date().toISOString().slice(0, 10), adviser: 'Satchell, Aron' },
+        lastChanged: { date: new Date().toISOString().slice(0, 10), adviser: 'Satchell, Aron' },
+        isLocked: false,
+        entities: [],
+        proposals: [],
+      };
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: [...state.clientFile.scenarios, newScenario],
+        },
+      };
+    }
+
+    case 'DELETE_SCENARIO':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.filter((s) => s.id !== action.id),
+        },
+      };
+
+    case 'LOCK_SCENARIO':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id === action.id
+              ? {
+                  ...s,
+                  isLocked: !s.isLocked,
+                  locked: !s.isLocked
+                    ? { date: new Date().toISOString().slice(0, 10), adviser: 'Satchell, Aron' }
+                    : undefined,
+                }
+              : s
+          ),
+        },
+      };
+
+    case 'UPDATE_PLATFORM':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id === action.scenarioId
+              ? patchPlatformInScenario(s, action.platformId, action.patch)
+              : s
+          ),
+        },
+      };
+
+    case 'ADD_INVESTMENT':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id === action.scenarioId
+              ? patchPlatformInScenario(s, action.platformId, {
+                  investments: [
+                    ...(s.entities
+                      .flatMap((e) => e.platforms)
+                      .find((p) => p.id === action.platformId)?.investments ?? []),
+                    action.investment,
+                  ],
+                })
+              : s
+          ),
+        },
+      };
+
+    case 'DELETE_INVESTMENT':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) => {
+            if (s.id !== action.scenarioId) return s;
+            const platform = s.entities.flatMap((e) => e.platforms).find((p) => p.id === action.platformId);
+            if (!platform) return s;
+            return patchPlatformInScenario(s, action.platformId, {
+              investments: platform.investments.filter((inv) => inv.id !== action.investmentId),
+            });
+          }),
+        },
+      };
+
+    default:
+      return state;
+  }
+}
+
+interface AppContextValue {
+  state: AppState;
+  dispatch: React.Dispatch<Action>;
+}
+
+const AppContext = createContext<AppContextValue | null>(null);
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = useReducer(reducer, {
+    clientFile: seedData,
+    activeScenarioId: seedData.scenarios[0]?.id ?? null,
+  });
+
+  return <AppContext.Provider value={{ state, dispatch }}>{children}</AppContext.Provider>;
+}
+
+export function useAppContext(): AppContextValue {
+  const ctx = useContext(AppContext);
+  if (!ctx) throw new Error('useAppContext must be used within AppProvider');
+  return ctx;
+}
