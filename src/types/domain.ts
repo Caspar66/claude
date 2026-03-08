@@ -15,6 +15,23 @@ export interface Investment {
   perfFee?: number;
   fundType?: 'SMA' | '';
   isSMAHighlight?: boolean;
+  // Detail modal fields
+  broadObjectives?: string;
+  pastPerformance?: {
+    oneMonth?: number;
+    threeMonth?: number;
+    sixMonth?: number;
+    oneYear?: number;
+    twoYear?: number;
+    threeYear?: number;
+    fiveYear?: number;
+    sevenYear?: number;
+    effectiveDate?: string;
+  };
+  isCashAccount?: boolean;
+  isEthical?: boolean;
+  feeArrangements?: Array<{ label: string; value: string }>;
+  investmentRebate?: number;
 }
 
 export interface Platform {

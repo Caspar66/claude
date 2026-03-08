@@ -5,7 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
 import { formatCurrency } from '@/lib/utils';
-import type { Platform } from '@/types/domain';
+import type { Platform, Investment } from '@/types/domain';
+import { InvestmentDetailsDialog } from './InvestmentDetailsDialog';
 
 interface Props {
   scenarioId: string;
@@ -18,6 +19,7 @@ export function InvestmentFundsTab({ scenarioId, platform }: Props) {
   const [amounts, setAmounts] = useState<Record<string, string>>(
     Object.fromEntries(platform.investments.map((inv) => [inv.id, String(inv.amount)]))
   );
+  const [detailInv, setDetailInv] = useState<Investment | null>(null);
 
   function handleAmountChange(id: string, val: string) {
     setAmounts((prev) => ({ ...prev, [id]: val }));
@@ -84,8 +86,13 @@ export function InvestmentFundsTab({ scenarioId, platform }: Props) {
                   <Copy size={12} />
                 </button>
               </td>
-              <td className="px-3 py-2 text-blue-600 hover:underline cursor-pointer">
-                {inv.name}
+              <td className="px-3 py-2">
+                <button
+                  onClick={() => setDetailInv(inv)}
+                  className="text-blue-600 hover:underline text-left text-sm"
+                >
+                  {inv.name}
+                </button>
               </td>
               <td className="px-3 py-2 text-muted-foreground font-mono text-xs">
                 {inv.apirCode}
@@ -117,6 +124,11 @@ export function InvestmentFundsTab({ scenarioId, platform }: Props) {
           </tr>
         </tfoot>
       </table>
+      <InvestmentDetailsDialog
+        investment={detailInv}
+        open={detailInv !== null}
+        onClose={() => setDetailInv(null)}
+      />
     </div>
   );
 }
