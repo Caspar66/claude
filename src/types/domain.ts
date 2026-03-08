@@ -15,6 +15,7 @@ export interface Investment {
   perfFee?: number;
   fundType?: 'SMA' | '';
   isSMAHighlight?: boolean;
+  isCustom?: boolean;
   // Detail modal fields
   broadObjectives?: string;
   pastPerformance?: {

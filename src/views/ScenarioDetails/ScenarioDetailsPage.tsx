@@ -118,7 +118,7 @@ export function ScenarioDetailsPage() {
         partner={state.clientFile.partner}
       />
 
-      <CurrentSituationSection entities={scenario.entities} />
+      <CurrentSituationSection entities={scenario.entities} scenarioId={scenarioId!} />
 
       <ProposalsSection proposals={scenario.proposals} />
     </div>

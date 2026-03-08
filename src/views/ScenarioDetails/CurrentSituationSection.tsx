@@ -1,15 +1,125 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, ChevronRight, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
+import { useNavigate } from 'react-router-dom';
 import { PlatformRow } from './PlatformRow';
 import { cn } from '@/lib/utils';
 import type { Entity, EntityOwner } from '@/types/domain';
+
+// ── Cascading Add Existing Menu ────────────────────────────────────────────────
+
+const PLAN_TYPES = [
+  { label: 'Super Plan', planType: 'Super' },
+  { label: 'Pension Plan', planType: 'Pension' },
+  { label: 'Investment Platform', planType: 'Investment' },
+] as const;
+
+const OTHER_ASSETS = [
+  'Investments - Bonds',
+  'Investments - Other Investments',
+  'Investments - Stocks',
+  'Investments - Unit Trusts',
+  'Liquid Assets - Cash on Hand',
+  'Liquid Assets - Current Savings',
+  'Liquid Assets - Fixed Deposits',
+] as const;
+
+const ENTITIES: EntityOwner[] = ['Client', 'Partner', 'Joint'];
+
+interface CascadeMenuProps {
+  scenarioId: string;
+  onClose: () => void;
+}
+
+function CascadeMenu({ scenarioId, onClose }: CascadeMenuProps) {
+  const navigate = useNavigate();
+  const [hoveredEntity, setHoveredEntity] = useState<EntityOwner | null>(null);
+  const [hoveredPlanType, setHoveredPlanType] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  function handleSelect(entity: EntityOwner, planType: string) {
+    onClose();
+    navigate(`/scenarios/${scenarioId}/add-existing?entity=${entity}&planType=${planType}`);
+  }
+
+  const itemCls = 'flex items-center justify-between gap-4 px-3 py-2 text-sm hover:bg-gray-100 cursor-pointer whitespace-nowrap select-none';
+  const headerCls = 'px-3 py-1.5 text-xs font-semibold text-muted-foreground border-b border-border bg-gray-50';
+
+  return (
+    <div
+      ref={menuRef}
+      className="absolute right-0 top-full mt-1 z-50 flex shadow-lg border border-border rounded-lg overflow-hidden bg-white"
+      style={{ minWidth: 180 }}
+    >
+      {/* Column 1: Entities */}
+      <div className="border-r border-border">
+        <div className={headerCls}>Entity</div>
+        {ENTITIES.map((entity) => (
+          <div
+            key={entity}
+            className={cn(itemCls, hoveredEntity === entity && 'bg-gray-100')}
+            onMouseEnter={() => { setHoveredEntity(entity); setHoveredPlanType(null); }}
+          >
+            {entity}
+            <ChevronRight size={12} className="text-muted-foreground" />
+          </div>
+        ))}
+      </div>
+
+      {/* Column 2: Plan Types — only shown when entity is hovered */}
+      {hoveredEntity && (
+        <div className="border-r border-border">
+          <div className={headerCls}>Type</div>
+          {PLAN_TYPES.map(({ label, planType }) => (
+            <div
+              key={planType}
+              className={cn(itemCls, hoveredPlanType === planType && 'bg-gray-100')}
+              onMouseEnter={() => setHoveredPlanType(planType)}
+              onClick={() => handleSelect(hoveredEntity, planType)}
+            >
+              {label}
+            </div>
+          ))}
+          <div
+            className={cn(itemCls, hoveredPlanType === 'Other' && 'bg-gray-100')}
+            onMouseEnter={() => setHoveredPlanType('Other')}
+          >
+            Other Assets
+            <ChevronRight size={12} className="text-muted-foreground" />
+          </div>
+        </div>
+      )}
+
+      {/* Column 3: Other Assets sub-menu */}
+      {hoveredEntity && hoveredPlanType === 'Other' && (
+        <div>
+          <div className={headerCls}>Category</div>
+          {OTHER_ASSETS.map((asset) => (
+            <div
+              key={asset}
+              className={itemCls}
+              onClick={() => handleSelect(hoveredEntity, 'Investment')}
+            >
+              {asset}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Entity Group ───────────────────────────────────────────────────────────────
 
 interface EntityGroupProps {
   label: EntityOwner;
@@ -23,7 +133,6 @@ function EntityGroup({ label, entity }: EntityGroupProps) {
 
   return (
     <tbody>
-      {/* Group header row */}
       <tr className="bg-gray-50 border-b border-border">
         <td colSpan={3} className="px-3 py-1.5">
           <button
@@ -49,7 +158,6 @@ function EntityGroup({ label, entity }: EntityGroupProps) {
           />
         ))}
 
-      {/* Group total */}
       {open && (
         <tr className="border-b border-border bg-gray-50/60">
           <td className="pl-8 pr-3 py-1.5 text-xs text-muted-foreground">{label} Total</td>
@@ -68,12 +176,16 @@ function EntityGroup({ label, entity }: EntityGroupProps) {
   );
 }
 
+// ── Section ────────────────────────────────────────────────────────────────────
+
 interface Props {
   entities: Entity[];
+  scenarioId: string;
 }
 
-export function CurrentSituationSection({ entities }: Props) {
+export function CurrentSituationSection({ entities, scenarioId }: Props) {
   const groups: EntityOwner[] = ['Client', 'Partner', 'Joint'];
+  const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <section className="mb-4">
@@ -82,24 +194,19 @@ export function CurrentSituationSection({ entities }: Props) {
           <Settings size={14} />
           Current Situation
         </span>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              size="sm"
-              variant="secondary"
-              className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
-            >
-              Add Existing <ChevronDown size={11} className="ml-1" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem>Super</DropdownMenuItem>
-            <DropdownMenuItem>Pension</DropdownMenuItem>
-            <DropdownMenuItem>Investment</DropdownMenuItem>
-            <DropdownMenuItem>SMSF</DropdownMenuItem>
-            <DropdownMenuItem>Insurance</DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <div className="relative">
+          <Button
+            size="sm"
+            variant="secondary"
+            className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
+            onClick={() => setMenuOpen((o) => !o)}
+          >
+            Add Existing <ChevronDown size={11} className="ml-1" />
+          </Button>
+          {menuOpen && (
+            <CascadeMenu scenarioId={scenarioId} onClose={() => setMenuOpen(false)} />
+          )}
+        </div>
       </div>
 
       <div className="border border-border border-t-0 rounded-b overflow-hidden">

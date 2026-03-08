@@ -93,6 +93,7 @@ export function ManualFundEntryPanel({ onAdd }: Props) {
       sellCost: parseFloat(sellCost) || 0,
       perfFee: parseFloat(perfFee) || 0,
       fundType: '',
+      isCustom: true,
     });
     // reset
     setName('');

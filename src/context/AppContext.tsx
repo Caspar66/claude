@@ -14,7 +14,9 @@ type Action =
   | { type: 'SET_ACTIVE_SCENARIO'; id: string }
   | { type: 'UPDATE_PLATFORM'; scenarioId: string; platformId: string; patch: Partial<Platform> }
   | { type: 'ADD_INVESTMENT'; scenarioId: string; platformId: string; investment: Investment }
-  | { type: 'DELETE_INVESTMENT'; scenarioId: string; platformId: string; investmentId: string };
+  | { type: 'DELETE_INVESTMENT'; scenarioId: string; platformId: string; investmentId: string }
+  | { type: 'UPDATE_INVESTMENT'; scenarioId: string; platformId: string; investment: Investment }
+  | { type: 'ADD_PLATFORM'; scenarioId: string; entityOwner: import('@/types/domain').EntityOwner; platform: Platform };
 
 function patchPlatformInScenario(scenario: Scenario, platformId: string, patch: Partial<Platform>): Scenario {
   return {
@@ -128,6 +130,58 @@ function reducer(state: AppState, action: Action): AppState {
           }),
         },
       };
+
+    case 'UPDATE_INVESTMENT':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) => {
+            if (s.id !== action.scenarioId) return s;
+            const platform = s.entities.flatMap((e) => e.platforms).find((p) => p.id === action.platformId);
+            if (!platform) return s;
+            return patchPlatformInScenario(s, action.platformId, {
+              investments: platform.investments.map((inv) =>
+                inv.id === action.investment.id ? action.investment : inv
+              ),
+            });
+          }),
+        },
+      };
+
+    case 'ADD_PLATFORM': {
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) => {
+            if (s.id !== action.scenarioId) return s;
+            const hasEntity = s.entities.some((e) => e.owner === action.entityOwner);
+            if (hasEntity) {
+              return {
+                ...s,
+                entities: s.entities.map((e) =>
+                  e.owner === action.entityOwner
+                    ? { ...e, platforms: [...e.platforms, action.platform] }
+                    : e
+                ),
+              };
+            }
+            return {
+              ...s,
+              entities: [
+                ...s.entities,
+                {
+                  id: `entity-${action.entityOwner.toLowerCase()}-${Date.now()}`,
+                  owner: action.entityOwner,
+                  platforms: [action.platform],
+                },
+              ],
+            };
+          }),
+        },
+      };
+    }
 
     default:
       return state;

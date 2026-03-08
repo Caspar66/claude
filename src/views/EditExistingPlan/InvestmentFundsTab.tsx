@@ -128,6 +128,8 @@ export function InvestmentFundsTab({ scenarioId, platform }: Props) {
         investment={detailInv}
         open={detailInv !== null}
         onClose={() => setDetailInv(null)}
+        scenarioId={scenarioId}
+        platformId={platform.id}
       />
     </div>
   );
