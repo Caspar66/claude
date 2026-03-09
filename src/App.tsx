@@ -34,6 +34,10 @@ export default function App() {
                 element={<EditFeesPage />}
               />
               <Route
+                path="scenarios/:scenarioId/proposals/:proposalId/fees/:platformId"
+                element={<EditFeesPage />}
+              />
+              <Route
                 path="scenarios/:scenarioId/add-existing"
                 element={<AddExistingPlanPage />}
               />
