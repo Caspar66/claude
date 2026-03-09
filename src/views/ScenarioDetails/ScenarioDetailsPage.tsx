@@ -120,7 +120,7 @@ export function ScenarioDetailsPage() {
 
       <CurrentSituationSection entities={scenario.entities} scenarioId={scenarioId!} />
 
-      <ProposalsSection proposals={scenario.proposals} />
+      <ProposalsSection proposals={scenario.proposals} scenarioId={scenarioId!} />
     </div>
   );
 }

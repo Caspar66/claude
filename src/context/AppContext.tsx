@@ -17,7 +17,10 @@ type Action =
   | { type: 'DELETE_INVESTMENT'; scenarioId: string; platformId: string; investmentId: string }
   | { type: 'UPDATE_INVESTMENT'; scenarioId: string; platformId: string; investment: Investment }
   | { type: 'ADD_PLATFORM'; scenarioId: string; entityOwner: import('@/types/domain').EntityOwner; platform: Platform }
-  | { type: 'DELETE_PLATFORM'; scenarioId: string; platformId: string };
+  | { type: 'DELETE_PLATFORM'; scenarioId: string; platformId: string }
+  | { type: 'RENAME_PROPOSAL'; scenarioId: string; proposalId: string; label: string }
+  | { type: 'DELETE_PROPOSAL'; scenarioId: string; proposalId: string }
+  | { type: 'COPY_PROPOSAL'; scenarioId: string; proposalId: string; newLabel: string };
 
 function patchPlatformInScenario(scenario: Scenario, platformId: string, patch: Partial<Platform>): Scenario {
   return {
@@ -201,6 +204,56 @@ function reducer(state: AppState, action: Action): AppState {
         },
       };
     }
+
+    case 'RENAME_PROPOSAL':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id !== action.scenarioId ? s : {
+              ...s,
+              proposals: s.proposals.map((p) =>
+                p.id === action.proposalId ? { ...p, label: action.label } : p
+              ),
+            }
+          ),
+        },
+      };
+
+    case 'DELETE_PROPOSAL':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id !== action.scenarioId ? s : {
+              ...s,
+              proposals: s.proposals.filter((p) => p.id !== action.proposalId),
+            }
+          ),
+        },
+      };
+
+    case 'COPY_PROPOSAL':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) => {
+            if (s.id !== action.scenarioId) return s;
+            const source = s.proposals.find((p) => p.id === action.proposalId);
+            if (!source) return s;
+            const copy = {
+              ...source,
+              id: `proposal-copy-${Date.now()}`,
+              label: action.newLabel,
+              rows: source.rows.map((r) => ({ ...r, id: `${r.id}-copy-${Date.now()}` })),
+            };
+            return { ...s, proposals: [...s.proposals, copy] };
+          }),
+        },
+      };
 
     default:
       return state;
