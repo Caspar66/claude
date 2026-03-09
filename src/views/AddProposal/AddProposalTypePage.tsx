@@ -1,103 +1,23 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
-import type { EntityOwner, Proposal } from '@/types/domain';
+import type { EntityOwner, PlanReviewProposal, PlanReviewEntry, Recommendation } from '@/types/domain';
 
 const ALL_CARDS = [
   {
     id: 'plan-review',
     title: 'Plan Review',
     category: 'all',
-    enabled: true,
     bullets: [
       'Allows for the reviewing of current plan/s.',
       'The best use of this proposal type is when there are multiple existing plans and multiple actions need to be assessed (switches and rollovers).',
     ],
   },
   {
-    id: 'switch-investments',
-    title: 'Switch Investments',
-    category: 'assets',
-    enabled: false,
-    bullets: ['Allows for the switching between investment options in a plan.'],
-  },
-  {
-    id: 'auto-plan-review',
-    title: 'Automatic Plan Review',
-    category: 'retirement',
-    enabled: false,
-    notConfigured: true,
-    bullets: [
-      'Uses a Hold and Acquire list to automatically replace superannuation plans and selects a Model Portfolio matching the client\'s Risk Profile.',
-      'The Acquire list can be tailored to suit needs by grouping mutually exclusive age and balance ranges.',
-    ],
-  },
-  {
-    id: 'auto-switch',
-    title: 'Automatic Switch',
-    category: 'retirement',
-    enabled: false,
-    notConfigured: true,
-    bullets: ['Matches clients Risk Profile with the most appropriate model portfolio.'],
-  },
-  {
-    id: 'rollover',
-    title: 'Rollover/Consolidate Plans',
-    category: 'all',
-    enabled: false,
-    bullets: [
-      'Allows for the consolidation of multiple plans that a client may hold.',
-      'Allows for partial and full rollover/consolidation into a single plan or multiple plans.',
-    ],
-  },
-  {
-    id: 'super-to-pension',
-    title: 'Super to Pension',
-    category: 'retirement',
-    enabled: false,
-    bullets: [
-      'Allows for the transfer from Super to Pension.',
-      'When using this proposal you should ensure that the client meets preservation and condition of release requirements.',
-      'If any buy/sell or transaction costs are to be waived in this proposal they will need to be edited manually.',
-    ],
-  },
-  {
-    id: 'transition-to-retirement',
-    title: 'Transition to Retirement',
-    category: 'retirement',
-    enabled: false,
-    bullets: [
-      'Transition to Retirement strategy proposal.',
-      'Available if preservation age has been reached.',
-    ],
-  },
-  {
-    id: 'insurance-review',
-    title: 'Insurance Review',
-    category: 'all',
-    enabled: false,
-    bullets: [
-      'Review the insurance situation of a client.',
-      'An insurance needs analysis can be completed if required.',
-      'An insurance premium estimate can be completed if required.',
-    ],
-  },
-  {
-    id: 'new-plan',
-    title: 'New Plan',
-    category: 'assets',
-    enabled: false,
-    bullets: [
-      'Allows for the allocation of any Other Asset amounts to a researched, derived or custom plan.',
-      'Only amounts from assets and investment platforms can be applied to a new plan in this proposal.',
-    ],
-  },
-  {
     id: 'like-for-like',
     title: 'Like-for-Like',
     category: 'assets',
-    enabled: true,
     bullets: [
       'Create a Rollover/Consolidate Plans proposal for Super, Pension or Investment Plans where there is more than one existing plan.',
       'Super will roll over to Super, Pension to Pension, and Investment will consolidate with Investment.',
@@ -121,9 +41,8 @@ export function AddProposalTypePage() {
 
   const visibleCards = ALL_CARDS.filter((c) => {
     if (filter === 'all') return true;
-    if (filter === 'retirement') return c.category === 'retirement';
     if (filter === 'assets') return c.category === 'assets';
-    return true;
+    return false;
   });
 
   function nextProposalLabel() {
@@ -145,45 +64,81 @@ export function AddProposalTypePage() {
       return;
     }
 
-    // Group platforms by type
+    // Group platforms by product type (Super, Pension, Investment, SMSF)
     const byType = new Map<string, typeof entityData.platforms>();
     for (const p of entityData.platforms) {
-      const list = byType.get(p.type) ?? [];
-      list.push(p);
-      byType.set(p.type, list);
+      const existing = byType.get(p.type) ?? [];
+      existing.push(p);
+      byType.set(p.type, existing);
     }
 
-    const rows: Proposal['rows'] = [];
+    const newProposals: PlanReviewProposal[] = [];
+    const ts = Date.now();
+    let idx = 0;
+
     for (const [, platforms] of byType) {
       if (platforms.length < 2) continue;
-      // Primary = highest balance
-      const [primary, ...rest] = [...platforms].sort((a, b) => b.balance - a.balance);
-      for (const src of rest) {
-        rows.push({
-          id: `like-for-like-${src.id}-${Date.now()}`,
+
+      const totalBalance = platforms.reduce((sum, p) => sum + p.balance, 0);
+
+      // For each platform as the consolidation target, create one proposal
+      for (const target of platforms) {
+        idx++;
+        const scaleFactor = target.balance > 0 ? totalBalance / target.balance : 1;
+
+        // Scale the target's investment mix to the combined total balance
+        const scaledInvestments = target.investments.map((inv, invIdx) => ({
+          ...inv,
+          id: `${inv.id}-lfl-${ts}-${idx}-${invIdx}`,
+          amount: inv.amount * scaleFactor,
+        }));
+
+        const entries: PlanReviewEntry[] = platforms.map((p, pIdx) => {
+          if (p.id === target.id) {
+            // Target: receives all funds, investment mix maintained but scaled
+            return {
+              id: `lfl-entry-${ts}-${idx}-target-${pIdx}`,
+              platform: p,
+              recommendation: 'Roll available balance in' as Recommendation,
+              proposedInvestments: scaledInvestments,
+              proposedBalance: totalBalance,
+            };
+          }
+          // Others: closed, rolling their balance into the target
+          return {
+            id: `lfl-entry-${ts}-${idx}-close-${pIdx}`,
+            platform: p,
+            recommendation: 'Close' as Recommendation,
+            proposedInvestments: [],
+            proposedBalance: 0,
+          };
+        });
+
+        newProposals.push({
+          id: `proposal-lfl-${ts}-${idx}`,
+          label: `Move all invests to ${target.name}`,
+          kind: 'plan-review',
           owner: entity,
-          proposalType: 'Rollover',
-          fromPlatform: src,
-          toPlatform: primary,
-          balance: src.balance,
+          entries,
         });
       }
     }
 
-    if (rows.length === 0) {
-      alert('Like-for-Like requires at least two plans of the same type.');
+    if (newProposals.length === 0) {
+      alert('Like-for-Like requires at least two plans of the same type (Super, Pension or Investment).');
       return;
     }
 
-    const proposal: Proposal = {
-      id: `proposal-lfl-${Date.now()}`,
-      label: nextProposalLabel(),
-      rows,
-    };
-
-    dispatch({ type: 'ADD_PROPOSAL_ANY', scenarioId: scenarioId!, proposal });
+    for (const proposal of newProposals) {
+      dispatch({ type: 'ADD_PROPOSAL_ANY', scenarioId: scenarioId!, proposal });
+    }
     navigate(`/scenarios/${scenarioId}`);
   }
+
+  const handlers: Record<string, () => void> = {
+    'plan-review': handlePlanReview,
+    'like-for-like': handleLikeForLike,
+  };
 
   return (
     <div className="p-6">
@@ -221,12 +176,7 @@ export function AddProposalTypePage() {
       {/* Card grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {visibleCards.map((card) => (
-          <div
-            key={card.id}
-            className={`border rounded p-4 flex flex-col ${
-              card.enabled ? 'border-border bg-white' : 'border-border bg-gray-50 opacity-70'
-            }`}
-          >
+          <div key={card.id} className="border border-border rounded p-4 flex flex-col bg-white">
             <h3 className="text-sm font-semibold mb-2">{card.title}</h3>
             <ul className="text-xs text-muted-foreground space-y-1 flex-1 mb-4">
               {card.bullets.map((b, i) => (
@@ -235,24 +185,10 @@ export function AddProposalTypePage() {
                 </li>
               ))}
             </ul>
-            {'notConfigured' in card && card.notConfigured && (
-              <p className="text-xs font-semibold text-red-600 mb-2">Not configured</p>
-            )}
             <div className="flex items-center gap-3 mt-auto">
-              {card.enabled && (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={card.id === 'plan-review' ? handlePlanReview : handleLikeForLike}
-                >
-                  Select
-                </Button>
-              )}
-              {!card.enabled && (
-                <Button size="sm" variant="outline" disabled>
-                  Select
-                </Button>
-              )}
+              <Button size="sm" variant="outline" onClick={handlers[card.id]}>
+                Select
+              </Button>
               <button className="text-xs text-blue-600 hover:underline">More Details</button>
             </div>
           </div>
