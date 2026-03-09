@@ -107,12 +107,18 @@ export interface PlanReviewEntry {
   proposedBalance: number;
 }
 
+export interface EntityPlanReview {
+  owner: EntityOwner;
+  entries: PlanReviewEntry[];
+}
+
 export interface PlanReviewProposal {
   id: string;
   label: string;
   kind: 'plan-review';
   owner: EntityOwner;
-  entries: PlanReviewEntry[];
+  entries: PlanReviewEntry[];             // single-entity case
+  entityReviews?: EntityPlanReview[];     // multi-entity (Joint) case
 }
 
 export function isPlanReviewProposal(

@@ -17,12 +17,27 @@ import {
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { useAppContext } from '@/context/AppContext';
 import { isPlanReviewProposal } from '@/types/domain';
-import type { Proposal, PlanReviewProposal, EntityOwner } from '@/types/domain';
+import type {
+  Proposal,
+  PlanReviewProposal,
+  EntityOwner,
+  EntityPlanReview,
+  PlanReviewEntry,
+  Recommendation,
+} from '@/types/domain';
 import { formatCurrency } from '@/lib/utils';
 
 interface Props {
   proposals: Array<Proposal | PlanReviewProposal>;
   scenarioId: string;
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getProposedBalance(entry: PlanReviewEntry): number {
+  if (entry.recommendation === 'Hold') return entry.platform.balance;
+  if (entry.recommendation === 'Close') return 0;
+  return entry.proposedBalance;
 }
 
 // ── Standard Proposal Table ───────────────────────────────────────────────────
@@ -103,7 +118,183 @@ function ProposalTable({ proposal }: { proposal: Proposal }) {
   );
 }
 
-// ── Plan Review Proposal Summary ──────────────────────────────────────────────
+// ── Multi-Entity Plan Review Table ────────────────────────────────────────────
+
+interface EntityRowProps {
+  entityReview: EntityPlanReview;
+  proposalId: string;
+  scenarioId: string;
+}
+
+function EntityReviewRow({ entityReview, proposalId, scenarioId }: EntityRowProps) {
+  const [expanded, setExpanded] = useState(true);
+  const navigate = useNavigate();
+  const { owner, entries } = entityReview;
+
+  const hasWarning = entries.some((e) => e.platform.hasWarning);
+
+  // From = all platforms (current)
+  const fromPlatforms = entries.map((e) => ({
+    name: e.platform.name,
+    accountNumber: e.platform.accountNumber,
+    type: e.platform.type as string,
+    balance: e.platform.balance,
+    hasWarning: e.platform.hasWarning,
+  }));
+
+  // To = platforms that aren't closed + unallocated
+  const toPlatforms: Array<{ name: string; type: string; balance: number; hasWarning?: boolean }> = [];
+  let unallocated = 0;
+  for (const e of entries) {
+    if (e.recommendation === 'Close') {
+      unallocated += e.platform.balance;
+    } else {
+      toPlatforms.push({
+        name: e.platform.name,
+        type: e.platform.type,
+        balance: getProposedBalance(e),
+        hasWarning: e.platform.hasWarning,
+      });
+    }
+  }
+  if (unallocated > 0) {
+    toPlatforms.push({ name: 'Unallocated', type: '', balance: unallocated });
+  }
+
+  return (
+    <>
+      {/* Entity header row */}
+      <tr className="border-b border-border bg-gray-50/50">
+        <td className="pl-2 py-1.5">
+          <button
+            onClick={() => setExpanded((v) => !v)}
+            className="text-muted-foreground hover:text-foreground"
+          >
+            <ChevronDown
+              size={13}
+              className={`transition-transform ${expanded ? '' : '-rotate-90'}`}
+            />
+          </button>
+        </td>
+        <td className="px-3 py-1.5 text-sm font-medium">{owner}</td>
+        <td className="px-3 py-1.5">
+          <button
+            className="text-blue-600 hover:underline text-sm flex items-center gap-1"
+            onClick={() =>
+              navigate(
+                `/scenarios/${scenarioId}/proposals/plan-review/${proposalId}?entity=${owner}`
+              )
+            }
+          >
+            Plan Review
+            {hasWarning && <AlertTriangle size={13} className="text-amber-500" />}
+          </button>
+        </td>
+        <td colSpan={4} />
+      </tr>
+
+      {/* From rows */}
+      {expanded &&
+        fromPlatforms.map((p, i) => (
+          <tr key={`from-${i}`} className="border-b border-border last:border-0 hover:bg-slate-50">
+            <td colSpan={2} />
+            <td />
+            <td className="px-2 py-1.5 text-xs font-medium text-muted-foreground w-10">
+              {i === 0 ? 'From' : ''}
+            </td>
+            <td className="px-3 py-1.5 text-sm">{p.name}</td>
+            <td className="px-3 py-1.5 text-sm text-muted-foreground">{p.type}</td>
+            <td className="px-3 py-1.5 text-right text-sm">
+              <span className="flex items-center justify-end gap-1">
+                {formatCurrency(p.balance)}
+                {p.hasWarning && <AlertTriangle size={12} className="text-amber-500" />}
+              </span>
+            </td>
+          </tr>
+        ))}
+
+      {/* To rows */}
+      {expanded &&
+        toPlatforms.map((p, i) => (
+          <tr key={`to-${i}`} className="border-b border-border last:border-0 hover:bg-slate-50">
+            <td colSpan={2} />
+            <td />
+            <td className="px-2 py-1.5 text-xs font-medium text-muted-foreground w-10">
+              {i === 0 ? 'To' : ''}
+            </td>
+            <td className="px-3 py-1.5 text-sm">{p.name}</td>
+            <td className="px-3 py-1.5 text-sm text-muted-foreground">{p.type}</td>
+            <td className="px-3 py-1.5 text-right text-sm">
+              <span className="flex items-center justify-end gap-1">
+                {formatCurrency(p.balance)}
+                {p.hasWarning && <AlertTriangle size={12} className="text-amber-500" />}
+              </span>
+            </td>
+          </tr>
+        ))}
+    </>
+  );
+}
+
+function MultiEntityPlanReviewTable({
+  proposal,
+  scenarioId,
+}: {
+  proposal: PlanReviewProposal;
+  scenarioId: string;
+}) {
+  const { entityReviews } = proposal;
+  if (!entityReviews) return null;
+
+  return (
+    <div>
+      {/* Sub-header */}
+      <div className="flex items-center justify-between px-3 py-1.5 border-b border-border bg-gray-50">
+        <div className="flex gap-6 text-xs font-semibold text-muted-foreground">
+          <span className="w-8" />
+          <span className="w-24">Owner</span>
+          <span>Proposal Type</span>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
+              Recommend and Acquire <ChevronDown size={12} />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem>Recommend</DropdownMenuItem>
+            <DropdownMenuItem>Acquire</DropdownMenuItem>
+            <DropdownMenuItem>Recommend &amp; Acquire</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <table className="w-full text-sm">
+        <colgroup>
+          <col className="w-8" />
+          <col className="w-28" />
+          <col className="w-36" />
+          <col className="w-12" />
+          <col />
+          <col className="w-28" />
+          <col className="w-32" />
+        </colgroup>
+        <tbody>
+          {entityReviews.map((er) => (
+            <EntityReviewRow
+              key={er.owner}
+              entityReview={er}
+              proposalId={proposal.id}
+              scenarioId={scenarioId}
+            />
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+// ── Single-Entity Plan Review Summary ─────────────────────────────────────────
 
 function PlanReviewSummary({
   proposal,
@@ -113,6 +304,12 @@ function PlanReviewSummary({
   scenarioId: string;
 }) {
   const navigate = useNavigate();
+
+  // Multi-entity: delegate
+  if (proposal.entityReviews) {
+    return <MultiEntityPlanReviewTable proposal={proposal} scenarioId={scenarioId} />;
+  }
+
   const currentTotal = proposal.entries.reduce((s, e) => s + e.platform.balance, 0);
   const proposedTotal = proposal.entries.reduce((s, e) => s + e.proposedBalance, 0);
   const unallocated = proposal.entries
@@ -256,12 +453,13 @@ function RenameModal({ open, currentLabel, onConfirm, onClose }: RenameModalProp
 // ── Main Section ──────────────────────────────────────────────────────────────
 
 export function ProposalsSection({ proposals, scenarioId }: Props) {
-  const { dispatch } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(proposals[0]?.id ?? '');
   const [renameOpen, setRenameOpen] = useState(false);
 
-  // Keep activeTab valid when proposals list changes (e.g., after delete)
+  const scenario = state.clientFile.scenarios.find((s) => s.id === scenarioId);
+
   useEffect(() => {
     if (proposals.length === 0) {
       setActiveTab('');
@@ -294,8 +492,35 @@ export function ProposalsSection({ proposals, scenarioId }: Props) {
     dispatch({ type: 'COPY_PROPOSAL', scenarioId, proposalId: activeProposal.id, newLabel });
   }
 
-  function navigateAddProposal(entity: EntityOwner) {
-    navigate(`/scenarios/${scenarioId}/add-proposal?entity=${entity}`);
+  function handleAddProposal(entity: EntityOwner) {
+    if (entity === 'Joint') {
+      // Auto-create a multi-entity Plan Review with all entities
+      if (!scenario) return;
+      const label = `Proposal ${proposals.length + 1} (Joint)`;
+      const entityReviews = scenario.entities.map((e) => ({
+        owner: e.owner,
+        entries: e.platforms.map((p) => ({
+          id: p.id,
+          platform: p,
+          recommendation: 'Hold' as Recommendation,
+          proposedInvestments: p.investments.map((i) => ({ ...i })),
+          proposedBalance: p.balance,
+        })),
+      }));
+      const proposal: PlanReviewProposal = {
+        id: `pr-joint-${Date.now()}`,
+        label,
+        kind: 'plan-review',
+        owner: 'Joint',
+        entries: [],
+        entityReviews,
+      };
+      dispatch({ type: 'ADD_PROPOSAL_ANY', scenarioId, proposal });
+      // Switch to the new tab (it will appear as the last proposal)
+      setTimeout(() => setActiveTab(proposal.id), 50);
+    } else {
+      navigate(`/scenarios/${scenarioId}/add-proposal?entity=${entity}`);
+    }
   }
 
   return (
@@ -319,13 +544,13 @@ export function ProposalsSection({ proposals, scenarioId }: Props) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => navigateAddProposal('Client')}>
+                <DropdownMenuItem onClick={() => handleAddProposal('Client')}>
                   Client
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigateAddProposal('Partner')}>
+                <DropdownMenuItem onClick={() => handleAddProposal('Partner')}>
                   Partner
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigateAddProposal('Joint')}>
+                <DropdownMenuItem onClick={() => handleAddProposal('Joint')}>
                   Joint
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -369,7 +594,6 @@ export function ProposalsSection({ proposals, scenarioId }: Props) {
                 ))}
               </TabsList>
 
-              {/* Per-proposal actions */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <button

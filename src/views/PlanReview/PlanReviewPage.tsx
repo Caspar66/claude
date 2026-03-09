@@ -471,6 +471,19 @@ export function PlanReviewPage() {
     if (proposalId && scenario) {
       const existing = scenario.proposals.find((p) => p.id === proposalId);
       if (existing && isPlanReviewProposal(existing)) {
+        // Multi-entity: find this entity's portion
+        if (existing.entityReviews) {
+          const er = existing.entityReviews.find((r) => r.owner === entity);
+          if (er) {
+            return er.entries.map((e) => ({
+              id: e.id,
+              platform: e.platform,
+              recommendation: e.recommendation,
+              proposedInvestments: copyInvestments(e.proposedInvestments),
+            }));
+          }
+        }
+        // Single-entity
         return existing.entries.map((e) => ({
           id: e.id,
           platform: e.platform,
@@ -523,6 +536,27 @@ export function PlanReviewPage() {
       ? scenario!.proposals.find((p) => p.id === proposalId)
       : undefined;
 
+    const updatedEntries = pageState.entries.map((e) => ({
+      id: e.id,
+      platform: e.platform,
+      recommendation: e.recommendation,
+      proposedInvestments: e.proposedInvestments,
+      proposedBalance: computeProposedBalance(e),
+    }));
+
+    // Multi-entity: update just this entity's portion
+    if (existingProposal && isPlanReviewProposal(existingProposal) && existingProposal.entityReviews) {
+      dispatch({
+        type: 'UPDATE_ENTITY_PLAN_REVIEW',
+        scenarioId: scenarioId!,
+        proposalId: existingProposal.id,
+        entityOwner: entity,
+        entries: updatedEntries,
+      });
+      navigate(`/scenarios/${scenarioId}`);
+      return;
+    }
+
     const label =
       (existingProposal ? existingProposal.label : null) ??
       labelParam ??
@@ -533,16 +567,10 @@ export function PlanReviewPage() {
       label,
       kind: 'plan-review',
       owner: entity,
-      entries: pageState.entries.map((e) => ({
-        id: e.id,
-        platform: e.platform,
-        recommendation: e.recommendation,
-        proposedInvestments: e.proposedInvestments,
-        proposedBalance: computeProposedBalance(e),
-      })),
+      entries: updatedEntries,
     };
 
-    if (proposalId && existingProposal) {
+    if (existingProposal) {
       dispatch({ type: 'UPDATE_PLAN_REVIEW_PROPOSAL', scenarioId: scenarioId!, proposal });
     } else {
       dispatch({ type: 'ADD_PROPOSAL_ANY', scenarioId: scenarioId!, proposal });
