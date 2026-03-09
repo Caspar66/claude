@@ -468,22 +468,23 @@ export function ProposalsSection({ proposals, scenarioId }: Props) {
     }
   }, [proposals, activeTab]);
 
-  if (proposals.length === 0) return null;
-
   const activeProposal = proposals.find((p) => p.id === activeTab) ?? proposals[0];
 
   function handleRename(newLabel: string) {
+    if (!activeProposal) return;
     dispatch({ type: 'RENAME_PROPOSAL', scenarioId, proposalId: activeProposal.id, label: newLabel });
     setRenameOpen(false);
   }
 
   function handleDelete() {
+    if (!activeProposal) return;
     if (confirm(`Delete proposal "${activeProposal.label}"?`)) {
       dispatch({ type: 'DELETE_PROPOSAL', scenarioId, proposalId: activeProposal.id });
     }
   }
 
   function handleCopy() {
+    if (!activeProposal) return;
     const base = activeProposal.label;
     const existingCopies = proposals.filter((p) =>
       p.label.match(new RegExp(`^Copy of \\d+ ${base.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`))
@@ -576,69 +577,77 @@ export function ProposalsSection({ proposals, scenarioId }: Props) {
         </div>
 
         <div className="border border-border border-t-0 rounded-b overflow-hidden">
-          <Tabs value={activeTab} onValueChange={setActiveTab}>
-            <div className="flex items-center border-b border-border bg-gray-50">
-              <TabsList className="flex-1 justify-start rounded-none border-0 bg-transparent h-auto p-1 gap-1 flex-wrap">
-                {proposals.map((p) => (
-                  <TabsTrigger
-                    key={p.id}
-                    value={p.id}
-                    className="max-w-[200px] truncate text-xs data-[state=active]:bg-teal-700 data-[state=active]:text-white"
-                    title={p.label}
-                  >
-                    {isPlanReviewProposal(p) && (
-                      <span className="mr-1 opacity-70 text-[10px]">[PR]</span>
-                    )}
-                    {p.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button
-                    className="shrink-0 mr-1 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-gray-200 transition-colors"
-                    title="Proposal actions"
-                  >
-                    <MoreHorizontal size={15} />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-44">
-                  <DropdownMenuItem onClick={() => setRenameOpen(true)}>
-                    Rename proposal
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className="text-red-600 focus:text-red-600"
-                    onClick={handleDelete}
-                  >
-                    Delete proposal
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleCopy}>Copy proposal</DropdownMenuItem>
-                  <DropdownMenuItem disabled>Combine proposals</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+          {proposals.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              No proposals have been specified
             </div>
+          ) : (
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+              <div className="flex items-center border-b border-border bg-gray-50">
+                <TabsList className="flex-1 justify-start rounded-none border-0 bg-transparent h-auto p-1 gap-1 flex-wrap">
+                  {proposals.map((p) => (
+                    <TabsTrigger
+                      key={p.id}
+                      value={p.id}
+                      className="max-w-[200px] truncate text-xs data-[state=active]:bg-teal-700 data-[state=active]:text-white"
+                      title={p.label}
+                    >
+                      {isPlanReviewProposal(p) && (
+                        <span className="mr-1 opacity-70 text-[10px]">[PR]</span>
+                      )}
+                      {p.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
 
-            {proposals.map((p) => (
-              <TabsContent key={p.id} value={p.id} className="mt-0">
-                {isPlanReviewProposal(p) ? (
-                  <PlanReviewSummary proposal={p} scenarioId={scenarioId} />
-                ) : (
-                  <ProposalTable proposal={p} />
-                )}
-              </TabsContent>
-            ))}
-          </Tabs>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      className="shrink-0 mr-1 p-1 rounded text-muted-foreground hover:text-foreground hover:bg-gray-200 transition-colors"
+                      title="Proposal actions"
+                    >
+                      <MoreHorizontal size={15} />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-44">
+                    <DropdownMenuItem onClick={() => setRenameOpen(true)}>
+                      Rename proposal
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="text-red-600 focus:text-red-600"
+                      onClick={handleDelete}
+                    >
+                      Delete proposal
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={handleCopy}>Copy proposal</DropdownMenuItem>
+                    <DropdownMenuItem disabled>Combine proposals</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {proposals.map((p) => (
+                <TabsContent key={p.id} value={p.id} className="mt-0">
+                  {isPlanReviewProposal(p) ? (
+                    <PlanReviewSummary proposal={p} scenarioId={scenarioId} />
+                  ) : (
+                    <ProposalTable proposal={p} />
+                  )}
+                </TabsContent>
+              ))}
+            </Tabs>
+          )}
         </div>
       </section>
 
-      <RenameModal
-        open={renameOpen}
-        currentLabel={activeProposal.label}
-        onConfirm={handleRename}
-        onClose={() => setRenameOpen(false)}
-      />
+      {activeProposal && (
+        <RenameModal
+          open={renameOpen}
+          currentLabel={activeProposal.label}
+          onConfirm={handleRename}
+          onClose={() => setRenameOpen(false)}
+        />
+      )}
     </>
   );
 }
