@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer } from 'react';
-import type { ClientFile, Platform, Investment, Scenario } from '@/types/domain';
+import type { ClientFile, Platform, Investment, Scenario, Proposal, PlanReviewProposal } from '@/types/domain';
 import { clientFile as seedData } from '@/data/seed';
 
 interface AppState {
@@ -20,7 +20,9 @@ type Action =
   | { type: 'DELETE_PLATFORM'; scenarioId: string; platformId: string }
   | { type: 'RENAME_PROPOSAL'; scenarioId: string; proposalId: string; label: string }
   | { type: 'DELETE_PROPOSAL'; scenarioId: string; proposalId: string }
-  | { type: 'COPY_PROPOSAL'; scenarioId: string; proposalId: string; newLabel: string };
+  | { type: 'COPY_PROPOSAL'; scenarioId: string; proposalId: string; newLabel: string }
+  | { type: 'ADD_PROPOSAL_ANY'; scenarioId: string; proposal: Proposal | PlanReviewProposal }
+  | { type: 'UPDATE_PLAN_REVIEW_PROPOSAL'; scenarioId: string; proposal: PlanReviewProposal };
 
 function patchPlatformInScenario(scenario: Scenario, platformId: string, patch: Partial<Platform>): Scenario {
   return {
@@ -205,6 +207,36 @@ function reducer(state: AppState, action: Action): AppState {
       };
     }
 
+    case 'ADD_PROPOSAL_ANY':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id !== action.scenarioId ? s : {
+              ...s,
+              proposals: [...s.proposals, action.proposal],
+            }
+          ),
+        },
+      };
+
+    case 'UPDATE_PLAN_REVIEW_PROPOSAL':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id !== action.scenarioId ? s : {
+              ...s,
+              proposals: s.proposals.map((p) =>
+                p.id === action.proposal.id ? action.proposal : p
+              ),
+            }
+          ),
+        },
+      };
+
     case 'RENAME_PROPOSAL':
       return {
         ...state,
@@ -244,12 +276,10 @@ function reducer(state: AppState, action: Action): AppState {
             if (s.id !== action.scenarioId) return s;
             const source = s.proposals.find((p) => p.id === action.proposalId);
             if (!source) return s;
-            const copy = {
-              ...source,
-              id: `proposal-copy-${Date.now()}`,
-              label: action.newLabel,
-              rows: source.rows.map((r) => ({ ...r, id: `${r.id}-copy-${Date.now()}` })),
-            };
+            const rows = 'rows' in source
+              ? source.rows.map((r) => ({ ...r, id: `${r.id}-copy-${Date.now()}` }))
+              : [];
+            const copy = { ...source, id: `proposal-copy-${Date.now()}`, label: action.newLabel, rows } as typeof source;
             return { ...s, proposals: [...s.proposals, copy] };
           }),
         },

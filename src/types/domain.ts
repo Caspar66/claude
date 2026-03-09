@@ -1,6 +1,13 @@
 export type AccountType = 'Super' | 'Investment' | 'Pension' | 'SMSF';
 export type EntityOwner = 'Client' | 'Partner' | 'Joint';
 export type ProposalType = 'Plan Review' | 'New Plan' | 'Rollover' | 'Switch';
+export type Recommendation =
+  | 'Hold'
+  | 'Close'
+  | 'Roll portion out'
+  | 'Switch/Rebalance'
+  | 'Roll portion in'
+  | 'Roll available balance in';
 
 export interface Investment {
   id: string;
@@ -92,6 +99,28 @@ export interface Proposal {
   rows: ProposalRow[];
 }
 
+export interface PlanReviewEntry {
+  id: string;
+  platform: Platform;
+  recommendation: Recommendation;
+  proposedInvestments: Investment[];
+  proposedBalance: number;
+}
+
+export interface PlanReviewProposal {
+  id: string;
+  label: string;
+  kind: 'plan-review';
+  owner: EntityOwner;
+  entries: PlanReviewEntry[];
+}
+
+export function isPlanReviewProposal(
+  p: Proposal | PlanReviewProposal
+): p is PlanReviewProposal {
+  return (p as PlanReviewProposal).kind === 'plan-review';
+}
+
 export interface Scenario {
   id: string;
   name: string;
@@ -101,7 +130,7 @@ export interface Scenario {
   locked?: AdviserTimestamp;
   isLocked: boolean;
   entities: Entity[];
-  proposals: Proposal[];
+  proposals: Array<Proposal | PlanReviewProposal>;
 }
 
 export interface ClientFile {

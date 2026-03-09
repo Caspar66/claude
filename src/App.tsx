@@ -8,6 +8,8 @@ import { EditExistingPlanPage } from '@/views/EditExistingPlan/EditExistingPlanP
 import { AddInvestmentPage } from '@/views/AddInvestment/AddInvestmentPage';
 import { AddExistingPlanPage } from '@/views/AddExistingPlan/AddExistingPlanPage';
 import { EditFeesPage } from '@/views/EditFees/EditFeesPage';
+import { AddProposalTypePage } from '@/views/AddProposal/AddProposalTypePage';
+import { PlanReviewPage } from '@/views/PlanReview/PlanReviewPage';
 
 export default function App() {
   return (
@@ -34,6 +36,18 @@ export default function App() {
               <Route
                 path="scenarios/:scenarioId/add-existing"
                 element={<AddExistingPlanPage />}
+              />
+              <Route
+                path="scenarios/:scenarioId/add-proposal"
+                element={<AddProposalTypePage />}
+              />
+              <Route
+                path="scenarios/:scenarioId/proposals/plan-review/new"
+                element={<PlanReviewPage />}
+              />
+              <Route
+                path="scenarios/:scenarioId/proposals/plan-review/:proposalId"
+                element={<PlanReviewPage />}
               />
             </Route>
           </Routes>
