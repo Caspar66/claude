@@ -35,6 +35,14 @@ export interface Investment {
   investmentRebate?: number;
 }
 
+export interface PlatformResearch {
+  description: string;
+  rating: number; // 1–5
+  statusColor?: 'red' | 'amber' | 'green';
+  productUrl?: string;
+  documents: Array<{ label: string; url?: string }>;
+}
+
 export interface Platform {
   id: string;
   name: string;
@@ -47,6 +55,7 @@ export interface Platform {
   hasWarning?: boolean;
   warningMessage?: string;
   investments: Investment[];
+  research?: PlatformResearch;
 }
 
 export interface Entity {

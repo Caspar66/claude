@@ -112,6 +112,17 @@ function makeHub24Super(suffix = ''): Platform {
     otherBalancesClient: 0,
     otherBalancesFamily: 0,
     investments: makeInvestments(`hub24-super${suffix}`),
+    research: {
+      description: 'HUB24 Super is a flexible superannuation platform offering a wide range of investment options including managed funds, listed securities and SMAs. It provides competitive fees and comprehensive reporting tools for advisers.',
+      rating: 4,
+      statusColor: 'green',
+      productUrl: 'https://www.hub24.com.au/super',
+      documents: [
+        { label: 'Product Disclosure Statement', url: '#' },
+        { label: 'Investment Menu', url: '#' },
+        { label: 'Fee Guide 2025', url: '#' },
+      ],
+    },
   };
 }
 
@@ -126,6 +137,17 @@ function makePcareSuper(suffix = ''): Platform {
     hasWarning: true,
     warningMessage: 'Platform requires attention — data may be out of date',
     investments: makeInvestments(`pcare-super${suffix}`),
+    research: {
+      description: 'PortfolioCare Super eWRAP is an Asgard wrap account providing access to a broad range of investments with flexible contribution and withdrawal options. Suitable for clients seeking a comprehensive managed account solution.',
+      rating: 3,
+      statusColor: 'amber',
+      productUrl: 'https://www.asgard.com.au/portfoliocare',
+      documents: [
+        { label: 'Product Disclosure Statement', url: '#' },
+        { label: 'Additional Information Booklet', url: '#' },
+        { label: 'Fee Update December 2025', url: '#' },
+      ],
+    },
   };
 }
 
@@ -138,6 +160,19 @@ function makeResLife(suffix = ''): Platform {
     balance: 250000,
     taxFreeBalance: 80000,
     investments: makeInvestments(`res-life${suffix}`),
+    research: {
+      description: 'SuperSelect is an all-in-one portable superannuation and rollover plan for eligible individuals. SuperSelect offers a diverse range of investment strategies and options structured to provide investment flexibility as you progress towards retirement.',
+      rating: 3,
+      statusColor: 'red',
+      productUrl: '#',
+      documents: [
+        { label: 'Fees December 2025', url: '#' },
+        { label: 'Group Life Insurance Rates July 2023', url: '#' },
+        { label: 'Investment Alignment flyer August 2024', url: '#' },
+        { label: 'Investment Report Dec 2024', url: '#' },
+        { label: 'Update September Fee Changes Sept 2025', url: '#' },
+      ],
+    },
   };
 }
 
@@ -148,6 +183,16 @@ function makeHub24Invest(suffix = ''): Platform {
     accountNumber: '333333',
     type: 'Investment',
     balance: 50000,
+    research: {
+      description: 'HUB24 Invest is a flexible investment platform offering access to ASX-listed securities, managed funds and SMAs. Designed for advisers who want to provide clients with a modern, transparent investment experience.',
+      rating: 4,
+      statusColor: 'green',
+      productUrl: 'https://www.hub24.com.au/invest',
+      documents: [
+        { label: 'Product Disclosure Statement', url: '#' },
+        { label: 'Fee Guide 2025', url: '#' },
+      ],
+    },
     investments: [
       {
         id: `hub24-invest${suffix}-inv1`,

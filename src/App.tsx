@@ -7,6 +7,7 @@ import { ScenarioDetailsPage } from '@/views/ScenarioDetails/ScenarioDetailsPage
 import { EditExistingPlanPage } from '@/views/EditExistingPlan/EditExistingPlanPage';
 import { AddInvestmentPage } from '@/views/AddInvestment/AddInvestmentPage';
 import { AddExistingPlanPage } from '@/views/AddExistingPlan/AddExistingPlanPage';
+import { EditFeesPage } from '@/views/EditFees/EditFeesPage';
 
 export default function App() {
   return (
@@ -25,6 +26,10 @@ export default function App() {
               <Route
                 path="scenarios/:scenarioId/plan/:platformId/investments/add"
                 element={<AddInvestmentPage />}
+              />
+              <Route
+                path="scenarios/:scenarioId/plan/:platformId/fees"
+                element={<EditFeesPage />}
               />
               <Route
                 path="scenarios/:scenarioId/add-existing"

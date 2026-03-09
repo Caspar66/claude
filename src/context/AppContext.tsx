@@ -16,7 +16,8 @@ type Action =
   | { type: 'ADD_INVESTMENT'; scenarioId: string; platformId: string; investment: Investment }
   | { type: 'DELETE_INVESTMENT'; scenarioId: string; platformId: string; investmentId: string }
   | { type: 'UPDATE_INVESTMENT'; scenarioId: string; platformId: string; investment: Investment }
-  | { type: 'ADD_PLATFORM'; scenarioId: string; entityOwner: import('@/types/domain').EntityOwner; platform: Platform };
+  | { type: 'ADD_PLATFORM'; scenarioId: string; entityOwner: import('@/types/domain').EntityOwner; platform: Platform }
+  | { type: 'DELETE_PLATFORM'; scenarioId: string; platformId: string };
 
 function patchPlatformInScenario(scenario: Scenario, platformId: string, patch: Partial<Platform>): Scenario {
   return {
@@ -145,6 +146,24 @@ function reducer(state: AppState, action: Action): AppState {
                 inv.id === action.investment.id ? action.investment : inv
               ),
             });
+          }),
+        },
+      };
+
+    case 'DELETE_PLATFORM':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) => {
+            if (s.id !== action.scenarioId) return s;
+            return {
+              ...s,
+              entities: s.entities.map((e) => ({
+                ...e,
+                platforms: e.platforms.filter((p) => p.id !== action.platformId),
+              })),
+            };
           }),
         },
       };
