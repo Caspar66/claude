@@ -39,13 +39,13 @@ export function EditExistingPlanPage() {
           <span className="text-xs font-semibold border border-border rounded px-2 py-1">
             CURRENT DATA
           </span>
-          <Button variant="outline" size="sm" onClick={() => navigate(-1)}>
+          <Button variant="outline" size="sm" onClick={() => navigate(`/scenarios/${scenarioId}`)}>
             Cancel
           </Button>
           <Button
             size="sm"
             className="bg-teal-700 hover:bg-teal-800 text-white"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(`/scenarios/${scenarioId}`)}
           >
             Save
           </Button>
