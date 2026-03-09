@@ -1,4 +1,4 @@
-import { useReducer, useEffect } from 'react';
+import { useReducer } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Settings, AlertTriangle, ChevronDown, X, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,17 +7,21 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { useAppContext } from '@/context/AppContext';
 import { isPlanReviewProposal } from '@/types/domain';
 import type {
+  AccountType,
   EntityOwner,
   Investment,
   Platform,
-  PlanReviewEntry,
   PlanReviewProposal,
   Recommendation,
 } from '@/types/domain';
+import { planCatalogue, type PlanType } from '@/data/planCatalogue';
 import { formatCurrency } from '@/lib/utils';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -29,9 +33,11 @@ const REC_LABEL: Record<Recommendation, string> = {
   'Switch/Rebalance': 'Switch / Rebalance',
   'Roll portion in': 'Roll portion in',
   'Roll available balance in': 'Roll available balance in',
+  'New Plan': 'New Plan',
 };
 
-const ALL_RECOMMENDATIONS: Recommendation[] = [
+// Recommendations available in the dropdown for existing platforms
+const EXISTING_RECOMMENDATIONS: Recommendation[] = [
   'Hold',
   'Close',
   'Roll portion out',
@@ -102,7 +108,7 @@ interface EntryState {
 type PageMode = { kind: 'list' } | { kind: 'edit-plan'; platformId: string };
 
 interface AllocMode {
-  byAmount: boolean; // true = By $ Amount, false = By Percentage
+  byAmount: boolean;
 }
 
 interface PageState {
@@ -137,7 +143,6 @@ function pageReducer(state: PageState, action: PageAction): PageState {
         } else if (rec === 'Close') {
           proposedInvestments = [];
         } else if (rec === 'Roll available balance in') {
-          // Distribute unallocated proportionally across existing proposed investments
           const unallocated = action.unallocated;
           const total = proposedInvestments.reduce((s, i) => s + i.amount, 0);
           if (total > 0 && unallocated > 0) {
@@ -313,6 +318,13 @@ function EditPlanPanel({
               </tr>
             );
           })}
+          {entry.proposedInvestments.length === 0 && (
+            <tr>
+              <td colSpan={8} className="px-3 py-4 text-center text-xs text-muted-foreground">
+                No investments added. Use "Add Investment" to add funds.
+              </td>
+            </tr>
+          )}
         </tbody>
         <tfoot>
           <tr className="border-t border-border font-medium">
@@ -463,62 +475,104 @@ export function PlanReviewPage() {
 
   const entity = (searchParams.get('entity') ?? 'Client') as EntityOwner;
   const labelParam = searchParams.get('label');
+  const addPlanId = searchParams.get('addPlan'); // plan catalogue ID to add as proposed entry
 
   const scenario = state.clientFile.scenarios.find((s) => s.id === scenarioId);
 
   // Build initial entries from existing proposal (edit) or entity platforms (new)
   function buildInitialEntries(): EntryState[] {
-    if (proposalId && scenario) {
+    let entries: EntryState[] = [];
+
+    if (proposalId && proposalId !== 'new' && scenario) {
       const existing = scenario.proposals.find((p) => p.id === proposalId);
       if (existing && isPlanReviewProposal(existing)) {
-        // Multi-entity: find this entity's portion
         if (existing.entityReviews) {
           const er = existing.entityReviews.find((r) => r.owner === entity);
           if (er) {
-            return er.entries.map((e) => ({
+            entries = er.entries.map((e) => ({
               id: e.id,
               platform: e.platform,
               recommendation: e.recommendation,
               proposedInvestments: copyInvestments(e.proposedInvestments),
             }));
           }
+        } else {
+          entries = existing.entries.map((e) => ({
+            id: e.id,
+            platform: e.platform,
+            recommendation: e.recommendation,
+            proposedInvestments: copyInvestments(e.proposedInvestments),
+          }));
         }
-        // Single-entity
-        return existing.entries.map((e) => ({
-          id: e.id,
-          platform: e.platform,
-          recommendation: e.recommendation,
-          proposedInvestments: copyInvestments(e.proposedInvestments),
-        }));
+      }
+    } else if (scenario) {
+      const entityData = scenario.entities.find((e) => e.owner === entity);
+      entries = (entityData?.platforms ?? []).map((p) => ({
+        id: p.id,
+        platform: p,
+        recommendation: 'Hold' as Recommendation,
+        proposedInvestments: copyInvestments(p.investments),
+      }));
+    }
+
+    // Add new proposed plan if coming back from plan research
+    if (addPlanId) {
+      const plan = planCatalogue.find((p) => p.id === addPlanId);
+      if (plan) {
+        const newPlatformId = `proposed-${addPlanId}`;
+        const cashHolding: Investment = {
+          id: `${newPlatformId}-cash`,
+          name: `Cash Holding - ${plan.name}`,
+          apirCode: 'FC58470AU',
+          amount: 0,
+          allocation: { 'Domestic Cash': 100 },
+          fundType: '',
+          isCashAccount: true,
+          broadObjectives: 'A cash holding account for this platform.',
+        };
+        const newPlatform: Platform = {
+          id: newPlatformId,
+          name: plan.name,
+          accountNumber: '',
+          type: plan.type as AccountType,
+          balance: 0,
+          investments: [cashHolding],
+        };
+        entries.push({
+          id: newPlatformId,
+          platform: newPlatform,
+          recommendation: 'New Plan',
+          proposedInvestments: [{ ...cashHolding }],
+        });
       }
     }
-    const entityData = scenario?.entities.find((e) => e.owner === entity);
-    return (entityData?.platforms ?? []).map((p) => ({
-      id: p.id,
-      platform: p,
-      recommendation: 'Hold' as Recommendation,
-      proposedInvestments: copyInvestments(p.investments),
-    }));
+
+    return entries;
   }
 
-  const [pageState, pageDispatch] = useReducer(pageReducer, undefined, () => ({
-    entries: buildInitialEntries(),
-    mode: { kind: 'list' } as PageMode,
-    toast: null,
-    snapshot: null,
-    allocMode: { byAmount: true },
-  }));
-
-  // Recompute entries when scenario loads (async context)
-  useEffect(() => {
-    // Only runs once on mount; entries already built above
-  }, []);
+  const [pageState, pageDispatch] = useReducer(pageReducer, undefined, () => {
+    const entries = buildInitialEntries();
+    // Auto-open edit view for newly added proposed plan
+    let initialMode: PageMode = { kind: 'list' };
+    if (addPlanId) {
+      const newEntry = entries.find((e) => e.id === `proposed-${addPlanId}`);
+      if (newEntry) {
+        initialMode = { kind: 'edit-plan', platformId: newEntry.id };
+      }
+    }
+    return {
+      entries,
+      mode: initialMode,
+      toast: null,
+      snapshot: null,
+      allocMode: { byAmount: true },
+    };
+  });
 
   if (!scenario) {
     return <div className="p-6 text-muted-foreground">Scenario not found.</div>;
   }
 
-  // Derived values
   const unallocatedAmount = pageState.entries
     .filter((e) => e.recommendation === 'Close')
     .reduce((s, e) => s + e.platform.balance, 0);
@@ -531,8 +585,20 @@ export function PlanReviewPage() {
     ? pageState.entries.find((e) => e.id === editingPlatformId)
     : undefined;
 
+  function handleAddProposedPlan(planType: PlanType) {
+    const params = new URLSearchParams({
+      entity,
+      planType,
+      mode: 'proposed',
+      proposalId: proposalId ?? 'new',
+      proposalEntity: entity,
+    });
+    if (labelParam) params.set('label', labelParam);
+    navigate(`/scenarios/${scenarioId}/add-existing?${params.toString()}`);
+  }
+
   function handleSave() {
-    const existingProposal = proposalId
+    const existingProposal = proposalId && proposalId !== 'new'
       ? scenario!.proposals.find((p) => p.id === proposalId)
       : undefined;
 
@@ -544,7 +610,6 @@ export function PlanReviewPage() {
       proposedBalance: computeProposedBalance(e),
     }));
 
-    // Multi-entity: update just this entity's portion
     if (existingProposal && isPlanReviewProposal(existingProposal) && existingProposal.entityReviews) {
       dispatch({
         type: 'UPDATE_ENTITY_PLAN_REVIEW',
@@ -581,7 +646,7 @@ export function PlanReviewPage() {
   const isEditMode = pageState.mode.kind === 'edit-plan';
 
   const sectionTitle = isEditMode && editingEntry
-    ? `Plan Review : Edit Plan : ${editingEntry.platform.name} (${editingEntry.platform.accountNumber})`
+    ? `Plan Review : Edit Plan : ${editingEntry.platform.name}${editingEntry.platform.accountNumber ? ` (${editingEntry.platform.accountNumber})` : ''}`
     : 'Plan Review';
 
   return (
@@ -641,9 +706,8 @@ export function PlanReviewPage() {
           {isEditMode && editingEntry ? (
             /* ── Edit Plan Sub-view ── */
             <>
-              {/* Tabs row */}
               <div className="flex items-center border-b border-border bg-gray-50 text-xs">
-                {['Investment Funds', 'Pension Details', 'Contribution Amounts', 'Balances/Aggregation', 'Research Notes', 'Fee Research'].map(
+                {['Investment Funds', 'Pension Details', 'Balances/Aggregation', 'Research Notes', 'Fee Research'].map(
                   (tab, i) => (
                     <button
                       key={tab}
@@ -702,9 +766,21 @@ export function PlanReviewPage() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem disabled>Super Plan</DropdownMenuItem>
-                    <DropdownMenuItem disabled>Pension Plan</DropdownMenuItem>
-                    <DropdownMenuItem disabled>Investment Platform</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddProposedPlan('Super')}>
+                      Super Plan
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddProposedPlan('Pension')}>
+                      Pension Plan
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleAddProposedPlan('Investment')}>
+                      Investment Platform
+                    </DropdownMenuItem>
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger disabled className="text-muted-foreground">
+                        Other Assets
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent />
+                    </DropdownMenuSub>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -733,6 +809,11 @@ export function PlanReviewPage() {
                 <tbody>
                   {pageState.entries.map((entry) => {
                     const proposed = computeProposedBalance(entry);
+                    const isNewPlan = entry.recommendation === 'New Plan';
+                    const platformLabel = entry.platform.accountNumber
+                      ? `${entry.platform.name} (${entry.platform.accountNumber})`
+                      : entry.platform.name;
+
                     return (
                       <tr
                         key={entry.id}
@@ -758,40 +839,42 @@ export function PlanReviewPage() {
                                 pageDispatch({ type: 'ENTER_EDIT', platformId: entry.id })
                               }
                             >
-                              {entry.platform.name} ({entry.platform.accountNumber})
+                              {platformLabel}
                             </button>
                           ) : (
-                            <span className="text-sm">
-                              {entry.platform.name} ({entry.platform.accountNumber})
-                            </span>
+                            <span className="text-sm">{platformLabel}</span>
                           )}
                         </td>
                         <td className="px-3 py-2 text-sm">{entry.platform.type}</td>
                         <td className="px-3 py-2">
-                          <div className="relative">
-                            <select
-                              className="appearance-none border border-border rounded px-2 py-1 pr-7 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-52"
-                              value={entry.recommendation}
-                              onChange={(e) =>
-                                pageDispatch({
-                                  type: 'SET_RECOMMENDATION',
-                                  platformId: entry.id,
-                                  recommendation: e.target.value as Recommendation,
-                                  unallocated: unallocatedAmount,
-                                })
-                              }
-                            >
-                              {ALL_RECOMMENDATIONS.map((r) => (
-                                <option key={r} value={r}>
-                                  {REC_LABEL[r]}
-                                </option>
-                              ))}
-                            </select>
-                            <ChevronDown
-                              size={12}
-                              className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
-                            />
-                          </div>
+                          {isNewPlan ? (
+                            <span className="text-xs text-muted-foreground">New Plan</span>
+                          ) : (
+                            <div className="relative">
+                              <select
+                                className="appearance-none border border-border rounded px-2 py-1 pr-7 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-52"
+                                value={entry.recommendation}
+                                onChange={(e) =>
+                                  pageDispatch({
+                                    type: 'SET_RECOMMENDATION',
+                                    platformId: entry.id,
+                                    recommendation: e.target.value as Recommendation,
+                                    unallocated: unallocatedAmount,
+                                  })
+                                }
+                              >
+                                {EXISTING_RECOMMENDATIONS.map((r) => (
+                                  <option key={r} value={r}>
+                                    {REC_LABEL[r]}
+                                  </option>
+                                ))}
+                              </select>
+                              <ChevronDown
+                                size={12}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-muted-foreground"
+                              />
+                            </div>
+                          )}
                         </td>
                         <td className="px-3 py-2 text-right text-sm">
                           {formatCurrency(entry.platform.balance)}
@@ -823,7 +906,7 @@ export function PlanReviewPage() {
                     <tr className="border-t border-border">
                       <td colSpan={4} className="px-3 py-1.5 text-xs text-right text-muted-foreground">
                         <span className="flex items-center justify-end gap-1">
-                          Unallocated amount
+                          <button className="text-blue-600 hover:underline">Unallocated amount</button>
                           <AlertTriangle size={12} className="text-amber-500" />
                         </span>
                       </td>

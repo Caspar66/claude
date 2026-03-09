@@ -207,6 +207,10 @@ export function AddExistingPlanPage() {
 
   const entityParam = (searchParams.get('entity') ?? 'Client') as EntityOwner;
   const typeParam = (searchParams.get('planType') ?? 'Super') as PlanType;
+  const mode = searchParams.get('mode'); // 'proposed' | null
+  const proposedProposalId = searchParams.get('proposalId');
+  const proposedEntity = (searchParams.get('proposalEntity') ?? entityParam) as EntityOwner;
+  const proposedLabel = searchParams.get('label');
 
   const [filter, setFilter] = useState<FilterState>({
     keyword: '',
@@ -252,6 +256,20 @@ export function AddExistingPlanPage() {
     const plan = planCatalogue.find((p) => p.id === planId);
     if (!plan || !scenarioId) return;
 
+    // Proposed plan mode: navigate back to PlanReviewPage with the selected plan
+    if (mode === 'proposed') {
+      const pid = proposedProposalId ?? 'new';
+      const params = new URLSearchParams({ entity: proposedEntity, addPlan: planId });
+      if (proposedLabel) params.set('label', proposedLabel);
+      if (pid === 'new') {
+        navigate(`/scenarios/${scenarioId}/proposals/plan-review/new?${params.toString()}`);
+      } else {
+        navigate(`/scenarios/${scenarioId}/proposals/plan-review/${pid}?${params.toString()}`);
+      }
+      return;
+    }
+
+    // Add existing plan to entity
     const newPlatformId = `platform-${Date.now()}`;
     const newPlatform: Platform = {
       id: newPlatformId,
@@ -286,8 +304,23 @@ export function AddExistingPlanPage() {
     navigate(`/scenarios/${scenarioId}/plan/${newPlatformId}/edit`);
   }
 
-  const planTypeLabel = filter.planType === 'Investment' ? 'Plan' : filter.planType + ' Plan';
-  const selectLabel = `Select ${filter.planType} Plan`;
+  const planTypeLabel = filter.planType === 'Investment' ? 'Platform' : filter.planType + ' Plan';
+  const selectLabel = `Select ${filter.planType === 'Investment' ? 'Investment' : filter.planType} Plan`;
+
+  function handleCancel() {
+    if (mode === 'proposed') {
+      const pid = proposedProposalId ?? 'new';
+      const params = new URLSearchParams({ entity: proposedEntity });
+      if (proposedLabel) params.set('label', proposedLabel);
+      if (pid === 'new') {
+        navigate(`/scenarios/${scenarioId}/proposals/plan-review/new?${params.toString()}`);
+      } else {
+        navigate(`/scenarios/${scenarioId}/proposals/plan-review/${pid}?${params.toString()}`);
+      }
+    } else {
+      navigate(`/scenarios/${scenarioId}`);
+    }
+  }
 
   return (
     <div className="flex h-full min-h-screen">
@@ -297,14 +330,16 @@ export function AddExistingPlanPage() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-3 bg-teal-700 text-white shrink-0">
-          <span className="text-sm font-semibold">Add Existing {planTypeLabel}</span>
+          <span className="text-sm font-semibold">
+            {mode === 'proposed' ? `Add Proposed ${planTypeLabel}` : `Add Existing ${planTypeLabel}`}
+          </span>
           <div className="flex items-center gap-3">
-            <span className="text-xs opacity-75">Entity: {entityParam}</span>
+            <span className="text-xs opacity-75">Entity: {mode === 'proposed' ? proposedEntity : entityParam}</span>
             <Button
               size="sm"
               variant="secondary"
               className="h-7 text-xs bg-white/20 hover:bg-white/30 text-white border-0"
-              onClick={() => navigate(`/scenarios/${scenarioId}`)}
+              onClick={handleCancel}
             >
               Cancel
             </Button>

@@ -7,7 +7,8 @@ export type Recommendation =
   | 'Roll portion out'
   | 'Switch/Rebalance'
   | 'Roll portion in'
-  | 'Roll available balance in';
+  | 'Roll available balance in'
+  | 'New Plan';
 
 export interface Investment {
   id: string;
