@@ -364,7 +364,7 @@ const scenarios: Scenario[] = scenarioNames.map((name, i) => {
     locked: i === 2 || i === 7 ? { date: '2025-06-01', adviser: 'Satchell, Aron' } : undefined,
     isLocked: i === 2 || i === 7,
     entities: makeEntities(id),
-    proposals: makeProposals(id),
+    proposals: [],
   };
 });
 
