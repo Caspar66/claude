@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppProvider } from '@/context/AppContext';
+import { WealthSolverProvider } from '@/context/WealthSolverContext';
 import { AppShell } from '@/components/layout/AppShell';
 import { ScenarioIndexPage } from '@/views/ScenarioIndex/ScenarioIndexPage';
 import { ScenarioDetailsPage } from '@/views/ScenarioDetails/ScenarioDetailsPage';
@@ -10,53 +11,74 @@ import { AddExistingPlanPage } from '@/views/AddExistingPlan/AddExistingPlanPage
 import { EditFeesPage } from '@/views/EditFees/EditFeesPage';
 import { AddProposalTypePage } from '@/views/AddProposal/AddProposalTypePage';
 import { PlanReviewPage } from '@/views/PlanReview/PlanReviewPage';
+import { PlanListPage } from '@/views/WealthSolver/PlanListPage';
+import { PlanDetailPage } from '@/views/WealthSolver/PlanDetailPage';
+import { InvestmentDataPage } from '@/views/WealthSolver/InvestmentDataPage';
 
 export default function App() {
   return (
     <AppProvider>
-      <TooltipProvider>
-        <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<AppShell />}>
-              <Route index element={<Navigate to="/scenarios" replace />} />
-              <Route path="scenarios" element={<ScenarioIndexPage />} />
-              <Route path="scenarios/:scenarioId" element={<ScenarioDetailsPage />} />
-              <Route
-                path="scenarios/:scenarioId/plan/:platformId/edit"
-                element={<EditExistingPlanPage />}
-              />
-              <Route
-                path="scenarios/:scenarioId/plan/:platformId/investments/add"
-                element={<AddInvestmentPage />}
-              />
-              <Route
-                path="scenarios/:scenarioId/plan/:platformId/fees"
-                element={<EditFeesPage />}
-              />
-              <Route
-                path="scenarios/:scenarioId/proposals/:proposalId/fees/:platformId"
-                element={<EditFeesPage />}
-              />
-              <Route
-                path="scenarios/:scenarioId/add-existing"
-                element={<AddExistingPlanPage />}
-              />
-              <Route
-                path="scenarios/:scenarioId/add-proposal"
-                element={<AddProposalTypePage />}
-              />
-              <Route
-                path="scenarios/:scenarioId/proposals/plan-review/new"
-                element={<PlanReviewPage />}
-              />
-              <Route
-                path="scenarios/:scenarioId/proposals/plan-review/:proposalId"
-                element={<PlanReviewPage />}
-              />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </TooltipProvider>
+      <WealthSolverProvider>
+        <TooltipProvider>
+          <BrowserRouter>
+            <Routes>
+              <Route path="/" element={<AppShell />}>
+                <Route index element={<Navigate to="/scenarios" replace />} />
+                <Route path="scenarios" element={<ScenarioIndexPage />} />
+                <Route path="scenarios/:scenarioId" element={<ScenarioDetailsPage />} />
+                <Route
+                  path="scenarios/:scenarioId/plan/:platformId/edit"
+                  element={<EditExistingPlanPage />}
+                />
+                <Route
+                  path="scenarios/:scenarioId/plan/:platformId/investments/add"
+                  element={<AddInvestmentPage />}
+                />
+                <Route
+                  path="scenarios/:scenarioId/plan/:platformId/fees"
+                  element={<EditFeesPage />}
+                />
+                <Route
+                  path="scenarios/:scenarioId/proposals/:proposalId/fees/:platformId"
+                  element={<EditFeesPage />}
+                />
+                <Route
+                  path="scenarios/:scenarioId/add-existing"
+                  element={<AddExistingPlanPage />}
+                />
+                <Route
+                  path="scenarios/:scenarioId/add-proposal"
+                  element={<AddProposalTypePage />}
+                />
+                <Route
+                  path="scenarios/:scenarioId/proposals/plan-review/new"
+                  element={<PlanReviewPage />}
+                />
+                <Route
+                  path="scenarios/:scenarioId/proposals/plan-review/:proposalId"
+                  element={<PlanReviewPage />}
+                />
+
+                {/* WealthSolver — Research */}
+                <Route path="research/plans" element={<PlanListPage />} />
+                <Route path="research/plans/:planId" element={<PlanDetailPage />} />
+                <Route path="research/investment-data" element={<InvestmentDataPage />} />
+                <Route path="research/performance" element={<StubPage title="Investment Performance" />} />
+                <Route path="research/insurance" element={<StubPage title="Insurance Rates & Features" />} />
+                <Route path="research/key-features" element={<StubPage title="Key Features" />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </TooltipProvider>
+      </WealthSolverProvider>
     </AppProvider>
+  );
+}
+
+function StubPage({ title }: { title: string }) {
+  return (
+    <div className="p-6 text-muted-foreground text-sm">
+      {title} — coming soon.
+    </div>
   );
 }

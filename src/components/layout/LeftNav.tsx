@@ -13,6 +13,20 @@ const navSections: { heading: string; items: NavItem[] }[] = [
       { label: 'Scenario Index', to: '/scenarios' },
     ],
   },
+  {
+    heading: 'WealthSolver > Research',
+    items: [
+      { label: 'View plans', to: '/research/plans' },
+      { label: 'Investment data', to: '/research/investment-data' },
+      { label: 'Investment performance', to: '/research/performance' },
+      { label: 'Insurance rates & features', to: '/research/insurance' },
+      { label: 'Key features', to: '/research/key-features' },
+    ],
+  },
+  {
+    heading: 'WealthSolver > Tools',
+    items: [],
+  },
 ];
 
 export function LeftNav() {
