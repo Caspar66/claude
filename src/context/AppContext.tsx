@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useReducer } from 'react';
-import type { ClientFile, Platform, Investment, Scenario, Proposal, PlanReviewProposal, PlanReviewEntry, EntityOwner } from '@/types/domain';
+import type { ClientFile, Platform, Investment, Scenario, Proposal, PlanReviewProposal, PlanReviewEntry, EntityOwner, ProposalStatus } from '@/types/domain';
 import { isPlanReviewProposal } from '@/types/domain';
 import { clientFile as seedData } from '@/data/seed';
 
@@ -24,7 +24,8 @@ type Action =
   | { type: 'COPY_PROPOSAL'; scenarioId: string; proposalId: string; newLabel: string }
   | { type: 'ADD_PROPOSAL_ANY'; scenarioId: string; proposal: Proposal | PlanReviewProposal }
   | { type: 'UPDATE_PLAN_REVIEW_PROPOSAL'; scenarioId: string; proposal: PlanReviewProposal }
-  | { type: 'UPDATE_ENTITY_PLAN_REVIEW'; scenarioId: string; proposalId: string; entityOwner: EntityOwner; entries: PlanReviewEntry[] };
+  | { type: 'UPDATE_ENTITY_PLAN_REVIEW'; scenarioId: string; proposalId: string; entityOwner: EntityOwner; entries: PlanReviewEntry[] }
+  | { type: 'SET_PROPOSAL_STATUS'; scenarioId: string; proposalId: string; status: ProposalStatus };
 
 function patchPlatformInScenario(scenario: Scenario, platformId: string, patch: Partial<Platform>): Scenario {
   return {
@@ -271,6 +272,22 @@ function reducer(state: AppState, action: Action): AppState {
               ...s,
               proposals: s.proposals.map((p) =>
                 p.id === action.proposalId ? { ...p, label: action.label } : p
+              ),
+            }
+          ),
+        },
+      };
+
+    case 'SET_PROPOSAL_STATUS':
+      return {
+        ...state,
+        clientFile: {
+          ...state.clientFile,
+          scenarios: state.clientFile.scenarios.map((s) =>
+            s.id !== action.scenarioId ? s : {
+              ...s,
+              proposals: s.proposals.map((p) =>
+                p.id === action.proposalId ? { ...p, status: action.status } : p
               ),
             }
           ),

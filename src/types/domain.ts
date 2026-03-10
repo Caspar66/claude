@@ -1,6 +1,7 @@
 export type AccountType = 'Super' | 'Investment' | 'Pension' | 'SMSF';
 export type EntityOwner = 'Client' | 'Partner' | 'Joint';
 export type ProposalType = 'Plan Review' | 'New Plan' | 'Rollover' | 'Switch';
+export type ProposalStatus = 'Not Accepted' | 'Recommend and Acquire' | 'Like-for-like comparison';
 export type Recommendation =
   | 'Hold'
   | 'Close'
@@ -98,6 +99,7 @@ export interface Proposal {
   id: string;
   label: string;
   rows: ProposalRow[];
+  status?: ProposalStatus;
 }
 
 export interface PlanReviewEntry {
@@ -120,6 +122,7 @@ export interface PlanReviewProposal {
   owner: EntityOwner;
   entries: PlanReviewEntry[];             // single-entity case
   entityReviews?: EntityPlanReview[];     // multi-entity (Joint) case
+  status?: ProposalStatus;
 }
 
 export function isPlanReviewProposal(

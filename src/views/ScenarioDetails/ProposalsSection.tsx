@@ -22,6 +22,7 @@ import type {
   EntityOwner,
   PlanReviewEntry,
   Recommendation,
+  ProposalStatus,
 } from '@/types/domain';
 import { formatCurrency } from '@/lib/utils';
 
@@ -341,6 +342,12 @@ function UnifiedProposalRow({ entityData, proposalId, scenarioId }: UnifiedPropo
 
 // ── Unified Proposal Table ─────────────────────────────────────────────────────
 
+const PROPOSAL_STATUSES: ProposalStatus[] = [
+  'Not Accepted',
+  'Recommend and Acquire',
+  'Like-for-like comparison',
+];
+
 function UnifiedProposalTable({
   proposal,
   scenarioId,
@@ -348,7 +355,13 @@ function UnifiedProposalTable({
   proposal: Proposal | PlanReviewProposal;
   scenarioId: string;
 }) {
+  const { dispatch } = useAppContext();
   const entities = getEntityData(proposal, scenarioId);
+  const currentStatus: ProposalStatus = proposal.status ?? 'Not Accepted';
+
+  function handleStatusChange(status: ProposalStatus) {
+    dispatch({ type: 'SET_PROPOSAL_STATUS', scenarioId, proposalId: proposal.id, status });
+  }
 
   if (entities.length === 0) {
     return (
@@ -370,13 +383,19 @@ function UnifiedProposalTable({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <button className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground">
-              Recommend and Acquire <ChevronDown size={12} />
+              {currentStatus} <ChevronDown size={12} />
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem>Recommend</DropdownMenuItem>
-            <DropdownMenuItem>Acquire</DropdownMenuItem>
-            <DropdownMenuItem>Recommend &amp; Acquire</DropdownMenuItem>
+            {PROPOSAL_STATUSES.map((s) => (
+              <DropdownMenuItem
+                key={s}
+                onClick={() => handleStatusChange(s)}
+                className={s === currentStatus ? 'font-semibold text-teal-700' : ''}
+              >
+                {s}
+              </DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
