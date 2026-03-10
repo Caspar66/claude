@@ -5,6 +5,7 @@ import { seedPlans, globalOptions } from '@/data/wealthsolverSeed';
 // ── Actions ───────────────────────────────────────────────────────────────────
 
 type Action =
+  | { type: 'ADD_PLAN'; plan: WsPlan }
   | { type: 'UPDATE_PLAN'; planId: string; patch: Partial<WsPlan>; changedFields?: string[] }
   | { type: 'UPDATE_PLAN_FEES'; planId: string; category: 'ongoing' | 'rebates' | 'transactional' | 'commissions'; fee: WsFee }
   | { type: 'ADD_INVESTMENT_OPTION'; planId: string; option: WsInvestmentOption }
@@ -18,6 +19,9 @@ type Action =
 
 function reducer(state: WealthSolverState, action: Action): WealthSolverState {
   switch (action.type) {
+    case 'ADD_PLAN':
+      return { ...state, plans: [...state.plans, action.plan] };
+
     case 'UPDATE_PLAN':
       return {
         ...state,

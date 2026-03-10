@@ -422,7 +422,7 @@ const defaultCommissions: WsFee[] = [
   },
 ];
 
-function makeDefaultFees() {
+export function makeDefaultFees() {
   return {
     ongoing: defaultOngoingFees.map((f) => ({ ...f, feeSets: f.feeSets.map((s) => ({ ...s, tiers: s.tiers.map((t) => ({ ...t })) })) })),
     rebates: defaultRebates.map((f) => ({ ...f, feeSets: f.feeSets.map((s) => ({ ...s, tiers: s.tiers.map((t) => ({ ...t })) })) })),

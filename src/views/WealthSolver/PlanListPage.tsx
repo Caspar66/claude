@@ -78,6 +78,14 @@ export function PlanListPage() {
 
       {/* Main content */}
       <div className="flex-1 overflow-auto p-4">
+        <div className="flex justify-end mb-3">
+          <button
+            className="px-3 py-1.5 bg-teal-700 hover:bg-teal-800 text-white text-sm rounded"
+            onClick={() => navigate('/research/plans/new')}
+          >
+            + Add Plan
+          </button>
+        </div>
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="border-b-2 border-border bg-gray-50">

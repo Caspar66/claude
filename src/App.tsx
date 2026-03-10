@@ -14,6 +14,8 @@ import { PlanReviewPage } from '@/views/PlanReview/PlanReviewPage';
 import { PlanListPage } from '@/views/WealthSolver/PlanListPage';
 import { PlanDetailPage } from '@/views/WealthSolver/PlanDetailPage';
 import { InvestmentDataPage } from '@/views/WealthSolver/InvestmentDataPage';
+import { AddPlanPage } from '@/views/WealthSolver/AddPlanPage';
+import { DerivePlanPage } from '@/views/WealthSolver/DerivePlanPage';
 
 export default function App() {
   return (
@@ -61,24 +63,15 @@ export default function App() {
 
                 {/* WealthSolver — Research */}
                 <Route path="research/plans" element={<PlanListPage />} />
+                <Route path="research/plans/new" element={<AddPlanPage />} />
+                <Route path="research/plans/:planId/derive" element={<DerivePlanPage />} />
                 <Route path="research/plans/:planId" element={<PlanDetailPage />} />
                 <Route path="research/investment-data" element={<InvestmentDataPage />} />
-                <Route path="research/performance" element={<StubPage title="Investment Performance" />} />
-                <Route path="research/insurance" element={<StubPage title="Insurance Rates & Features" />} />
-                <Route path="research/key-features" element={<StubPage title="Key Features" />} />
               </Route>
             </Routes>
           </BrowserRouter>
         </TooltipProvider>
       </WealthSolverProvider>
     </AppProvider>
-  );
-}
-
-function StubPage({ title }: { title: string }) {
-  return (
-    <div className="p-6 text-muted-foreground text-sm">
-      {title} — coming soon.
-    </div>
   );
 }

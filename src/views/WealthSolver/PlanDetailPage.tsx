@@ -90,6 +90,7 @@ function PlanDetail({ plan, onMode }: { plan: WsPlan; onMode: (m: string) => voi
               <DropdownMenuItem onClick={() => onMode('editResearch')}>Edit Research</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onMode('editFees')}>Edit Fees</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onMode('editDocuments')}>Edit Product Documents</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate(`/research/plans/${plan.id}/derive`)}>Derive Plan</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" variant="outline" className="h-8 text-sm" onClick={() => navigate('/research/plans')}>
