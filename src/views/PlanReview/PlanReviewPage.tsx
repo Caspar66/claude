@@ -736,9 +736,15 @@ export function PlanReviewPage() {
     return <div className="p-6 text-muted-foreground">Scenario not found.</div>;
   }
 
-  const unallocatedAmount = pageState.entries
+  const totalClosedBalance = pageState.entries
     .filter((e) => e.recommendation === 'Close')
     .reduce((s, e) => s + e.platform.balance, 0);
+
+  const totalAllocatedAboveBase = pageState.entries
+    .filter((e) => e.recommendation !== 'Close' && e.recommendation !== 'Hold')
+    .reduce((s, e) => s + Math.max(0, computeProposedBalance(e) - e.platform.balance), 0);
+
+  const unallocatedAmount = Math.max(0, totalClosedBalance - totalAllocatedAboveBase);
 
   const currentTotal = pageState.entries.reduce((s, e) => s + e.platform.balance, 0);
   const proposedTotal = pageState.entries.reduce((s, e) => s + computeProposedBalance(e), 0);

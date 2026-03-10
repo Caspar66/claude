@@ -38,6 +38,16 @@ function getProposedBalance(entry: PlanReviewEntry): number {
   return entry.proposedBalance;
 }
 
+function computeUnallocated(entries: PlanReviewEntry[]): number {
+  const totalClosed = entries
+    .filter((e) => e.recommendation === 'Close')
+    .reduce((s, e) => s + e.platform.balance, 0);
+  const totalAllocatedAboveBase = entries
+    .filter((e) => e.recommendation !== 'Close' && e.recommendation !== 'Hold')
+    .reduce((s, e) => s + Math.max(0, getProposedBalance(e) - e.platform.balance), 0);
+  return Math.max(0, totalClosed - totalAllocatedAboveBase);
+}
+
 interface FlatPlatform {
   id: string;
   name: string;
@@ -110,11 +120,8 @@ function getEntityData(
       }));
 
       const toPlatforms: Array<{ name: string; type: string; balance: number; hasWarning?: boolean }> = [];
-      let unallocated = 0;
       for (const e of er.entries) {
-        if (e.recommendation === 'Close') {
-          unallocated += e.platform.balance;
-        } else {
+        if (e.recommendation !== 'Close') {
           toPlatforms.push({
             name: e.platform.name,
             type: e.platform.type,
@@ -123,6 +130,7 @@ function getEntityData(
           });
         }
       }
+      const unallocated = computeUnallocated(er.entries);
       if (unallocated > 0) {
         toPlatforms.push({ name: 'Unallocated', type: '', balance: unallocated });
       }
@@ -167,11 +175,8 @@ function getEntityData(
   }));
 
   const toPlatforms: Array<{ name: string; type: string; balance: number; hasWarning?: boolean }> = [];
-  let unallocated = 0;
   for (const e of proposal.entries) {
-    if (e.recommendation === 'Close') {
-      unallocated += e.platform.balance;
-    } else {
+    if (e.recommendation !== 'Close') {
       toPlatforms.push({
         name: e.platform.name,
         type: e.platform.type,
@@ -180,6 +185,7 @@ function getEntityData(
       });
     }
   }
+  const unallocated = computeUnallocated(proposal.entries);
   if (unallocated > 0) {
     toPlatforms.push({ name: 'Unallocated', type: '', balance: unallocated });
   }
