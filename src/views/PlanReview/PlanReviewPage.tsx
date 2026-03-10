@@ -1,4 +1,4 @@
-import { useReducer } from 'react';
+import { useReducer, useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { Settings, AlertTriangle, ChevronDown, X, TriangleAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -22,7 +22,18 @@ import type {
   Recommendation,
 } from '@/types/domain';
 import { planCatalogue, type PlanType } from '@/data/planCatalogue';
-import { formatCurrency } from '@/lib/utils';
+import { cn, formatCurrency } from '@/lib/utils';
+import { InvestmentSearchPanel } from '@/views/AddInvestment/InvestmentSearchPanel';
+import { ManualFundEntryPanel } from '@/views/AddInvestment/ManualFundEntryPanel';
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+type SelectedInvestment = Omit<Investment, 'id' | 'amount'> & { id: string; amount: number };
+
+function fmtPct(n: number | undefined) {
+  if (n === undefined) return '0.00%';
+  return n.toFixed(n % 1 === 0 ? 2 : 4).replace(/0+$/, '').replace(/\.$/, '') + '%';
+}
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -105,7 +116,10 @@ interface EntryState {
   proposedInvestments: Investment[];
 }
 
-type PageMode = { kind: 'list' } | { kind: 'edit-plan'; platformId: string };
+type PageMode =
+  | { kind: 'list' }
+  | { kind: 'edit-plan'; platformId: string }
+  | { kind: 'add-investment'; platformId: string };
 
 interface AllocMode {
   byAmount: boolean;
@@ -123,6 +137,8 @@ type PageAction =
   | { type: 'SET_RECOMMENDATION'; platformId: string; recommendation: Recommendation; unallocated: number }
   | { type: 'ENTER_EDIT'; platformId: string }
   | { type: 'EXIT_EDIT' }
+  | { type: 'ENTER_ADD_INVESTMENT'; platformId: string }
+  | { type: 'CONFIRM_ADD_INVESTMENTS'; platformId: string; investments: SelectedInvestment[] }
   | { type: 'SET_PROPOSED_AMOUNT'; platformId: string; investmentId: string; amount: number }
   | { type: 'REMOVE_PROPOSED_INVESTMENT'; platformId: string; investmentId: string }
   | { type: 'ADD_TO_PLAN'; platformId: string; amount: number }
@@ -168,6 +184,21 @@ function pageReducer(state: PageState, action: PageAction): PageState {
       return { ...state, mode: { kind: 'edit-plan', platformId: action.platformId } };
     case 'EXIT_EDIT':
       return { ...state, mode: { kind: 'list' } };
+    case 'ENTER_ADD_INVESTMENT':
+      return { ...state, mode: { kind: 'add-investment', platformId: action.platformId } };
+    case 'CONFIRM_ADD_INVESTMENTS': {
+      const existingSet = new Set(
+        state.entries
+          .find((e) => e.id === action.platformId)
+          ?.proposedInvestments.map((i) => i.apirCode) ?? []
+      );
+      const newInvestments = action.investments.filter((inv) => !existingSet.has(inv.apirCode));
+      const entries = state.entries.map((e) => {
+        if (e.id !== action.platformId) return e;
+        return { ...e, proposedInvestments: [...e.proposedInvestments, ...newInvestments] };
+      });
+      return { ...state, entries, mode: { kind: 'edit-plan', platformId: action.platformId } };
+    }
     case 'SET_PROPOSED_AMOUNT': {
       const entries = state.entries.map((e) => {
         if (e.id !== action.platformId) return e;
@@ -227,6 +258,7 @@ interface EditPlanPanelProps {
   onRemove: (investmentId: string) => void;
   onAddToplan: (amount: number) => void;
   onSetAllocMode: (byAmount: boolean) => void;
+  onAddInvestment: () => void;
 }
 
 function EditPlanPanel({
@@ -237,6 +269,7 @@ function EditPlanPanel({
   onRemove,
   onAddToplan,
   onSetAllocMode,
+  onAddInvestment,
 }: EditPlanPanelProps) {
   const proposedTotal = entry.proposedInvestments.reduce((s, i) => s + i.amount, 0);
   const currentTotal = entry.platform.investments.reduce((s, i) => s + i.amount, 0);
@@ -266,7 +299,7 @@ function EditPlanPanel({
             <span className="text-sm">By Percentage</span>
           </label>
         </div>
-        <Button size="sm" className="bg-gray-700 hover:bg-gray-800 text-white text-xs">
+        <Button size="sm" className="bg-gray-700 hover:bg-gray-800 text-white text-xs" onClick={onAddInvestment}>
           Add Investment
         </Button>
       </div>
@@ -391,6 +424,136 @@ function EditPlanPanel({
           />
         </div>
       )}
+    </div>
+  );
+}
+
+// ── Add Investment Panel ──────────────────────────────────────────────────────
+
+interface AddInvestmentPanelProps {
+  platformName: string;
+  onCancel: () => void;
+  onConfirm: (investments: SelectedInvestment[]) => void;
+}
+
+function AddInvestmentPanel({ platformName, onCancel, onConfirm }: AddInvestmentPanelProps) {
+  const [mode, setMode] = useState<'search' | 'manual'>('search');
+  const [selected, setSelected] = useState<SelectedInvestment[]>([]);
+  const selectedIds = new Set(selected.map((s) => s.apirCode));
+
+  function toggleFromCatalogue(item: Omit<Investment, 'id' | 'amount'>) {
+    const key = item.apirCode;
+    if (selectedIds.has(key)) {
+      setSelected((prev) => prev.filter((s) => s.apirCode !== key));
+    } else {
+      setSelected((prev) => [
+        ...prev,
+        { ...item, id: `catalogue-${key}-${Date.now()}`, amount: 0 },
+      ]);
+    }
+  }
+
+  function addManual(inv: SelectedInvestment) {
+    setSelected((prev) => [...prev, inv]);
+  }
+
+  function removeSelected(id: string) {
+    setSelected((prev) => prev.filter((s) => s.id !== id));
+  }
+
+  return (
+    <div className="p-6">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="text-base font-semibold">
+          Add Investment: <span className="text-foreground">{platformName}</span>
+        </h2>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={onCancel}>
+            Cancel
+          </Button>
+          <Button
+            size="sm"
+            className="bg-teal-700 hover:bg-teal-800 text-white"
+            onClick={() => onConfirm(selected)}
+            disabled={selected.length === 0}
+          >
+            Add Investments
+          </Button>
+        </div>
+      </div>
+
+      <div className="border border-border rounded mb-4">
+        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">Add Investment</div>
+        <div className="p-4 border-b border-border">
+          <select
+            value={mode}
+            onChange={(e) => setMode(e.target.value as 'search' | 'manual')}
+            className="h-9 rounded border border-input bg-background px-3 text-sm min-w-[220px]"
+          >
+            <option value="search">Plan Investment Menu</option>
+            <option value="manual">Manual Fund Entry</option>
+          </select>
+        </div>
+        {mode === 'search' ? (
+          <InvestmentSearchPanel selectedIds={selectedIds} onToggle={toggleFromCatalogue} />
+        ) : (
+          <ManualFundEntryPanel onAdd={addManual} />
+        )}
+      </div>
+
+      <div className="border border-border rounded">
+        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">
+          Selected Investments{selected.length > 0 ? ` (${selected.length})` : ''}
+        </div>
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 border-b border-border">
+            <tr>
+              <th className="w-8" />
+              <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Name</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Code / APIR</th>
+              <th className="px-3 py-2 text-left text-xs font-semibold text-muted-foreground">Type</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Invest Costs</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Transaction Cost</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Buy Cost</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Sell Cost</th>
+              <th className="px-3 py-2 text-right text-xs font-semibold text-muted-foreground">Perf Fee</th>
+            </tr>
+          </thead>
+          <tbody>
+            {selected.length === 0 && (
+              <tr>
+                <td colSpan={9} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                  No investments selected
+                </td>
+              </tr>
+            )}
+            {selected.map((inv) => (
+              <tr key={inv.id} className="border-b border-border last:border-0 hover:bg-slate-50">
+                <td className="pl-2 py-2">
+                  <button
+                    onClick={() => removeSelected(inv.id)}
+                    className="p-1 rounded hover:bg-red-100 hover:text-red-600 text-muted-foreground"
+                  >
+                    <X size={12} />
+                  </button>
+                </td>
+                <td className={cn('px-3 py-2', inv.isSMAHighlight ? 'text-red-600' : inv.fundType === 'SMA' ? 'text-teal-700' : 'text-blue-600')}>
+                  {inv.name}
+                </td>
+                <td className="px-3 py-2 font-mono text-xs text-muted-foreground">{inv.apirCode}</td>
+                <td className={cn('px-3 py-2 text-xs font-medium', inv.fundType === 'SMA' ? 'text-red-600' : '')}>
+                  {inv.fundType || ''}
+                </td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(inv.investCosts)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(inv.transactionCost)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(inv.buyCost)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(inv.sellCost)}</td>
+                <td className="px-3 py-2 text-right tabular-nums">{fmtPct(inv.perfFee)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -644,9 +807,15 @@ export function PlanReviewPage() {
   }
 
   const isEditMode = pageState.mode.kind === 'edit-plan';
+  const isAddInvestmentMode = pageState.mode.kind === 'add-investment';
+  const addInvestmentEntry = isAddInvestmentMode
+    ? pageState.entries.find((e) => e.id === (pageState.mode as { kind: 'add-investment'; platformId: string }).platformId)
+    : undefined;
 
-  const sectionTitle = isEditMode && editingEntry
+  const sectionTitle = (isEditMode || isAddInvestmentMode) && editingEntry
     ? `Plan Review : Edit Plan : ${editingEntry.platform.name}${editingEntry.platform.accountNumber ? ` (${editingEntry.platform.accountNumber})` : ''}`
+    : isAddInvestmentMode && addInvestmentEntry
+    ? `Plan Review : Edit Plan : ${addInvestmentEntry.platform.name}${addInvestmentEntry.platform.accountNumber ? ` (${addInvestmentEntry.platform.accountNumber})` : ''}`
     : 'Plan Review';
 
   return (
@@ -703,7 +872,22 @@ export function PlanReviewPage() {
         </div>
 
         <div className="border border-border border-t-0 rounded-b overflow-hidden">
-          {isEditMode && editingEntry ? (
+          {isAddInvestmentMode && addInvestmentEntry ? (
+            /* ── Add Investment Sub-view ── */
+            <AddInvestmentPanel
+              platformName={addInvestmentEntry.platform.name}
+              onCancel={() =>
+                pageDispatch({ type: 'ENTER_EDIT', platformId: addInvestmentEntry.id })
+              }
+              onConfirm={(investments) =>
+                pageDispatch({
+                  type: 'CONFIRM_ADD_INVESTMENTS',
+                  platformId: addInvestmentEntry.id,
+                  investments,
+                })
+              }
+            />
+          ) : isEditMode && editingEntry ? (
             /* ── Edit Plan Sub-view ── */
             <>
               <div className="flex items-center border-b border-border bg-gray-50 text-xs">
@@ -752,6 +936,9 @@ export function PlanReviewPage() {
                 }
                 onSetAllocMode={(byAmount) =>
                   pageDispatch({ type: 'SET_ALLOC_MODE', byAmount })
+                }
+                onAddInvestment={() =>
+                  pageDispatch({ type: 'ENTER_ADD_INVESTMENT', platformId: editingEntry.id })
                 }
               />
             </>
