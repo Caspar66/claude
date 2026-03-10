@@ -48,12 +48,15 @@ export function PlanDetailPage() {
   );
 
   // Default: Plan Detail View
-  return <PlanDetail plan={plan} onMode={setMode} />;
+  return <PlanDetail plan={plan} onMode={setMode} plans={state.plans} />;
 }
 
-function PlanDetail({ plan, onMode }: { plan: WsPlan; onMode: (m: string) => void }) {
+function PlanDetail({ plan, onMode, plans }: { plan: WsPlan; onMode: (m: string) => void; plans: WsPlan[] }) {
   const navigate = useNavigate();
   const isChanged = (field: string) => (plan.changedFields ?? []).includes(field);
+
+  const isDerived = !!plan.derivedFromId;
+  const sourcePlan = isDerived ? plans.find((p) => p.id === plan.derivedFromId) : undefined;
 
   return (
     <div className="p-4 overflow-auto">
@@ -65,11 +68,28 @@ function PlanDetail({ plan, onMode }: { plan: WsPlan; onMode: (m: string) => voi
         </div>
       )}
 
+      {/* Derived-from banner */}
+      {isDerived && (
+        <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-800">
+          Derived from{' '}
+          {sourcePlan ? (
+            <button
+              className="font-semibold underline hover:text-blue-900"
+              onClick={() => navigate(`/research/plans/${sourcePlan.id}`)}
+            >
+              {sourcePlan.name}
+            </button>
+          ) : (
+            <span className="font-semibold">a deleted plan</span>
+          )}
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-base font-semibold">
           {plan.name}
-          {(plan.changedFields?.length ?? 0) > 0 && <span className="ml-2 text-sm font-normal text-muted-foreground">Derived</span>}
+          {isDerived && <span className="ml-2 text-sm font-normal text-muted-foreground">Derived</span>}
         </h2>
         <div className="flex items-center gap-2">
           <Button
@@ -90,7 +110,9 @@ function PlanDetail({ plan, onMode }: { plan: WsPlan; onMode: (m: string) => voi
               <DropdownMenuItem onClick={() => onMode('editResearch')}>Edit Research</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onMode('editFees')}>Edit Fees</DropdownMenuItem>
               <DropdownMenuItem onClick={() => onMode('editDocuments')}>Edit Product Documents</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate(`/research/plans/${plan.id}/derive`)}>Derive Plan</DropdownMenuItem>
+              {!isDerived && (
+                <DropdownMenuItem onClick={() => navigate(`/research/plans/${plan.id}/derive`)}>Derive Plan</DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button size="sm" variant="outline" className="h-8 text-sm" onClick={() => navigate('/research/plans')}>

@@ -160,6 +160,7 @@ export interface WsPlan {
   };
   documents: WsDocument[];
   changedFields?: string[];
+  derivedFromId?: string;  // set when this plan was derived from another plan
 }
 
 // ── State for WealthSolver ───────────────────────────────────────────────────

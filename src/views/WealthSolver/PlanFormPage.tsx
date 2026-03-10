@@ -92,7 +92,13 @@ export function PlanFormPage(props: Props) {
     const id = `ws-plan-${Date.now()}`;
     dispatch({
       type: 'ADD_PLAN',
-      plan: { ...form, id, name: form.name.trim(), sortName: form.sortName || form.name.trim() },
+      plan: {
+        ...form,
+        id,
+        name: form.name.trim(),
+        sortName: form.sortName || form.name.trim(),
+        ...(isDerive ? { derivedFromId: props.sourcePlan.id } : {}),
+      },
     });
     navigate(`/research/plans/${id}`);
   }
