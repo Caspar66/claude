@@ -15,19 +15,21 @@ function fmtPct(n: number | undefined) {
 interface Props {
   selectedIds: Set<string>;
   onToggle: (item: CatalogueItem) => void;
+  catalogue?: CatalogueItem[];
 }
 
-export function InvestmentSearchPanel({ selectedIds, onToggle }: Props) {
+export function InvestmentSearchPanel({ selectedIds, onToggle, catalogue }: Props) {
+  const source = catalogue ?? investmentCatalogue;
   const [query, setQuery] = useState('');
-  const [results, setResults] = useState<CatalogueItem[]>(investmentCatalogue);
+  const [results, setResults] = useState<CatalogueItem[]>(source);
 
   function handleSearch() {
     const q = query.trim().toLowerCase();
     if (!q) {
-      setResults(investmentCatalogue);
+      setResults(source);
     } else {
       setResults(
-        investmentCatalogue.filter(
+        source.filter(
           (f) => f.name.toLowerCase().includes(q) || f.apirCode.toLowerCase().includes(q)
         )
       );

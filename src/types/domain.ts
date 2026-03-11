@@ -65,6 +65,7 @@ export interface Platform {
   warningMessage?: string;
   investments: Investment[];
   research?: PlatformResearch;
+  wsPlanId?: string;  // links to WsPlan.id in WealthSolverContext
 }
 
 export interface Entity {

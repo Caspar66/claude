@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppContext } from '@/context/AppContext';
+import { useWealthSolver } from '@/context/WealthSolverContext';
 import { cn } from '@/lib/utils';
 import { InvestmentSearchPanel } from './InvestmentSearchPanel';
 import { ManualFundEntryPanel } from './ManualFundEntryPanel';
 import type { Investment } from '@/types/domain';
-import { investmentCatalogue } from '@/data/seed';
+import type { WsInvestmentOption } from '@/types/wealthsolver';
 
 type Mode = 'search' | 'manual';
 
@@ -18,13 +19,50 @@ function fmtPct(n: number | undefined) {
   return n.toFixed(n % 1 === 0 ? 2 : 4).replace(/0+$/, '').replace(/\.$/, '') + '%';
 }
 
+function wsOptionToCatalogueItem(opt: WsInvestmentOption): Omit<Investment, 'id' | 'amount'> {
+  return {
+    name: opt.name,
+    apirCode: opt.apir,
+    allocation: {
+      'Domestic Equity': opt.alloc.domEq,
+      'International Equity': opt.alloc.intlEq,
+      'Domestic Property': opt.alloc.domProp,
+      'International Property': opt.alloc.intlProp,
+      'Domestic Fixed Interest': opt.alloc.domFI,
+      'International Fixed Interest': opt.alloc.intlFI,
+      'Domestic Cash': opt.alloc.domCash,
+      'International Cash': opt.alloc.intlCash,
+      'Alternative': opt.alloc.alt,
+      'Other': opt.alloc.other,
+    },
+    investCosts: opt.investFees,
+    transactionCost: opt.transCost ?? undefined,
+    buyCost: opt.buyCost ?? undefined,
+    sellCost: opt.sellCost ?? undefined,
+    perfFee: opt.perfFees ?? undefined,
+    fundType: opt.sma ? 'SMA' : '',
+    isCashAccount: opt.cashAccount,
+    isEthical: opt.ethical,
+    broadObjectives: opt.broadObjectives,
+  };
+}
+
 export function AddInvestmentPage() {
   const { scenarioId, platformId } = useParams<{ scenarioId: string; platformId: string }>();
   const { state, dispatch } = useAppContext();
+  const { state: wsState } = useWealthSolver();
   const navigate = useNavigate();
 
   const scenario = state.clientFile.scenarios.find((s) => s.id === scenarioId);
   const platform = scenario?.entities.flatMap((e) => e.platforms).find((p) => p.id === platformId);
+
+  // Build investment catalogue from the linked WsPlan's investmentOptions
+  const planCatalogue = useMemo(() => {
+    if (!platform?.wsPlanId) return undefined;
+    const wsPlan = wsState.plans.find((p) => p.id === platform.wsPlanId);
+    if (!wsPlan) return undefined;
+    return wsPlan.investmentOptions.map(wsOptionToCatalogueItem);
+  }, [platform?.wsPlanId, wsState.plans]);
 
   const [mode, setMode] = useState<Mode>('search');
   const [selected, setSelected] = useState<SelectedInvestment[]>([]);
@@ -112,7 +150,7 @@ export function AddInvestmentPage() {
         </div>
 
         {mode === 'search' ? (
-          <InvestmentSearchPanel selectedIds={selectedIds} onToggle={toggleFromCatalogue} />
+          <InvestmentSearchPanel selectedIds={selectedIds} onToggle={toggleFromCatalogue} catalogue={planCatalogue} />
         ) : (
           <ManualFundEntryPanel onAdd={addManual} />
         )}

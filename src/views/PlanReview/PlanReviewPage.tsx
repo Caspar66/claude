@@ -12,6 +12,7 @@ import {
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { useAppContext } from '@/context/AppContext';
+import { useWealthSolver } from '@/context/WealthSolverContext';
 import { isPlanReviewProposal } from '@/types/domain';
 import type {
   AccountType,
@@ -21,7 +22,7 @@ import type {
   PlanReviewProposal,
   Recommendation,
 } from '@/types/domain';
-import { planCatalogue, type PlanType } from '@/data/planCatalogue';
+import { type PlanType } from '@/data/planCatalogue';
 import { cn, formatCurrency } from '@/lib/utils';
 import { InvestmentSearchPanel } from '@/views/AddInvestment/InvestmentSearchPanel';
 import { ManualFundEntryPanel } from '@/views/AddInvestment/ManualFundEntryPanel';
@@ -635,6 +636,7 @@ export function PlanReviewPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { state, dispatch } = useAppContext();
+  const { state: wsState } = useWealthSolver();
 
   const entity = (searchParams.get('entity') ?? 'Client') as EntityOwner;
   const labelParam = searchParams.get('label');
@@ -680,7 +682,7 @@ export function PlanReviewPage() {
 
     // Add new proposed plan if coming back from plan research
     if (addPlanId) {
-      const plan = planCatalogue.find((p) => p.id === addPlanId);
+      const plan = wsState.plans.find((p) => p.id === addPlanId);
       if (plan) {
         const newPlatformId = `proposed-${addPlanId}`;
         const cashHolding: Investment = {
@@ -695,9 +697,10 @@ export function PlanReviewPage() {
         };
         const newPlatform: Platform = {
           id: newPlatformId,
+          wsPlanId: plan.id,
           name: plan.name,
           accountNumber: '',
-          type: plan.type as AccountType,
+          type: plan.type === 'Investment Platform' ? 'Investment' : plan.type as AccountType,
           balance: 0,
           investments: [cashHolding],
         };

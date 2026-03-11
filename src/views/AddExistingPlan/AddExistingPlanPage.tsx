@@ -4,15 +4,16 @@ import { Search, Info, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppContext } from '@/context/AppContext';
-import {
-  planCatalogue,
-  PLAN_MANAGERS,
-  PLAN_SUBTYPES,
-  ADVANCED_FEATURES,
-  type PlanType,
-} from '@/data/planCatalogue';
+import { useWealthSolver } from '@/context/WealthSolverContext';
+import { ADVANCED_FEATURES, type PlanType } from '@/data/planCatalogue';
 import type { EntityOwner, Platform } from '@/types/domain';
+import type { WsPlan, WsPlanType } from '@/types/wealthsolver';
 import { cn } from '@/lib/utils';
+
+// Map WsPlanType → UI PlanType filter value
+function toPlanType(t: WsPlanType): PlanType {
+  return t === 'Investment Platform' ? 'Investment' : t;
+}
 
 // ── Star Rating ───────────────────────────────────────────────────────────────
 
@@ -64,12 +65,15 @@ interface FilterState {
 function FilterPanel({
   filter,
   onChange,
+  managers,
+  subtypes,
 }: {
   filter: FilterState;
   onChange: (patch: Partial<FilterState>) => void;
+  managers: string[];
+  subtypes: string[];
 }) {
   const [advancedOpen, setAdvancedOpen] = useState(true);
-  const subtypes = PLAN_SUBTYPES[filter.planType];
 
   function toggleFeature(f: string) {
     const next = new Set(filter.features);
@@ -129,7 +133,7 @@ function FilterPanel({
             value={filter.manager}
             onChange={(e) => onChange({ manager: e.target.value })}
           >
-            {PLAN_MANAGERS.map((m) => <option key={m}>{m}</option>)}
+            {managers.map((m) => <option key={m}>{m}</option>)}
           </select>
         </div>
 
@@ -204,6 +208,7 @@ export function AddExistingPlanPage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { dispatch } = useAppContext();
+  const { state: wsState } = useWealthSolver();
 
   const entityParam = (searchParams.get('entity') ?? 'Client') as EntityOwner;
   const typeParam = (searchParams.get('planType') ?? 'Super') as PlanType;
@@ -226,8 +231,24 @@ export function AddExistingPlanPage() {
     setFilter((prev) => ({ ...prev, ...patch }));
   }
 
+  // Derive manager and subtype lists from the current WsPlan catalogue for this type
+  const plansForType = useMemo(
+    () => wsState.plans.filter((p) => toPlanType(p.type) === filter.planType),
+    [wsState.plans, filter.planType]
+  );
+
+  const managers = useMemo(() => {
+    const vals = Array.from(new Set(plansForType.map((p) => p.manager))).sort();
+    return ['All', ...vals];
+  }, [plansForType]);
+
+  const subtypes = useMemo(() => {
+    const vals = Array.from(new Set(plansForType.map((p) => p.subtype).filter(Boolean))).sort();
+    return ['All', ...vals];
+  }, [plansForType]);
+
   const filtered = useMemo(() => {
-    let result = planCatalogue.filter((p) => p.type === filter.planType);
+    let result = plansForType;
 
     if (filter.keyword.trim()) {
       const kw = filter.keyword.toLowerCase();
@@ -239,27 +260,29 @@ export function AddExistingPlanPage() {
     if (filter.manager !== 'All') {
       result = result.filter((p) => p.manager === filter.manager);
     }
+    if (filter.minInvestmentOptions > 0) {
+      result = result.filter((p) => p.investmentOptions.length >= filter.minInvestmentOptions);
+    }
 
-    // Sort
     result = [...result].sort((a, b) => {
       if (filter.sortBy === 'A-Z') return a.name.localeCompare(b.name);
       if (filter.sortBy === 'Z-A') return b.name.localeCompare(a.name);
-      if (filter.sortBy === 'Rating: High to Low') return b.stars - a.stars;
-      if (filter.sortBy === 'Rating: Low to High') return a.stars - b.stars;
+      if (filter.sortBy === 'Rating: High to Low') return b.rating - a.rating;
+      if (filter.sortBy === 'Rating: Low to High') return a.rating - b.rating;
       return 0;
     });
 
     return result;
-  }, [filter]);
+  }, [plansForType, filter]);
 
-  function handleSelect(planId: string) {
-    const plan = planCatalogue.find((p) => p.id === planId);
+  function handleSelect(wsPlanId: string) {
+    const plan = wsState.plans.find((p) => p.id === wsPlanId);
     if (!plan || !scenarioId) return;
 
-    // Proposed plan mode: navigate back to PlanReviewPage with the selected plan
+    // Proposed plan mode: navigate back to PlanReviewPage with the selected plan id
     if (mode === 'proposed') {
       const pid = proposedProposalId ?? 'new';
-      const params = new URLSearchParams({ entity: proposedEntity, addPlan: planId });
+      const params = new URLSearchParams({ entity: proposedEntity, addPlan: wsPlanId });
       if (proposedLabel) params.set('label', proposedLabel);
       if (pid === 'new') {
         navigate(`/scenarios/${scenarioId}/proposals/plan-review/new?${params.toString()}`);
@@ -273,9 +296,10 @@ export function AddExistingPlanPage() {
     const newPlatformId = `platform-${Date.now()}`;
     const newPlatform: Platform = {
       id: newPlatformId,
-      name: `${plan.name} - Choice`,
+      wsPlanId: plan.id,
+      name: plan.name,
       accountNumber: String(Math.floor(100000 + Math.random() * 900000)),
-      type: plan.type === 'Investment' ? 'Investment' : plan.type,
+      type: plan.type === 'Investment Platform' ? 'Investment' : plan.type,
       balance: 0,
       taxFreeBalance: 0,
       otherBalancesClient: 0,
@@ -324,7 +348,12 @@ export function AddExistingPlanPage() {
 
   return (
     <div className="flex h-full min-h-screen">
-      <FilterPanel filter={filter} onChange={patchFilter} />
+      <FilterPanel
+        filter={filter}
+        onChange={patchFilter}
+        managers={managers}
+        subtypes={subtypes}
+      />
 
       {/* Results panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
@@ -364,36 +393,22 @@ export function AddExistingPlanPage() {
               <div className="flex-1 min-w-0">
                 <div className="text-sm font-semibold text-foreground mb-1">{plan.name}</div>
                 <div className="flex items-center gap-2">
-                  <StarRating stars={plan.stars} />
+                  <StarRating stars={plan.rating} />
                   <button className="text-muted-foreground hover:text-foreground">
                     <Info size={13} />
                   </button>
-                  {plan.hasWarning && (
-                    <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" title="Plan has a warning" />
+                  {!plan.openForBusiness && (
+                    <div className="w-3 h-3 rounded-full bg-red-500 shrink-0" title="Closed for new business" />
                   )}
                 </div>
               </div>
               <div className="shrink-0 ml-4">
-                {plan.hasVariants ? (
-                  <div className="flex">
-                    <button
-                      onClick={() => handleSelect(plan.id)}
-                      className="border border-border rounded-l px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors"
-                    >
-                      {selectLabel}
-                    </button>
-                    <button className="border border-border border-l-0 rounded-r px-2 py-1.5 text-xs hover:bg-gray-50 transition-colors">
-                      <ChevronDown size={11} />
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => handleSelect(plan.id)}
-                    className="border border-border rounded px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors"
-                  >
-                    {selectLabel}
-                  </button>
-                )}
+                <button
+                  onClick={() => handleSelect(plan.id)}
+                  className="border border-border rounded px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors"
+                >
+                  {selectLabel}
+                </button>
               </div>
             </div>
           ))}
