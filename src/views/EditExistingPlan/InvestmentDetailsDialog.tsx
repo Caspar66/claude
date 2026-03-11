@@ -441,6 +441,92 @@ function TMDTab({ inv }: { inv: Investment }) {
   );
 }
 
+// ── Edit Asset Allocations Tab (SMA only) ────────────────────────────────────
+
+function EditAssetAllocationsTab({
+  inv,
+  scenarioId,
+  platformId,
+}: {
+  inv: Investment;
+  scenarioId?: string;
+  platformId?: string;
+}) {
+  const { dispatch } = useAppContext();
+  const [alloc, setAlloc] = useState<Record<string, string>>(
+    Object.fromEntries(
+      [...GROWTH_FIELDS, ...DEFENSIVE_FIELDS, ...OTHER_FIELDS_CF].map((f) => [
+        f,
+        String((inv.allocation as Record<string, number>)[f] ?? 0),
+      ])
+    )
+  );
+  const [saved, setSaved] = useState(false);
+
+  function parseA(f: string) {
+    return parseFloat(alloc[f]?.replace(/[^0-9.]/g, '') || '0') || 0;
+  }
+
+  const growthTotal = GROWTH_FIELDS.reduce((s, f) => s + parseA(f), 0);
+  const defTotal = DEFENSIVE_FIELDS.reduce((s, f) => s + parseA(f), 0);
+  const otherTotal = OTHER_FIELDS_CF.reduce((s, f) => s + parseA(f), 0);
+  const total = growthTotal + defTotal + otherTotal;
+
+  function handleUpdate() {
+    if (!scenarioId || !platformId) return;
+    const allocationRecord: Record<string, number> = {};
+    [...GROWTH_FIELDS, ...DEFENSIVE_FIELDS, ...OTHER_FIELDS_CF].forEach((f) => {
+      const n = parseA(f);
+      if (n > 0) allocationRecord[f] = n;
+    });
+    dispatch({
+      type: 'UPDATE_INVESTMENT',
+      scenarioId,
+      platformId,
+      investment: { ...inv, allocation: allocationRecord },
+    });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className="p-4">
+      <div className="border border-border rounded overflow-hidden p-4">
+        <div className="text-sm font-semibold mb-3">Asset Allocation</div>
+        <div className="grid grid-cols-3 gap-8 mb-4">
+          <div className="space-y-1">
+            {GROWTH_FIELDS.map((f) => pctField(f, alloc[f], (v) => setAlloc((p) => ({ ...p, [f]: v }))))}
+          </div>
+          <div className="space-y-1">
+            {DEFENSIVE_FIELDS.map((f) => pctField(f, alloc[f], (v) => setAlloc((p) => ({ ...p, [f]: v }))))}
+          </div>
+          <div className="space-y-1">
+            {OTHER_FIELDS_CF.map((f) => pctField(f, alloc[f], (v) => setAlloc((p) => ({ ...p, [f]: v }))))}
+          </div>
+        </div>
+
+        {/* Totals */}
+        <div className="flex items-center gap-8 border-t border-border pt-2 text-xs text-muted-foreground mb-4">
+          <span><span className="font-medium">Growth total</span> {growthTotal.toFixed(3)}%</span>
+          <span><span className="font-medium">Defensive total</span> {defTotal.toFixed(3)}%</span>
+          <span><span className="font-medium">Other total</span> {otherTotal.toFixed(3)}%</span>
+          <span className="ml-auto"><span className="font-medium">Total</span> {total.toFixed(3)}%</span>
+        </div>
+
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleUpdate}
+            className="border border-border rounded px-4 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+          >
+            Update
+          </button>
+          {saved && <span className="text-xs text-green-600">Saved!</span>}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Edit Custom Fund Tab ──────────────────────────────────────────────────────
 
 function pctField(label: string, value: string, onChange: (v: string) => void) {
@@ -639,6 +725,7 @@ export function InvestmentDetailsDialog({ investment, open, onClose, scenarioId,
   if (!investment) return null;
 
   const isCustom = !!investment.isCustom;
+  const isSMA = investment.fundType === 'SMA';
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -682,6 +769,9 @@ export function InvestmentDetailsDialog({ investment, open, onClose, scenarioId,
               {isCustom && (
                 <TabsTrigger value="custom" className={TRIGGER_CLASS}>Edit Custom Fund</TabsTrigger>
               )}
+              {isSMA && (
+                <TabsTrigger value="edit-alloc" className={TRIGGER_CLASS}>Edit Asset Allocations</TabsTrigger>
+              )}
               <TabsTrigger value="type" className={TRIGGER_CLASS}>Type</TabsTrigger>
               <TabsTrigger value="tmd" className={TRIGGER_CLASS}>TMD</TabsTrigger>
             </TabsList>
@@ -707,6 +797,15 @@ export function InvestmentDetailsDialog({ investment, open, onClose, scenarioId,
                   scenarioId={scenarioId}
                   platformId={platformId}
                   onClose={onClose}
+                />
+              </TabsContent>
+            )}
+            {isSMA && (
+              <TabsContent value="edit-alloc" className="mt-0">
+                <EditAssetAllocationsTab
+                  inv={investment}
+                  scenarioId={scenarioId}
+                  platformId={platformId}
                 />
               </TabsContent>
             )}
