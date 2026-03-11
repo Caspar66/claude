@@ -179,7 +179,6 @@ export function InvestmentOptionsView({ plan }: Props) {
   const [showAddExisting, setShowAddExisting] = useState(false);
   const [showAddCustom, setShowAddCustom] = useState(false);
   const [viewingOption, setViewingOption] = useState<WsInvestmentOption | null>(null);
-  const [editingOption, setEditingOption] = useState<WsInvestmentOption | null>(null);
 
   const existingIds = new Set(plan.investmentOptions.map((o) => o.id));
 
@@ -243,24 +242,13 @@ export function InvestmentOptionsView({ plan }: Props) {
               <tr key={opt.id} className="border-b border-border hover:bg-gray-50">
                 <td className="px-3 py-2">
                   <span className="flex items-center gap-1.5">
-                    {/* View details icon for all options */}
                     <button
                       className="text-teal-700 hover:text-teal-900"
-                      title="View investment details"
+                      title={opt.custom ? 'View / Edit investment details' : 'View investment details'}
                       onClick={() => setViewingOption(opt)}
                     >
                       <ExternalLink size={13} />
                     </button>
-                    {/* Edit icon only for custom options */}
-                    {opt.custom && (
-                      <button
-                        className="text-teal-700 hover:text-teal-900"
-                        title="Edit custom option"
-                        onClick={() => setEditingOption(opt)}
-                      >
-                        ✎
-                      </button>
-                    )}
                     <button
                       className="text-red-400 hover:text-red-600"
                       title="Remove"
@@ -293,12 +281,16 @@ export function InvestmentOptionsView({ plan }: Props) {
         </table>
       </div>
 
-      {/* Investment Details Modal (view) */}
+      {/* Investment Details Modal (view / edit custom) */}
       {viewingOption && (
         <InvestmentViewModal
           option={viewingOption}
           plan={plan}
           onClose={() => setViewingOption(null)}
+          onUpdate={(opt) => {
+            dispatch({ type: 'UPDATE_INVESTMENT_OPTION', planId: plan.id, option: opt });
+            setViewingOption(opt);
+          }}
         />
       )}
 
@@ -317,23 +309,12 @@ export function InvestmentOptionsView({ plan }: Props) {
       {/* Add Custom Modal */}
       {showAddCustom && (
         <AddCustomModal
+          plan={plan}
           onAdd={(opt) => {
             dispatch({ type: 'ADD_INVESTMENT_OPTION', planId: plan.id, option: opt });
             setShowAddCustom(false);
           }}
           onClose={() => setShowAddCustom(false)}
-        />
-      )}
-
-      {/* Edit Modal (custom only) */}
-      {editingOption && (
-        <InvestmentEditModal
-          option={editingOption}
-          onSave={(opt) => {
-            dispatch({ type: 'UPDATE_INVESTMENT_OPTION', planId: plan.id, option: opt });
-            setEditingOption(null);
-          }}
-          onClose={() => setEditingOption(null)}
         />
       )}
     </div>
@@ -342,15 +323,25 @@ export function InvestmentOptionsView({ plan }: Props) {
 
 // ── Investment View Modal (read-only, tabbed) ─────────────────────────────────
 
-type ViewTab = 'assetAllocation' | 'fees' | 'pastPerformance' | 'researchReports' | 'type' | 'admin' | 'tmd';
+type ViewTab = 'assetAllocation' | 'fees' | 'pastPerformance' | 'researchReports' | 'editCustomFund' | 'type' | 'admin' | 'tmd';
 
-const VIEW_TABS: { key: ViewTab; label: string }[] = [
+const VIEW_TABS_STANDARD: { key: ViewTab; label: string }[] = [
   { key: 'assetAllocation',  label: 'Asset Allocation' },
   { key: 'fees',             label: 'Fees' },
   { key: 'pastPerformance',  label: 'Past Performance' },
   { key: 'researchReports',  label: 'Research Reports' },
   { key: 'type',             label: 'Type' },
   { key: 'admin',            label: 'Admin' },
+  { key: 'tmd',              label: 'TMD' },
+];
+
+const VIEW_TABS_CUSTOM: { key: ViewTab; label: string }[] = [
+  { key: 'assetAllocation',  label: 'Asset Allocation' },
+  { key: 'fees',             label: 'Fees' },
+  { key: 'pastPerformance',  label: 'Past Performance' },
+  { key: 'researchReports',  label: 'Research Reports' },
+  { key: 'editCustomFund',   label: 'Edit Custom Fund' },
+  { key: 'type',             label: 'Type' },
   { key: 'tmd',              label: 'TMD' },
 ];
 
@@ -377,11 +368,14 @@ function InvestmentViewModal({
   option,
   plan,
   onClose,
+  onUpdate,
 }: {
   option: WsInvestmentOption;
   plan: WsPlan;
   onClose: () => void;
+  onUpdate?: (opt: WsInvestmentOption) => void;
 }) {
+  const tabs = option.custom ? VIEW_TABS_CUSTOM : VIEW_TABS_STANDARD;
   const [tab, setTab] = useState<ViewTab>('assetAllocation');
   const alloc = option.alloc;
 
@@ -429,18 +423,16 @@ function InvestmentViewModal({
               <span className="text-muted-foreground">APIR, ASX or other code</span>
               <span className="font-semibold">{option.apir}</span>
             </div>
-            {option.broadObjectives && (
-              <div className="grid grid-cols-[160px_1fr] gap-2 text-sm">
-                <span className="text-muted-foreground">Broad Objectives</span>
-                <span className="text-sm">{option.broadObjectives}</span>
-              </div>
-            )}
+            <div className="grid grid-cols-[160px_1fr] gap-2 text-sm">
+              <span className="text-muted-foreground">Broad Objectives</span>
+              <span className="text-sm">{option.broadObjectives || 'n/a'}</span>
+            </div>
           </div>
 
           {/* Tabs */}
           <div className="border-b border-border px-5">
             <div className="flex gap-0 flex-wrap">
-              {VIEW_TABS.map(({ key, label }) => (
+              {tabs.map(({ key, label }) => (
                 <button
                   key={key}
                   className={`px-3 py-2.5 text-xs border-b-2 -mb-px transition-colors ${
@@ -620,6 +612,11 @@ function InvestmentViewModal({
               </div>
             )}
 
+            {/* ── Edit Custom Fund ── */}
+            {tab === 'editCustomFund' && option.custom && onUpdate && (
+              <EditCustomFundTab option={option} onUpdate={onUpdate} />
+            )}
+
             {/* ── Type ── */}
             {tab === 'type' && (
               <div className="border border-border rounded overflow-hidden">
@@ -734,21 +731,75 @@ function AddExistingModal({
 
 // ── Add Custom Modal ──────────────────────────────────────────────────────────
 
-function AddCustomModal({ onAdd, onClose }: { onAdd: (opt: WsInvestmentOption) => void; onClose: () => void }) {
+// Percent input that shows 4 decimal places on blur and tracks raw string during edit
+function PctInput({
+  value,
+  onChange,
+  decimals = 4,
+  className = '',
+}: {
+  value: number;
+  onChange: (v: number) => void;
+  decimals?: number;
+  className?: string;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [raw, setRaw] = useState('');
+
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      className={`border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 ${className}`}
+      value={editing ? raw : `${value.toFixed(decimals)}%`}
+      onFocus={() => { setEditing(true); setRaw(String(value)); }}
+      onChange={(e) => setRaw(e.target.value)}
+      onBlur={() => {
+        setEditing(false);
+        const n = parseFloat(raw);
+        onChange(isNaN(n) ? 0 : n);
+      }}
+    />
+  );
+}
+
+function AddCustomModal({
+  plan,
+  onAdd,
+  onClose,
+}: {
+  plan: WsPlan;
+  onAdd: (opt: WsInvestmentOption) => void;
+  onClose: () => void;
+}) {
   const [name, setName] = useState('');
   const [apir, setApir] = useState('');
   const [investFees, setInvestFees] = useState(0);
-  const [perfFees, setPerfFees] = useState<string>('');
-  const [transCost, setTransCost] = useState<string>('');
-  const [buyCost, setBuyCost] = useState<string>('');
-  const [sellCost, setSellCost] = useState<string>('');
+  const [perfFees, setPerfFees] = useState(0);
+  const [transCost, setTransCost] = useState(0);
+  const [buyCost, setBuyCost] = useState(0);
+  const [sellCost, setSellCost] = useState(0);
   const [alloc, setAlloc] = useState<WsAssetAllocation>({ ...EMPTY_ALLOC });
 
+  const growth = allocGrowth(alloc);
+  const defensive = allocDefensive(alloc);
+  const other = allocOther(alloc);
   const total = allocTotal(alloc);
   const canAdd = name.trim() && apir.trim();
-  const inputSm = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full';
 
-  function handleAdd() {
+  const planFees = getAllPlanFees(plan);
+
+  // For brand-new custom option, no id yet so all fees will show as "Excluded"
+  const TEMP_ID = '__new__';
+
+  const fieldCls = 'border border-border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full';
+  const computedCls = 'border border-border rounded px-2 py-0.5 text-xs w-full text-right bg-gray-50 text-muted-foreground';
+
+  function setAllocKey(key: keyof WsAssetAllocation, val: number) {
+    setAlloc((a) => ({ ...a, [key]: val }));
+  }
+
+  function handleOK() {
     const opt: WsInvestmentOption = {
       id: `custom-${Date.now()}`,
       name: name.trim(),
@@ -756,10 +807,10 @@ function AddCustomModal({ onAdd, onClose }: { onAdd: (opt: WsInvestmentOption) =
       type: '',
       assetAllocation: primaryAlloc(alloc),
       investFees,
-      perfFees: perfFees === '' ? null : Number(perfFees),
-      transCost: transCost === '' ? null : Number(transCost),
-      buyCost: buyCost === '' ? null : Number(buyCost),
-      sellCost: sellCost === '' ? null : Number(sellCost),
+      perfFees,
+      transCost,
+      buyCost,
+      sellCost,
       custom: true,
       broadObjectives: '',
       alloc,
@@ -778,136 +829,295 @@ function AddCustomModal({ onAdd, onClose }: { onAdd: (opt: WsInvestmentOption) =
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-sm font-semibold mb-3">Add Custom Option</h3>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {[
-            { label: 'Name *',      val: name,       set: setName,       type: 'text' },
-            { label: 'APIR / Code *', val: apir,     set: setApir,       type: 'text' },
-          ].map(({ label, val, set, type }) => (
-            <div key={label}>
-              <label className="text-xs text-muted-foreground">{label}</label>
-              <input type={type} className={`${inputSm} mt-0.5`} value={val} onChange={(e) => (set as (v: string) => void)(e.target.value)} />
-            </div>
-          ))}
-          {[
-            { label: 'Invest Fees %', val: investFees, set: setInvestFees },
-          ].map(({ label, val, set }) => (
-            <div key={label}>
-              <label className="text-xs text-muted-foreground">{label}</label>
-              <input type="number" className={`${inputSm} mt-0.5`} value={val} onChange={(e) => set(Number(e.target.value))} />
-            </div>
-          ))}
-          {[
-            { label: 'Perf Fee %',   val: perfFees,   set: setPerfFees },
-            { label: 'Trans Cost %', val: transCost,  set: setTransCost },
-            { label: 'Buy Cost %',   val: buyCost,    set: setBuyCost },
-            { label: 'Sell Cost %',  val: sellCost,   set: setSellCost },
-          ].map(({ label, val, set }) => (
-            <div key={label}>
-              <label className="text-xs text-muted-foreground">{label}</label>
-              <input type="number" className={`${inputSm} mt-0.5`} value={val} onChange={(e) => set(e.target.value)} placeholder="—" />
-            </div>
-          ))}
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white flex-shrink-0">
+          <span className="text-sm font-semibold">Add New Investment Option</span>
+          <button onClick={onClose} className="text-white/80 hover:text-white"><X size={16} /></button>
         </div>
 
-        <h4 className="text-xs font-semibold mb-2">Asset Allocation</h4>
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          {ALLOC_KEYS.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground w-44 flex-shrink-0">{label}</label>
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {/* Name + APIR */}
+          <div className="grid grid-cols-[160px_1fr] gap-y-2 gap-x-3 mb-4">
+            <label className="text-sm self-center">Name</label>
+            <input
+              type="text"
+              className={`${fieldCls} col-span-1`}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Fund name"
+            />
+            <label className="text-sm self-center">APIR, ASX or other code</label>
+            <input
+              type="text"
+              className={`${fieldCls} w-40`}
+              value={apir}
+              onChange={(e) => setApir(e.target.value)}
+              placeholder="e.g. ABC0001AU"
+            />
+          </div>
+
+          {/* Two-column: fee inputs (left) + fee set assignments (right) */}
+          <div className="flex gap-8 mb-4">
+            {/* Left: fee inputs */}
+            <div className="flex-shrink-0 w-72">
+              {[
+                { label: 'Investment Fees and Costs', val: investFees, set: setInvestFees, dec: 4 },
+                { label: 'Performance Fee',           val: perfFees,   set: setPerfFees,   dec: 3 },
+                { label: '',                          val: null,       set: null,          dec: 0 },
+                { label: 'Transaction Cost',          val: transCost,  set: setTransCost,  dec: 4 },
+                { label: 'Buy Cost',                  val: buyCost,    set: setBuyCost,    dec: 3 },
+                { label: 'Sell Cost',                 val: sellCost,   set: setSellCost,   dec: 3 },
+              ].map(({ label, val, set, dec }, i) =>
+                label ? (
+                  <div key={label} className="flex items-center gap-3 mb-2">
+                    <span className="text-sm w-52 flex-shrink-0">{label}</span>
+                    <PctInput value={val!} onChange={set!} decimals={dec} className="w-24" />
+                  </div>
+                ) : (
+                  <div key={i} className="h-3" />
+                )
+              )}
+            </div>
+
+            {/* Right: plan fee assignments (informational) */}
+            <div className="flex-1 min-w-0">
+              <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
+                {planFees.map((fee) => {
+                  const assignment = getFeeSetForOption(fee, TEMP_ID);
+                  return (
+                    <div key={fee.xplanId} className="contents">
+                      <span className="text-xs text-muted-foreground">{fee.name}:</span>
+                      <span className="text-xs text-right">{assignment}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Asset Allocation */}
+          <div>
+            {/* Growth group */}
+            {[
+              { key: 'domEq',   label: 'Domestic Equity' },
+              { key: 'intlEq',  label: 'International Equity' },
+              { key: 'domProp', label: 'Domestic Property' },
+              { key: 'intlProp',label: 'International Property' },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center mb-1">
+                <span className="text-sm w-56">{label}</span>
+                <PctInput value={alloc[key as keyof WsAssetAllocation]} onChange={(v) => setAllocKey(key as keyof WsAssetAllocation, v)} decimals={3} className="w-24" />
+              </div>
+            ))}
+            <div className="flex items-center mb-2">
+              <span className="text-sm font-bold w-56">Total Growth</span>
+              <input readOnly className={`${computedCls} w-24`} value={`${growth.toFixed(3)}%`} />
+            </div>
+
+            {/* Defensive group */}
+            {[
+              { key: 'domFI',   label: 'Domestic Fixed Interest' },
+              { key: 'intlFI',  label: 'International Fixed Interest' },
+              { key: 'domCash', label: 'Domestic Cash' },
+              { key: 'intlCash',label: 'International Cash' },
+              { key: 'dirProp', label: 'Direct Property' },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center mb-1">
+                <span className="text-sm w-56">{label}</span>
+                <PctInput value={alloc[key as keyof WsAssetAllocation]} onChange={(v) => setAllocKey(key as keyof WsAssetAllocation, v)} decimals={3} className="w-24" />
+              </div>
+            ))}
+            <div className="flex items-center mb-2">
+              <span className="text-sm font-bold w-56">Total Defensive</span>
+              <input readOnly className={`${computedCls} w-24`} value={`${defensive.toFixed(3)}%`} />
+            </div>
+
+            {/* Other group */}
+            {[
+              { key: 'alt',   label: 'Alternative' },
+              { key: 'other', label: 'Other' },
+            ].map(({ key, label }) => (
+              <div key={key} className="flex items-center mb-1">
+                <span className="text-sm w-56">{label}</span>
+                <PctInput value={alloc[key as keyof WsAssetAllocation]} onChange={(v) => setAllocKey(key as keyof WsAssetAllocation, v)} decimals={3} className="w-24" />
+              </div>
+            ))}
+            <div className="flex items-center mb-2">
+              <span className="text-sm font-bold w-56">Total Other</span>
+              <input readOnly className={`${computedCls} w-24`} value={`${other.toFixed(3)}%`} />
+            </div>
+
+            {/* Grand total */}
+            <div className="flex items-center">
+              <span className="text-sm font-bold w-56">TOTAL</span>
               <input
-                type="number"
-                className="border border-border rounded px-2 py-1 text-xs w-16 focus:outline-none focus:ring-1 focus:ring-teal-600"
-                value={alloc[key]}
-                onChange={(e) => setAlloc((a) => ({ ...a, [key]: Number(e.target.value) }))}
+                readOnly
+                className={`w-24 border border-border rounded px-2 py-0.5 text-xs text-right font-semibold ${
+                  Math.abs(total - 100) > 0.001 ? 'bg-red-100 text-red-700 border-red-300' : 'bg-green-50 text-green-700 border-green-300'
+                }`}
+                value={`${total.toFixed(3)}%`}
               />
-              <span className="text-xs text-muted-foreground">%</span>
             </div>
-          ))}
-        </div>
-        <div className="text-xs flex gap-6 mb-4">
-          <span>Growth: <strong>{allocGrowth(alloc).toFixed(2)}%</strong></span>
-          <span>Defensive: <strong>{allocDefensive(alloc).toFixed(2)}%</strong></span>
-          <span>Other: <strong>{allocOther(alloc).toFixed(2)}%</strong></span>
-          <span className={total !== 100 ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold'}>
-            Total: {total.toFixed(2)}%
-          </span>
+          </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button className="bg-teal-700 hover:bg-teal-800 text-white h-8 text-sm" disabled={!canAdd} onClick={handleAdd}>Add</Button>
-          <Button variant="outline" className="h-8 text-sm" onClick={onClose}>Cancel</Button>
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-white flex-shrink-0">
+          <Button className="bg-white border border-border text-foreground hover:bg-gray-50 h-7 text-xs px-4" disabled={!canAdd} onClick={handleOK}>OK</Button>
+          <Button variant="outline" className="h-7 text-xs px-4" onClick={onClose}>Cancel</Button>
         </div>
       </DialogContent>
     </Dialog>
   );
 }
 
-// ── Investment Edit Modal (custom options only) ───────────────────────────────
+// ── Edit Custom Fund Tab (inside Investment Details modal) ────────────────────
 
-function InvestmentEditModal({
+function EditCustomFundTab({
   option,
-  onSave,
-  onClose,
+  onUpdate,
 }: {
   option: WsInvestmentOption;
-  onSave: (opt: WsInvestmentOption) => void;
-  onClose: () => void;
+  onUpdate: (opt: WsInvestmentOption) => void;
 }) {
   const [form, setForm] = useState<WsInvestmentOption>({ ...option, alloc: { ...option.alloc } });
+
+  const growth = allocGrowth(form.alloc);
+  const defensive = allocDefensive(form.alloc);
+  const other = allocOther(form.alloc);
   const total = allocTotal(form.alloc);
-  const inputSm = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full';
+
+  const computedCls = 'border border-border rounded px-2 py-0.5 text-xs text-right bg-gray-50 text-muted-foreground w-full';
+
+  function setAllocKey(key: keyof WsAssetAllocation, val: number) {
+    setForm((f) => ({ ...f, alloc: { ...f.alloc, [key]: val } }));
+  }
+
+  // Column 1: domEq, intlEq, domProp, intlProp
+  const col1: Array<keyof WsAssetAllocation> = ['domEq', 'intlEq', 'domProp', 'intlProp'];
+  // Column 2: domFI, intlFI, domCash, intlCash, dirProp
+  const col2: Array<keyof WsAssetAllocation> = ['domFI', 'intlFI', 'domCash', 'intlCash', 'dirProp'];
+  // Column 3: alt, other
+  const col3: Array<keyof WsAssetAllocation> = ['alt', 'other'];
+
+  const keyLabel: Record<keyof WsAssetAllocation, string> = {
+    domEq: 'Domestic Equity', intlEq: 'International Equity', domProp: 'Domestic Property',
+    intlProp: 'International Property', domFI: 'Domestic Fixed Interest', intlFI: 'International Fixed Interest',
+    domCash: 'Domestic Cash', intlCash: 'International Cash', dirProp: 'Direct Property',
+    alt: 'Alternative', other: 'Other',
+  };
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <h3 className="text-sm font-semibold mb-3">Edit — {option.name}</h3>
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          {[
-            { label: 'Invest Fees %',       val: form.investFees,           set: (v: number) => setForm((f) => ({ ...f, investFees: v })) },
-            { label: 'Perf Fee %',          val: form.perfFees ?? '',       set: (v: number) => setForm((f) => ({ ...f, perfFees: v || null })) },
-            { label: 'Trans Cost %',        val: form.transCost ?? '',      set: (v: number) => setForm((f) => ({ ...f, transCost: v || null })) },
-            { label: 'Buy Cost %',          val: form.buyCost ?? '',        set: (v: number) => setForm((f) => ({ ...f, buyCost: v || null })) },
-            { label: 'Sell Cost %',         val: form.sellCost ?? '',       set: (v: number) => setForm((f) => ({ ...f, sellCost: v || null })) },
-            { label: 'Investment Rebate %', val: form.investmentRebate ?? 0, set: (v: number) => setForm((f) => ({ ...f, investmentRebate: v })) },
-          ].map(({ label, val, set }) => (
-            <div key={label}>
-              <label className="text-xs text-muted-foreground">{label}</label>
-              <input type="number" className={`${inputSm} mt-0.5`} value={val} onChange={(e) => set(Number(e.target.value))} />
+    <div>
+      {/* Fees edit row */}
+      <div className="border border-border rounded overflow-x-auto mb-5">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-gray-50 border-b border-border">
+              <th className="px-3 py-2 text-left font-semibold">Name</th>
+              <th className="px-3 py-2 text-left font-semibold">Code / APIR</th>
+              <th className="px-3 py-2 text-right font-semibold">Invest Costs</th>
+              <th className="px-3 py-2 text-right font-semibold">Transaction Cost</th>
+              <th className="px-3 py-2 text-right font-semibold">Buy Cost</th>
+              <th className="px-3 py-2 text-right font-semibold">Sell Cost</th>
+              <th className="px-3 py-2 text-right font-semibold">Perf Fee</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td className="px-2 py-1.5">
+                <input
+                  type="text"
+                  className="border border-border rounded px-2 py-0.5 text-xs w-40 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  value={form.name}
+                  onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
+                />
+              </td>
+              <td className="px-2 py-1.5">
+                <input
+                  type="text"
+                  className="border border-border rounded px-2 py-0.5 text-xs w-24 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  value={form.apir}
+                  onChange={(e) => setForm((f) => ({ ...f, apir: e.target.value }))}
+                />
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <PctInput value={form.investFees} onChange={(v) => setForm((f) => ({ ...f, investFees: v }))} decimals={4} className="w-20" />
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <PctInput value={form.transCost ?? 0} onChange={(v) => setForm((f) => ({ ...f, transCost: v }))} decimals={4} className="w-20" />
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <PctInput value={form.buyCost ?? 0} onChange={(v) => setForm((f) => ({ ...f, buyCost: v }))} decimals={3} className="w-20" />
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <PctInput value={form.sellCost ?? 0} onChange={(v) => setForm((f) => ({ ...f, sellCost: v }))} decimals={3} className="w-20" />
+              </td>
+              <td className="px-2 py-1.5 text-right">
+                <PctInput value={form.perfFees ?? 0} onChange={(v) => setForm((f) => ({ ...f, perfFees: v }))} decimals={3} className="w-20" />
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Asset Allocation */}
+      <h4 className="text-sm font-semibold mb-3">Asset Allocation</h4>
+      <div className="grid grid-cols-3 gap-x-6 gap-y-1 mb-3">
+        {/* Column 1 */}
+        <div>
+          {col1.map((key) => (
+            <div key={key} className="flex items-center gap-2 mb-1">
+              <label className="text-xs w-36 flex-shrink-0">{keyLabel[key]}</label>
+              <PctInput value={form.alloc[key]} onChange={(v) => setAllocKey(key, v)} decimals={3} className="w-20" />
             </div>
           ))}
         </div>
-
-        <h4 className="text-xs font-semibold mb-2">Asset Allocation</h4>
-        <div className="grid grid-cols-2 gap-2 mb-2">
-          {ALLOC_KEYS.map(({ key, label }) => (
-            <div key={key} className="flex items-center gap-2">
-              <label className="text-xs text-muted-foreground w-44 flex-shrink-0">{label}</label>
-              <input
-                type="number"
-                className="border border-border rounded px-2 py-1 text-xs w-16 focus:outline-none focus:ring-1 focus:ring-teal-600"
-                value={form.alloc[key]}
-                onChange={(e) => setForm((f) => ({ ...f, alloc: { ...f.alloc, [key]: Number(e.target.value) } }))}
-              />
-              <span className="text-xs text-muted-foreground">%</span>
+        {/* Column 2 */}
+        <div>
+          {col2.map((key) => (
+            <div key={key} className="flex items-center gap-2 mb-1">
+              <label className="text-xs w-40 flex-shrink-0">{keyLabel[key]}</label>
+              <PctInput value={form.alloc[key]} onChange={(v) => setAllocKey(key, v)} decimals={3} className="w-20" />
             </div>
           ))}
         </div>
-        <div className="text-xs flex gap-6 mb-4">
-          <span>Growth: <strong>{allocGrowth(form.alloc).toFixed(2)}%</strong></span>
-          <span>Defensive: <strong>{allocDefensive(form.alloc).toFixed(2)}%</strong></span>
-          <span>Other: <strong>{allocOther(form.alloc).toFixed(2)}%</strong></span>
-          <span className={total !== 100 ? 'text-red-600 font-semibold' : 'text-green-700 font-semibold'}>
-            Total: {total.toFixed(2)}%
-          </span>
+        {/* Column 3 */}
+        <div>
+          {col3.map((key) => (
+            <div key={key} className="flex items-center gap-2 mb-1">
+              <label className="text-xs w-24 flex-shrink-0">{keyLabel[key]}</label>
+              <PctInput value={form.alloc[key]} onChange={(v) => setAllocKey(key, v)} decimals={3} className="w-20" />
+            </div>
+          ))}
         </div>
+      </div>
 
-        <div className="flex gap-2">
-          <Button className="bg-teal-700 hover:bg-teal-800 text-white h-8 text-sm" onClick={() => onSave(form)}>Save</Button>
-          <Button variant="outline" className="h-8 text-sm" onClick={onClose}>Cancel</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      {/* Totals row */}
+      <div className="flex items-center gap-6 text-xs border-t border-border pt-2 mb-4">
+        <span className="font-semibold">Growth total</span>
+        <input readOnly className={`${computedCls} w-20`} value={`${growth.toFixed(3)}%`} />
+        <span className="font-semibold ml-4">Defensive total</span>
+        <input readOnly className={`${computedCls} w-20`} value={`${defensive.toFixed(3)}%`} />
+        <span className="font-semibold ml-4">Other total</span>
+        <input readOnly className={`${computedCls} w-20`} value={`${other.toFixed(3)}%`} />
+        <span className="font-semibold ml-4">Total</span>
+        <input
+          readOnly
+          className={`w-20 border rounded px-2 py-0.5 text-xs text-right font-semibold ${
+            Math.abs(total - 100) > 0.001 ? 'bg-red-100 text-red-700 border-red-300' : 'bg-green-50 text-green-700 border-green-300'
+          }`}
+          value={`${total.toFixed(3)}%`}
+        />
+      </div>
+
+      <Button
+        className="bg-white border border-border text-foreground hover:bg-gray-50 h-7 text-xs px-4"
+        onClick={() => onUpdate({ ...form, assetAllocation: primaryAlloc(form.alloc) })}
+      >
+        Update
+      </Button>
+    </div>
   );
 }
