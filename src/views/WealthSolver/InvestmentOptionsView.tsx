@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { X, ExternalLink, FileText } from 'lucide-react';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useWealthSolver } from '@/context/WealthSolverContext';
 import type { WsPlan, WsInvestmentOption, WsAssetAllocation, WsFee } from '@/types/wealthsolver';
@@ -311,8 +311,10 @@ export function InvestmentOptionsView({ plan }: Props) {
       {showAddExisting && (
         <AddExistingModal
           globalOptions={state.globalOptions.filter((o) => !existingIds.has(o.id))}
-          onAdd={(opt) => {
-            dispatch({ type: 'ADD_INVESTMENT_OPTION', planId: plan.id, option: { ...opt, investmentRebate: 0 } });
+          onAdd={(opts) => {
+            opts.forEach((opt) =>
+              dispatch({ type: 'ADD_INVESTMENT_OPTION', planId: plan.id, option: { ...opt, investmentRebate: 0 } })
+            );
             setShowAddExisting(false);
           }}
           onClose={() => setShowAddExisting(false)}
@@ -702,53 +704,120 @@ function AddExistingModal({
   onClose,
 }: {
   globalOptions: WsInvestmentOption[];
-  onAdd: (opt: WsInvestmentOption) => void;
+  onAdd: (opts: WsInvestmentOption[]) => void;
   onClose: () => void;
 }) {
-  const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
+  const [committed, setCommitted] = useState('');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   const filtered = globalOptions.filter(
-    (o) => !search || o.name.toLowerCase().includes(search.toLowerCase()) || o.apir.toLowerCase().includes(search.toLowerCase())
+    (o) =>
+      !committed ||
+      o.name.toLowerCase().includes(committed.toLowerCase()) ||
+      o.apir.toLowerCase().includes(committed.toLowerCase())
   );
-  const selectedOpt = globalOptions.find((o) => o.id === selected);
+
+  function toggleId(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  const selectedOpts = globalOptions.filter((o) => selectedIds.has(o.id));
 
   return (
     <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-xl">
-        <h3 className="text-sm font-semibold mb-3">Add Existing Option</h3>
-        <input
-          type="text"
-          className="border border-border rounded px-2 py-1.5 text-sm w-full mb-3 focus:outline-none focus:ring-1 focus:ring-teal-600"
-          placeholder="Search name or APIR…"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-        <div className="border border-border rounded max-h-56 overflow-y-auto mb-3">
-          {filtered.map((opt) => (
-            <label
-              key={opt.id}
-              className={`flex items-center gap-3 px-3 py-2 border-b border-border last:border-0 cursor-pointer hover:bg-gray-50 ${selected === opt.id ? 'bg-teal-50' : ''}`}
-            >
-              <input type="radio" name="existing-opt" className="accent-teal-700" checked={selected === opt.id} onChange={() => setSelected(opt.id)} />
-              <span className="flex-1 text-sm">{opt.name}</span>
-              <span className="text-xs text-muted-foreground font-mono">{opt.apir}</span>
-            </label>
-          ))}
-          {filtered.length === 0 && <p className="px-3 py-3 text-sm text-muted-foreground">No options available.</p>}
+      <DialogContent
+        style={{ width: 921, minHeight: 0, height: 614 }}
+        className="flex flex-col p-0 gap-0 overflow-hidden max-w-none"
+      >
+        {/* Title bar */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-border shrink-0">
+          <span className="text-sm font-semibold">Add Investment Option</span>
+          <DialogClose asChild>
+            <button className="text-muted-foreground hover:text-foreground text-lg leading-none" aria-label="Close">×</button>
+          </DialogClose>
         </div>
-        {selectedOpt && (
-          <div className="bg-gray-50 border border-border rounded px-3 py-2 text-xs mb-3 grid grid-cols-3 gap-2">
-            <span><span className="text-muted-foreground">Invest Fees:</span> {fmtPct(selectedOpt.investFees)}</span>
-            <span><span className="text-muted-foreground">Perf Fees:</span> {fmtPct(selectedOpt.perfFees)}</span>
-            <span><span className="text-muted-foreground">Trans Cost:</span> {fmtPct(selectedOpt.transCost)}</span>
+
+        {/* Option Selection section */}
+        <div className="shrink-0">
+          <div className="bg-teal-700 text-white text-xs font-semibold px-4 py-1.5">Option Selection</div>
+          <div className="flex items-center gap-3 px-4 py-3">
+            <label className="text-sm font-medium text-muted-foreground w-32 shrink-0">Code/Description</label>
+            <input
+              type="text"
+              className="border border-border rounded px-2 py-1 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-teal-600"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && setCommitted(query)}
+              autoFocus
+            />
+            <Button
+              className="bg-teal-700 hover:bg-teal-800 text-white h-7 text-xs px-4"
+              onClick={() => setCommitted(query)}
+            >
+              Search
+            </Button>
           </div>
-        )}
-        <div className="flex gap-2">
-          <Button className="bg-teal-700 hover:bg-teal-800 text-white h-8 text-sm" disabled={!selected} onClick={() => selectedOpt && onAdd(selectedOpt)}>
-            Add to Plan
+        </div>
+
+        {/* Search Results section */}
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
+          <div className="bg-teal-700 text-white text-xs font-semibold px-4 py-1.5 shrink-0">Search Results</div>
+          <div className="flex-1 overflow-auto">
+            <table className="w-full text-sm border-collapse">
+              <thead className="sticky top-0 bg-white z-10">
+                <tr className="border-b border-border">
+                  <th className="w-8 px-3 py-1.5" />
+                  <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground w-28">APIR</th>
+                  <th className="px-3 py-1.5 text-left text-xs font-semibold text-muted-foreground">Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map((opt) => (
+                  <tr
+                    key={opt.id}
+                    className="border-b border-border last:border-0 cursor-pointer hover:bg-gray-50"
+                    onClick={() => toggleId(opt.id)}
+                  >
+                    <td className="px-3 py-1.5 text-center">
+                      <input
+                        type="checkbox"
+                        className="accent-teal-700"
+                        checked={selectedIds.has(opt.id)}
+                        onChange={() => toggleId(opt.id)}
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </td>
+                    <td className="px-3 py-1.5 font-mono text-xs">{opt.apir}</td>
+                    <td className="px-3 py-1.5">{opt.name}</td>
+                  </tr>
+                ))}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="px-3 py-6 text-center text-sm text-muted-foreground">
+                      {committed ? 'No options match your search.' : 'Enter a code or description and click Search.'}
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 px-4 py-2.5 border-t border-border shrink-0">
+          <Button
+            className="bg-teal-700 hover:bg-teal-800 text-white h-8 text-sm px-5"
+            disabled={selectedIds.size === 0}
+            onClick={() => onAdd(selectedOpts)}
+          >
+            Add
           </Button>
-          <Button variant="outline" className="h-8 text-sm" onClick={onClose}>Cancel</Button>
+          <Button variant="outline" className="h-8 text-sm px-5" onClick={onClose}>Cancel</Button>
         </div>
       </DialogContent>
     </Dialog>
