@@ -35,7 +35,7 @@ export function PlanDetailPage() {
 
   // Sub-view routing
   if (mode === 'editResearch') return <EditResearch plan={plan} />;
-  if (mode === 'editFees') return <EditFees plan={plan} />;
+  if (mode === 'editFees') return <EditFees plan={plan} onBack={() => setMode(null)} />;
   if (mode === 'editDocuments') return <EditDocuments plan={plan} />;
   if (mode === 'investmentOptions') return (
     <div className="p-4">

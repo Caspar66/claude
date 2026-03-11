@@ -1,100 +1,242 @@
 import { useState } from 'react';
+import { Pencil, RotateCcw, BarChart2, Settings, ChevronDown, ChevronUp, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useWealthSolver } from '@/context/WealthSolverContext';
-import type { WsPlan, WsFee, WsFeeSet, WsFeeTier } from '@/types/wealthsolver';
+import type { WsPlan, WsFee, WsFeeSet } from '@/types/wealthsolver';
+import {
+  AGGREGATION_OPTIONS,
+  BALANCE_AGGREGATION_TYPES,
+  TIER_COUNT_OPTIONS,
+  SHARE_EXCHANGES,
+  generateFeeDescription,
+  numTiersFromOption,
+} from '@/types/wealthsolver';
+
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const REMAINING = 99999999999;
 
-interface Props {
-  plan: WsPlan;
+type FeeCategory = 'ongoing' | 'rebates' | 'transactional' | 'commissions';
+
+const FEE_SECTIONS: { label: string; category: FeeCategory }[] = [
+  { label: 'Ongoing costs', category: 'ongoing' },
+  { label: 'Rebates', category: 'rebates' },
+  { label: 'Transactional Costs', category: 'transactional' },
+  { label: 'Commission Details', category: 'commissions' },
+];
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function fmtDollar(n: number) {
+  return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(n);
 }
 
-export function EditFees({ plan }: Props) {
-  const [editingFee, setEditingFee] = useState<{ fee: WsFee; category: 'ongoing' | 'rebates' | 'transactional' | 'commissions' } | null>(null);
+function fmtPct(n: number) {
+  return `${n.toFixed(4).replace(/\.?0+$/, '')}%`;
+}
 
-  function allFees() {
-    return [
-      { label: 'Ongoing Costs', fees: plan.fees.ongoing, category: 'ongoing' as const },
-      { label: 'Rebates', fees: plan.fees.rebates, category: 'rebates' as const },
-      { label: 'Transactional Costs', fees: plan.fees.transactional, category: 'transactional' as const },
-      { label: 'Commission Details', fees: plan.fees.commissions, category: 'commissions' as const },
-    ];
+function getFeeDisplayDesc(fee: WsFee): string {
+  if (fee.researchDescription) return fee.researchDescription;
+  if (fee.prodCostDesc) return fee.prodCostDesc;
+  return generateFeeDescription(fee);
+}
+
+// ── Edit Fees Root ────────────────────────────────────────────────────────────
+
+interface Props {
+  plan: WsPlan;
+  onBack: () => void;
+}
+
+export function EditFees({ plan, onBack }: Props) {
+  const [editingFee, setEditingFee] = useState<{ fee: WsFee; category: FeeCategory } | null>(null);
+
+  if (editingFee) {
+    return (
+      <FeeEditPage
+        plan={plan}
+        fee={editingFee.fee}
+        category={editingFee.category}
+        onClose={() => setEditingFee(null)}
+      />
+    );
+  }
+
+  return <FeeListPage plan={plan} onBack={onBack} onEdit={setEditingFee} />;
+}
+
+// ── Fee List Page ─────────────────────────────────────────────────────────────
+
+function FeeListPage({
+  plan,
+  onBack,
+  onEdit,
+}: {
+  plan: WsPlan;
+  onBack: () => void;
+  onEdit: (entry: { fee: WsFee; category: FeeCategory }) => void;
+}) {
+  const { state, dispatch } = useWealthSolver();
+  const isDerived = !!plan.derivedFromId;
+  const sourcePlan = isDerived ? state.plans.find((p) => p.id === plan.derivedFromId) : undefined;
+
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  function toggleSection(label: string) {
+    setCollapsed((c) => ({ ...c, [label]: !c[label] }));
+  }
+
+  function getResearchFee(fee: WsFee, category: FeeCategory): WsFee | undefined {
+    if (!sourcePlan) return undefined;
+    return sourcePlan.fees[category].find((f) => f.xplanId === fee.xplanId);
+  }
+
+  function handleUndo(fee: WsFee, category: FeeCategory) {
+    dispatch({ type: 'UNDO_DERIVED_PLAN_FEE_OVERRIDE', planId: plan.id, category, feeId: fee.xplanId });
   }
 
   return (
-    <div className="p-6 max-w-3xl">
-      <h2 className="text-base font-semibold mb-4">Edit Fees — {plan.name}</h2>
+    <div className="min-h-screen bg-white">
+      {/* Top bar */}
+      <div className="flex items-center justify-end px-4 py-2 border-b border-border">
+        <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onBack}>
+          Back
+        </Button>
+      </div>
 
-      {allFees().map(({ label, fees, category }) => (
-        <div key={label} className="mb-6">
-          <h3 className="text-sm font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-1.5 rounded-t">
-            {label}
-          </h3>
-          <div className="border border-t-0 border-border rounded-b divide-y divide-border">
-            {fees.map((fee) => (
-              <div key={fee.xplanId} className="flex items-center justify-between px-4 py-2.5">
-                <div>
-                  <p className="text-sm font-medium">{fee.name}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{fee.prodCostDesc}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setEditingFee({ fee, category })}
-                >
-                  Edit
-                </Button>
+      <div className="p-4">
+        <h2 className="text-sm font-semibold mb-4">
+          Edit Fees: <span className="font-bold">{plan.name}{isDerived ? ' <Derived>' : ''}</span>
+        </h2>
+
+        {FEE_SECTIONS.map(({ label, category }) => {
+          const fees = plan.fees[category];
+          const isCollapsed = collapsed[label];
+
+          return (
+            <div key={label} className="mb-4 border border-border rounded overflow-hidden">
+              {/* Section header */}
+              <div
+                className="flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white cursor-pointer select-none"
+                onClick={() => toggleSection(label)}
+              >
+                <span className="text-sm font-semibold">{label}</span>
+                {isCollapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
               </div>
-            ))}
-          </div>
-        </div>
-      ))}
 
-      {editingFee && (
-        <FeeEditModal
-          planId={plan.id}
-          fee={editingFee.fee}
-          category={editingFee.category}
-          onClose={() => setEditingFee(null)}
-        />
-      )}
+              {!isCollapsed && (
+                <>
+                  {/* Add button row */}
+                  <div className="flex justify-end px-3 py-1.5 border-b border-border bg-white">
+                    <div className="flex items-center gap-1 border border-border rounded text-xs px-2 py-1 cursor-pointer hover:bg-gray-50">
+                      Add <ChevronDown size={12} />
+                    </div>
+                  </div>
+
+                  {/* Column headers */}
+                  <div className="grid text-xs font-semibold text-foreground px-4 py-2 bg-white border-b border-border"
+                    style={{ gridTemplateColumns: isDerived ? '48px 1fr 1fr 1fr 40px' : '48px 1fr 1fr 40px' }}
+                  >
+                    <div>Action</div>
+                    <div>Fee name</div>
+                    <div>{isDerived ? 'Research' : 'Value'}</div>
+                    {isDerived && <div>Custom/Override</div>}
+                    <div />
+                  </div>
+
+                  {/* Fee rows */}
+                  {fees.map((fee) => {
+                    const researchFee = getResearchFee(fee, category);
+                    const hasOverride = !!fee.overrideFee;
+                    const displayFee = isDerived && hasOverride ? fee.overrideFee! : fee;
+                    const researchDesc = researchFee ? getFeeDisplayDesc(researchFee) : getFeeDisplayDesc(fee);
+                    const overrideDesc = hasOverride ? getFeeDisplayDesc(fee.overrideFee!) : '';
+
+                    return (
+                      <div
+                        key={fee.xplanId}
+                        className="grid items-start px-4 py-2.5 border-b border-border last:border-0 hover:bg-gray-50"
+                        style={{ gridTemplateColumns: isDerived ? '48px 1fr 1fr 1fr 40px' : '48px 1fr 1fr 40px' }}
+                      >
+                        {/* Action icons */}
+                        <div className="flex items-center gap-1.5 pt-0.5">
+                          <button
+                            className="text-teal-700 hover:text-teal-900"
+                            title="Edit fee"
+                            onClick={() => onEdit({ fee, category })}
+                          >
+                            <Pencil size={14} />
+                          </button>
+                          {isDerived && hasOverride && (
+                            <button
+                              className="text-orange-500 hover:text-orange-700"
+                              title="Undo override — revert to original plan fee"
+                              onClick={() => handleUndo(fee, category)}
+                            >
+                              <RotateCcw size={14} />
+                            </button>
+                          )}
+                        </div>
+
+                        {/* Fee name */}
+                        <div className="text-sm">{fee.name}</div>
+
+                        {/* Research / Value */}
+                        <div className="text-xs text-muted-foreground whitespace-pre-line">
+                          {researchDesc}
+                        </div>
+
+                        {/* Custom/Override (derived only) */}
+                        {isDerived && (
+                          <div className="text-xs text-muted-foreground whitespace-pre-line">
+                            {overrideDesc}
+                          </div>
+                        )}
+
+                        {/* Chart icon */}
+                        <div className="flex justify-end pt-0.5">
+                          <button className="text-teal-700 hover:text-teal-900" title="View chart">
+                            <BarChart2 size={14} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-// ── Fee Edit Modal ────────────────────────────────────────────────────────────
+// ── Fee Edit Page ─────────────────────────────────────────────────────────────
 
-const EXCHANGES = ['ASX', 'AXW', 'FND', 'CASH', 'TD'];
-const FEE_BASES = ['Account balance', 'Investment balance', 'Fixed'];
-const AGGREGATION_OPTIONS = [
-  { value: 'plan_balance', label: 'Plan balance' },
-  { value: 'set', label: 'Total allocation for set' },
-  { value: 'investment_allocation', label: 'Investment Allocation' },
-  { value: 'member_balance', label: 'Balance of members accounts' },
-  { value: 'family_balance', label: 'Balance of family accounts' },
-];
-const MIN_MAX_OPTIONS = [
-  { value: 'none', label: 'No min/max' },
-  { value: 'plan', label: 'Plan (old method)' },
-  { value: 'set', label: 'Set' },
-];
+type FeeTab = 'feeValue' | 'investmentOptions' | 'sharesExchanges' | 'feeStructure';
 
-function FeeEditModal({
-  planId,
+function FeeEditPage({
+  plan,
   fee: initialFee,
   category,
   onClose,
 }: {
-  planId: string;
+  plan: WsPlan;
   fee: WsFee;
-  category: 'ongoing' | 'rebates' | 'transactional' | 'commissions';
+  category: FeeCategory;
   onClose: () => void;
 }) {
   const { dispatch } = useWealthSolver();
-  const [tab, setTab] = useState<'tiers' | 'allocation' | 'structure'>('tiers');
-  const [fee, setFee] = useState<WsFee>(JSON.parse(JSON.stringify(initialFee)));
+  const isDerived = !!plan.derivedFromId;
+
+  // For derived plans, edit the existing override or start from current fee
+  const startingFee: WsFee = isDerived
+    ? JSON.parse(JSON.stringify(initialFee.overrideFee ?? initialFee))
+    : JSON.parse(JSON.stringify(initialFee));
+
+  const [fee, setFee] = useState<WsFee>(startingFee);
+  const [tab, setTab] = useState<FeeTab>('feeValue');
 
   function updateFee<K extends keyof WsFee>(key: K, value: WsFee[K]) {
     setFee((f) => ({ ...f, [key]: value }));
@@ -107,294 +249,562 @@ function FeeEditModal({
     }));
   }
 
-  function updateTier(setIdx: number, tierIdx: number, patch: Partial<WsFeeTier>) {
+  function updateTier(setIdx: number, tierIdx: number, patch: Partial<import('@/types/wealthsolver').WsFeeTier>) {
     setFee((f) => ({
       ...f,
       feeSets: f.feeSets.map((s, i) =>
-        i !== setIdx
-          ? s
-          : { ...s, tiers: s.tiers.map((t, j) => (j === tierIdx ? { ...t, ...patch } : t)) }
+        i !== setIdx ? s : { ...s, tiers: s.tiers.map((t, j) => (j === tierIdx ? { ...t, ...patch } : t)) }
       ),
     }));
   }
 
-  function addTier(setIdx: number) {
+  function addSet() {
+    const nextLetter = String.fromCharCode(65 + fee.feeSets.length); // A, B, C...
+    const newSet: WsFeeSet = {
+      shortId: nextLetter,
+      name: `Set ${nextLetter}`,
+      isDefault: false,
+      minDollar: 0,
+      maxDollar: 0,
+      numTiers: 'Flat rate',
+      tiers: [{ feePercent: 0, feeDollar: 0, tierLimit: REMAINING }],
+      shareExchanges: [],
+      investmentOptionIds: [],
+    };
+    setFee((f) => ({ ...f, feeSets: [...f.feeSets, newSet] }));
+  }
+
+  function removeSet(setIdx: number) {
     setFee((f) => ({
       ...f,
-      feeSets: f.feeSets.map((s, i) =>
-        i !== setIdx
-          ? s
-          : {
-              ...s,
-              tiers: [
-                ...s.tiers.slice(0, -1).map((t) => ({ ...t })),
-                { feePercent: 0, feeDollar: 0, tierLimit: 1000000 },
-                { ...s.tiers[s.tiers.length - 1] },
-              ],
-            }
-      ),
+      feeSets: f.feeSets.filter((_, i) => i !== setIdx),
     }));
   }
 
-  function removeTier(setIdx: number, tierIdx: number) {
+  function changeNumTiers(setIdx: number, opt: string) {
+    const count = numTiersFromOption(opt);
     setFee((f) => ({
       ...f,
-      feeSets: f.feeSets.map((s, i) =>
-        i !== setIdx || s.tiers.length <= 1
-          ? s
-          : { ...s, tiers: s.tiers.filter((_, j) => j !== tierIdx) }
-      ),
+      feeSets: f.feeSets.map((s, i) => {
+        if (i !== setIdx) return s;
+        // Build tiers array of the right length, preserving existing values where possible
+        const newTiers: import('@/types/wealthsolver').WsFeeTier[] = [];
+        for (let t = 0; t < count; t++) {
+          const existing = s.tiers[t];
+          if (t === count - 1) {
+            newTiers.push({ feePercent: existing?.feePercent ?? 0, feeDollar: existing?.feeDollar ?? 0, tierLimit: REMAINING });
+          } else {
+            newTiers.push({ feePercent: existing?.feePercent ?? 0, feeDollar: existing?.feeDollar ?? 0, tierLimit: existing?.tierLimit !== REMAINING ? (existing?.tierLimit ?? 100000) : 100000 });
+          }
+        }
+        return { ...s, numTiers: opt, tiers: newTiers };
+      }),
+    }));
+  }
+
+  function setDefaultSet(shortId: string) {
+    setFee((f) => ({
+      ...f,
+      defaultSetId: shortId,
+      feeSets: f.feeSets.map((s) => ({ ...s, isDefault: s.shortId === shortId })),
+    }));
+  }
+
+  function assignExchangeToSet(code: string, targetSetId: string | 'excluded') {
+    setFee((f) => ({
+      ...f,
+      feeSets: f.feeSets.map((s) => ({
+        ...s,
+        shareExchanges:
+          targetSetId === s.shortId
+            ? [...(s.shareExchanges ?? []).filter((e) => e.code !== code), { code }]
+            : (s.shareExchanges ?? []).filter((e) => e.code !== code),
+      })),
+    }));
+  }
+
+  function assignOptionToSet(optId: string, targetSetId: string | 'excluded') {
+    setFee((f) => ({
+      ...f,
+      feeSets: f.feeSets.map((s) => ({
+        ...s,
+        investmentOptionIds:
+          targetSetId === s.shortId
+            ? [...(s.investmentOptionIds ?? []).filter((id) => id !== optId), optId]
+            : (s.investmentOptionIds ?? []).filter((id) => id !== optId),
+      })),
     }));
   }
 
   function handleSave() {
-    dispatch({ type: 'UPDATE_PLAN_FEES', planId, category, fee });
+    if (isDerived) {
+      dispatch({ type: 'OVERRIDE_DERIVED_PLAN_FEE', planId: plan.id, category, feeId: initialFee.xplanId, override: fee });
+    } else {
+      dispatch({ type: 'UPDATE_PLAN_FEES', planId: plan.id, category, fee });
+    }
     onClose();
   }
 
-  const inputSm = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600';
+  const isBalanceAggregation = BALANCE_AGGREGATION_TYPES.includes(fee.aggregationOption);
+  const showMinMax = fee.minMaxApplied === 'Plan';
+  const showAggregatedMinMax = showMinMax && isBalanceAggregation;
+  const showBasePerAccount = isBalanceAggregation;
+
+  const inp = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600';
+  const sel = `${inp} bg-white`;
+
+  const tabs: { key: FeeTab; label: string }[] = [
+    { key: 'feeValue', label: 'Fee Value' },
+    { key: 'investmentOptions', label: 'Investment Options' },
+    { key: 'sharesExchanges', label: 'Shares Exchanges' },
+    { key: 'feeStructure', label: 'Fee Structure' },
+  ];
 
   return (
-    <Dialog open onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <div className="p-1">
-          <h3 className="text-sm font-semibold mb-3">{fee.name}</h3>
+    <div className="min-h-screen bg-white">
+      {/* Top bar */}
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+        <span className="text-xs text-muted-foreground font-medium">
+          WealthSolver: <span className="text-foreground">{plan.name}{isDerived ? ' <Derived>' : ''}</span>
+        </span>
+        <div className="flex items-center gap-2">
+          <Button onClick={handleSave} size="sm" className="h-7 text-xs bg-teal-700 hover:bg-teal-800 text-white">
+            Save
+          </Button>
+          <Button variant="outline" size="sm" className="h-7 text-xs" onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      </div>
 
-          {/* Tabs */}
-          <div className="flex border-b border-border mb-4">
-            {(['tiers', 'allocation', 'structure'] as const).map((t) => (
-              <button
-                key={t}
-                className={`px-4 py-2 text-xs capitalize border-b-2 -mb-px ${tab === t ? 'border-teal-700 text-teal-700 font-semibold' : 'border-transparent text-muted-foreground hover:text-foreground'}`}
-                onClick={() => setTab(t)}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+      {/* Card header */}
+      <div className="mx-4 mt-4 flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white rounded-t">
+        <span className="text-sm font-semibold">Edit Fee: {initialFee.name}</span>
+        <Settings size={16} className="text-white/80" />
+      </div>
 
-          {/* ── Tiers Tab ── */}
-          {tab === 'tiers' && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-muted-foreground">Fee ID</label>
-                  <p className="text-xs font-mono mt-0.5">{fee.xplanId}</p>
+      {/* Tabs */}
+      <div className="mx-4 border-b border-border bg-white px-4">
+        <div className="flex">
+          {tabs.map(({ key, label }) => (
+            <button
+              key={key}
+              className={`px-4 py-2.5 text-xs border-b-2 -mb-px transition-colors ${
+                tab === key
+                  ? 'border-teal-700 text-teal-700 font-semibold'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setTab(key)}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Tab content */}
+      <div className="mx-4 border border-t-0 border-border rounded-b p-4 bg-white">
+        {/* ── Fee Value Tab ── */}
+        {tab === 'feeValue' && (
+          <div className="space-y-4 max-w-3xl">
+            {/* Base Fee */}
+            <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+              <label className="text-sm font-medium">Base Fee</label>
+              <input
+                type="number"
+                className={`${inp} w-28`}
+                value={fee.baseDollar}
+                onChange={(e) => updateFee('baseDollar', Number(e.target.value))}
+              />
+            </div>
+
+            <div className="text-sm font-bold">PLUS</div>
+
+            {/* Min/max fields (shown when minMaxApplied === 'Plan') */}
+            {showMinMax && (
+              <>
+                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                  <label className="text-sm">Fee minimum</label>
+                  <input type="number" className={`${inp} w-28`} value={fee.minDollar} onChange={(e) => updateFee('minDollar', Number(e.target.value))} />
                 </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Fee Basis</label>
-                  <select className={`${inputSm} w-full mt-0.5`} value={fee.feeBasis} onChange={(e) => updateFee('feeBasis', e.target.value)}>
-                    {FEE_BASES.map((b) => <option key={b} value={b}>{b}</option>)}
-                  </select>
+                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                  <label className="text-sm">Fee maximum</label>
+                  <input type="number" className={`${inp} w-28`} value={fee.maxDollar} onChange={(e) => updateFee('maxDollar', Number(e.target.value))} />
                 </div>
-              </div>
+              </>
+            )}
+            {showAggregatedMinMax && (
+              <>
+                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                  <label className="text-sm">Fee minimum (aggregated)</label>
+                  <input type="number" className={`${inp} w-28`} value={fee.minAggregated} onChange={(e) => updateFee('minAggregated', Number(e.target.value))} />
+                </div>
+                <div className="grid grid-cols-[160px_1fr] items-center gap-4">
+                  <label className="text-sm">Fee maximum (aggregated)</label>
+                  <input type="number" className={`${inp} w-28`} value={fee.maxAggregated} onChange={(e) => updateFee('maxAggregated', Number(e.target.value))} />
+                </div>
+              </>
+            )}
 
-              <div>
-                <label className="text-xs text-muted-foreground">Base Fee ($)</label>
-                <input type="number" className={`${inputSm} w-32 block mt-0.5`} value={fee.baseDollar} onChange={(e) => updateFee('baseDollar', Number(e.target.value))} />
-              </div>
-
-              {fee.feeSets.map((feeSet, si) => (
-                <div key={feeSet.shortId} className="border border-border rounded p-3">
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-semibold">Set {feeSet.shortId} — {feeSet.name}</p>
-                  </div>
-                  <table className="w-full text-xs mb-2">
+            {/* Fee sets */}
+            {fee.feeSets.map((feeSet, si) => {
+              const tierCount = numTiersFromOption(feeSet.numTiers);
+              return (
+                <div key={feeSet.shortId}>
+                  <h3 className="text-sm font-semibold mb-2">
+                    {feeSet.name}{feeSet.isDefault ? ' (Default)' : ''}
+                  </h3>
+                  <table className="w-full text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left py-1 pr-2 text-muted-foreground">{fee.isDollar ? 'Amount ($)' : 'Fee (%)'}</th>
-                        <th className="text-left py-1 pr-2 text-muted-foreground">Tier Limit ($)</th>
-                        <th className="w-6" />
+                        <th className="text-left py-1.5 w-8 text-muted-foreground" />
+                        <th className="text-center py-1.5 pr-3 w-28 text-muted-foreground">
+                          {fee.isDollar ? 'Fee amount ($)' : 'Fee percent'}
+                        </th>
+                        <th className="text-left py-1.5 pr-3 text-muted-foreground" />
+                        {tierCount > 1 && (
+                          <th className="text-right py-1.5 w-36 text-muted-foreground">Amount</th>
+                        )}
                       </tr>
                     </thead>
                     <tbody>
-                      {feeSet.tiers.map((tier, ti) => (
-                        <tr key={ti} className="border-b border-border last:border-0">
-                          <td className="py-1 pr-2">
-                            <input
-                              type="number"
-                              className={`${inputSm} w-24`}
-                              value={fee.isDollar ? tier.feeDollar : tier.feePercent}
-                              onChange={(e) =>
-                                updateTier(si, ti, fee.isDollar ? { feeDollar: Number(e.target.value) } : { feePercent: Number(e.target.value) })
-                              }
-                            />
-                          </td>
-                          <td className="py-1 pr-2">
-                            {tier.tierLimit === REMAINING ? (
-                              <span className="text-muted-foreground italic">Remaining</span>
-                            ) : (
+                      {feeSet.tiers.map((tier, ti) => {
+                        const isLast = ti === feeSet.tiers.length - 1;
+                        const isFirst = ti === 0;
+                        return (
+                          <tr key={ti} className="border-b border-border last:border-0">
+                            <td className="py-1.5 text-muted-foreground text-center pr-2">{ti + 1}</td>
+                            <td className="py-1.5 pr-3">
                               <input
                                 type="number"
-                                className={`${inputSm} w-28`}
-                                value={tier.tierLimit}
-                                onChange={(e) => updateTier(si, ti, { tierLimit: Number(e.target.value) })}
+                                step={fee.isDollar ? '1' : '0.0001'}
+                                className={`${inp} w-24 text-right`}
+                                value={fee.isDollar ? tier.feeDollar : tier.feePercent}
+                                onChange={(e) =>
+                                  updateTier(si, ti, fee.isDollar ? { feeDollar: Number(e.target.value) } : { feePercent: Number(e.target.value) })
+                                }
                               />
+                              {!fee.isDollar && <span className="ml-1 text-muted-foreground">%</span>}
+                            </td>
+                            <td className="py-1.5 pr-3 text-muted-foreground">
+                              {isLast ? 'for the remaining balance' : isFirst ? 'for the first' : 'for the next'}
+                            </td>
+                            {tierCount > 1 && (
+                              <td className="py-1.5">
+                                {!isLast ? (
+                                  <input
+                                    type="number"
+                                    className={`${inp} w-32 text-right`}
+                                    value={tier.tierLimit === REMAINING ? '' : tier.tierLimit}
+                                    onChange={(e) => updateTier(si, ti, { tierLimit: Number(e.target.value) })}
+                                  />
+                                ) : null}
+                              </td>
                             )}
-                          </td>
-                          <td>
-                            {feeSet.tiers.length > 1 && (
-                              <button className="text-red-500 hover:text-red-700 text-xs" onClick={() => removeTier(si, ti)}>✕</button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
+                          </tr>
+                        );
+                      })}
                     </tbody>
                   </table>
-                  <button className="text-xs text-teal-700 hover:underline" onClick={() => addTier(si)}>+ Add tier</button>
-                  <div className="grid grid-cols-2 gap-3 mt-3">
-                    <div>
-                      <label className="text-xs text-muted-foreground">Set Min ($)</label>
-                      <input type="number" className={`${inputSm} w-full mt-0.5`} value={feeSet.minDollar} onChange={(e) => updateSet(si, { minDollar: Number(e.target.value) })} />
-                    </div>
-                    <div>
-                      <label className="text-xs text-muted-foreground">Set Max ($)</label>
-                      <input type="number" className={`${inputSm} w-full mt-0.5`} value={feeSet.maxDollar} onChange={(e) => updateSet(si, { maxDollar: Number(e.target.value) })} />
-                    </div>
-                  </div>
                 </div>
-              ))}
-            </div>
-          )}
+              );
+            })}
 
-          {/* ── Allocation Tab ── */}
-          {tab === 'allocation' && (
+            {/* Research Description */}
             <div>
-              <p className="text-xs text-muted-foreground mb-3">Assign each exchange to a fee set or mark as Excluded.</p>
-              <table className="w-full text-sm">
+              <label className="text-sm text-muted-foreground block mb-1">Research Description</label>
+              <p className="text-xs text-muted-foreground mb-1 italic">
+                This text will be displayed as the research description of the fee. If blank the description will be automatically generated from the fee structure.
+              </p>
+              <textarea
+                className={`${inp} w-full`}
+                rows={5}
+                value={fee.researchDescription}
+                onChange={(e) => updateFee('researchDescription', e.target.value)}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* ── Investment Options Tab ── */}
+        {tab === 'investmentOptions' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 pr-4 font-semibold">Name</th>
+                  <th className="text-left py-2 pr-4 font-semibold">SPIR</th>
+                  {fee.feeSets.map((s) => (
+                    <th key={s.shortId} className="text-center py-2 pr-4 font-semibold min-w-[120px]">
+                      {s.name}{s.isDefault ? ' (Default)' : ''}
+                    </th>
+                  ))}
+                  <th className="text-center py-2 font-semibold">Excluded</th>
+                </tr>
+              </thead>
+              <tbody>
+                {plan.investmentOptions.map((opt) => {
+                  const assignedSet = fee.feeSets.find((s) => (s.investmentOptionIds ?? []).includes(opt.id))?.shortId ?? 'excluded';
+                  return (
+                    <tr key={opt.id} className="border-b border-border last:border-0 hover:bg-gray-50">
+                      <td className="py-2 pr-4 text-blue-600">{opt.name}</td>
+                      <td className="py-2 pr-4 font-mono text-muted-foreground">{opt.apir}</td>
+                      {fee.feeSets.map((s) => (
+                        <td key={s.shortId} className="py-2 pr-4 text-center">
+                          <input
+                            type="radio"
+                            name={`opt-${opt.id}`}
+                            className="accent-teal-700"
+                            checked={assignedSet === s.shortId}
+                            onChange={() => assignOptionToSet(opt.id, s.shortId)}
+                          />
+                        </td>
+                      ))}
+                      <td className="py-2 text-center">
+                        <input
+                          type="radio"
+                          name={`opt-${opt.id}`}
+                          className="accent-teal-700"
+                          checked={assignedSet === 'excluded'}
+                          onChange={() => assignOptionToSet(opt.id, 'excluded')}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Shares Exchanges Tab ── */}
+        {tab === 'sharesExchanges' && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-left py-2 pr-4 font-semibold">Name</th>
+                  <th className="text-left py-2 pr-4 font-semibold">Code</th>
+                  {fee.feeSets.map((s) => (
+                    <th key={s.shortId} className="text-center py-2 pr-4 font-semibold min-w-[120px]">
+                      {s.name}{s.isDefault ? ' (Default)' : ''}
+                    </th>
+                  ))}
+                  <th className="text-center py-2 font-semibold">Excluded</th>
+                </tr>
+              </thead>
+              <tbody>
+                {SHARE_EXCHANGES.map((ex) => {
+                  const assignedSet = fee.feeSets.find((s) => (s.shareExchanges ?? []).some((e) => e.code === ex.code))?.shortId ?? 'excluded';
+                  return (
+                    <tr key={ex.code} className="border-b border-border last:border-0 hover:bg-gray-50">
+                      <td className="py-2 pr-4">{ex.name}</td>
+                      <td className="py-2 pr-4 font-mono font-semibold">{ex.code}</td>
+                      {fee.feeSets.map((s) => (
+                        <td key={s.shortId} className="py-2 pr-4 text-center">
+                          <input
+                            type="radio"
+                            name={`ex-${ex.code}`}
+                            className="accent-teal-700"
+                            checked={assignedSet === s.shortId}
+                            onChange={() => assignExchangeToSet(ex.code, s.shortId)}
+                          />
+                        </td>
+                      ))}
+                      <td className="py-2 text-center">
+                        <input
+                          type="radio"
+                          name={`ex-${ex.code}`}
+                          className="accent-teal-700"
+                          checked={assignedSet === 'excluded'}
+                          onChange={() => assignExchangeToSet(ex.code, 'excluded')}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ── Fee Structure Tab ── */}
+        {tab === 'feeStructure' && (
+          <div className="space-y-4 max-w-2xl text-sm">
+            {/* Read-only fields */}
+            <StructureRow label="Fee ID">
+              <span className="text-xs font-mono">{fee.xplanId}</span>
+            </StructureRow>
+            <StructureRow label="Fee basis">
+              <span className="text-xs">{fee.feeBasis}</span>
+            </StructureRow>
+
+            {/* Aggregation method */}
+            <StructureRow label="Aggregation method">
+              <select
+                className={`${sel} w-full max-w-sm`}
+                value={fee.aggregationOption}
+                onChange={(e) => updateFee('aggregationOption', e.target.value)}
+              >
+                {AGGREGATION_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
+                ))}
+              </select>
+            </StructureRow>
+
+            {/* Tier type */}
+            <StructureRow label="Tier type">
+              <select
+                className={`${sel} w-40`}
+                value={fee.isFlat ? 'Flat' : 'Progressive'}
+                onChange={(e) => updateFee('isFlat', e.target.value === 'Flat')}
+              >
+                <option value="Progressive">Progressive</option>
+                <option value="Flat">Flat</option>
+              </select>
+            </StructureRow>
+
+            {/* Percent or dollar fee */}
+            <StructureRow label="Percent or dollar fee">
+              <select
+                className={`${sel} w-40`}
+                value={fee.isDollar ? 'Dollar' : 'Percentage'}
+                onChange={(e) => updateFee('isDollar', e.target.value === 'Dollar')}
+              >
+                <option value="Percentage">Percentage</option>
+                <option value="Dollar">Dollar</option>
+              </select>
+            </StructureRow>
+
+            {/* Min/max applies to */}
+            <StructureRow label="Min/max applies to">
+              <select
+                className={`${sel} w-40`}
+                value={fee.minMaxApplied}
+                onChange={(e) => updateFee('minMaxApplied', e.target.value)}
+              >
+                <option value="Plan">Plan</option>
+                <option value="No min/max">No min/max</option>
+              </select>
+            </StructureRow>
+
+            {/* Include Base Fee in min/max */}
+            <StructureRow label="Include Base Fee in min/max?">
+              <select
+                className={`${sel} w-24`}
+                value={fee.includeBaseInMinMax ? 'Yes' : 'No'}
+                onChange={(e) => updateFee('includeBaseInMinMax', e.target.value === 'Yes')}
+              >
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </StructureRow>
+
+            {/* Base Fee applies per account (only for balance aggregation types) */}
+            {showBasePerAccount && (
+              <StructureRow label="Base Fee applies per account?">
+                <select
+                  className={`${sel} w-24`}
+                  value={fee.basePerAccount ? 'Yes' : 'No'}
+                  onChange={(e) => updateFee('basePerAccount', e.target.value === 'Yes')}
+                >
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </StructureRow>
+            )}
+
+            {/* Default set for investment options */}
+            <StructureRow label="Default set for investment options">
+              <select
+                className={`${sel} w-64`}
+                value={fee.defaultSetId}
+                onChange={(e) => setDefaultSet(e.target.value)}
+              >
+                {fee.feeSets.map((s) => (
+                  <option key={s.shortId} value={s.shortId}>{s.name}</option>
+                ))}
+              </select>
+            </StructureRow>
+
+            {/* Sets table */}
+            <div>
+              <table className="w-full text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-border">
-                    <th className="text-left py-1.5 pr-3 text-xs text-muted-foreground">Exchange</th>
-                    {fee.feeSets.map((s) => (
-                      <th key={s.shortId} className="text-left py-1.5 pr-3 text-xs text-muted-foreground">Set {s.shortId}</th>
-                    ))}
-                    <th className="text-left py-1.5 text-xs text-muted-foreground">Excluded</th>
+                    <th className="w-8 py-1.5" />
+                    <th className="text-left py-1.5 pr-3 font-semibold">Set name</th>
+                    <th className="text-left py-1.5 pr-3 font-semibold w-20">Short ID</th>
+                    <th className="text-left py-1.5 pr-3 font-semibold w-36">Number of tiers</th>
+                    <th className="w-8 py-1.5" />
                   </tr>
                 </thead>
                 <tbody>
-                  {EXCHANGES.map((ex) => {
-                    const assignedSet = fee.feeSets.find((s) => s.shareExchanges?.some((e) => e.code === ex))?.shortId ?? 'excluded';
-                    return (
-                      <tr key={ex} className="border-b border-border last:border-0">
-                        <td className="py-1.5 pr-3 text-xs font-mono">{ex}</td>
-                        {fee.feeSets.map((s) => (
-                          <td key={s.shortId} className="py-1.5 pr-3">
-                            <input
-                              type="radio"
-                              name={`ex-${ex}`}
-                              checked={assignedSet === s.shortId}
-                              className="accent-teal-700"
-                              onChange={() => {
-                                setFee((f) => ({
-                                  ...f,
-                                  feeSets: f.feeSets.map((fs) => ({
-                                    ...fs,
-                                    shareExchanges: fs.shortId === s.shortId
-                                      ? [...(fs.shareExchanges ?? []).filter((e) => e.code !== ex), { code: ex }]
-                                      : (fs.shareExchanges ?? []).filter((e) => e.code !== ex),
-                                  })),
-                                }));
-                              }}
-                            />
-                          </td>
-                        ))}
-                        <td className="py-1.5">
-                          <input
-                            type="radio"
-                            name={`ex-${ex}`}
-                            checked={assignedSet === 'excluded'}
-                            className="accent-teal-700"
-                            onChange={() => {
-                              setFee((f) => ({
-                                ...f,
-                                feeSets: f.feeSets.map((fs) => ({
-                                  ...fs,
-                                  shareExchanges: (fs.shareExchanges ?? []).filter((e) => e.code !== ex),
-                                })),
-                              }));
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    );
-                  })}
+                  {fee.feeSets.map((s, si) => (
+                    <tr key={s.shortId} className="border-b border-border last:border-0">
+                      <td className="py-1.5 pr-2">
+                        <button
+                          className="text-red-500 hover:text-red-700"
+                          onClick={() => removeSet(si)}
+                          disabled={fee.feeSets.length <= 1}
+                          title="Remove set"
+                        >
+                          <X size={12} />
+                        </button>
+                      </td>
+                      <td className="py-1.5 pr-3">
+                        <input
+                          type="text"
+                          className={`${inp} w-full`}
+                          value={s.name}
+                          onChange={(e) => updateSet(si, { name: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-3">
+                        <input
+                          type="text"
+                          className={`${inp} w-14`}
+                          value={s.shortId}
+                          onChange={(e) => updateSet(si, { shortId: e.target.value })}
+                        />
+                      </td>
+                      <td className="py-1.5 pr-3">
+                        <select
+                          className={`${sel} w-full`}
+                          value={s.numTiers}
+                          onChange={(e) => changeNumTiers(si, e.target.value)}
+                        >
+                          {TIER_COUNT_OPTIONS.map((o) => (
+                            <option key={o} value={o}>{o}</option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-1.5">
+                        <button
+                          className="text-teal-700 hover:text-teal-900"
+                          onClick={addSet}
+                          title="Add set"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
-          )}
-
-          {/* ── Structure Tab ── */}
-          {tab === 'structure' && (
-            <div className="space-y-4 text-sm">
-              <StructureSelect label="Aggregation Method" value={fee.aggregationOption} options={AGGREGATION_OPTIONS} onChange={(v) => updateFee('aggregationOption', v)} />
-              <StructureSelect label="Min/Max Applied" value={fee.minMaxApplied} options={MIN_MAX_OPTIONS} onChange={(v) => updateFee('minMaxApplied', v)} />
-              <div>
-                <label className="text-xs text-muted-foreground">Fee Type</label>
-                <div className="flex gap-4 mt-1">
-                  {['Flat', 'Progressive'].map((v) => (
-                    <label key={v} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                      <input type="radio" className="accent-teal-700" name="feeType" checked={fee.isFlat === (v === 'Flat')} onChange={() => updateFee('isFlat', v === 'Flat')} />
-                      {v}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Amount Type</label>
-                <div className="flex gap-4 mt-1">
-                  {['Percentage', 'Dollar'].map((v) => (
-                    <label key={v} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                      <input type="radio" className="accent-teal-700" name="amtType" checked={fee.isDollar === (v === 'Dollar')} onChange={() => updateFee('isDollar', v === 'Dollar')} />
-                      {v}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-muted-foreground">Include Base Fee in min/max</label>
-                <div className="flex gap-4 mt-1">
-                  {['Yes', 'No'].map((v) => (
-                    <label key={v} className="flex items-center gap-1.5 text-xs cursor-pointer">
-                      <input type="radio" className="accent-teal-700" name="baseInMM" checked={fee.includeBaseInMinMax === (v === 'Yes')} onChange={() => updateFee('includeBaseInMinMax', v === 'Yes')} />
-                      {v}
-                    </label>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-xs text-muted-foreground">Plan-level Min ($)</label>
-                  <input type="number" className="border border-border rounded px-2 py-1 text-xs w-full mt-0.5 focus:outline-none focus:ring-1 focus:ring-teal-600" value={fee.minDollar} onChange={(e) => updateFee('minDollar', Number(e.target.value))} />
-                </div>
-                <div>
-                  <label className="text-xs text-muted-foreground">Plan-level Max ($)</label>
-                  <input type="number" className="border border-border rounded px-2 py-1 text-xs w-full mt-0.5 focus:outline-none focus:ring-1 focus:ring-teal-600" value={fee.maxDollar} onChange={(e) => updateFee('maxDollar', Number(e.target.value))} />
-                </div>
-              </div>
-            </div>
-          )}
-
-          <div className="flex gap-2 mt-6 pt-4 border-t border-border">
-            <Button onClick={handleSave} className="bg-teal-700 hover:bg-teal-800 text-white h-8 text-sm">Save</Button>
-            <Button variant="outline" className="h-8 text-sm" onClick={onClose}>Cancel</Button>
           </div>
-        </div>
-      </DialogContent>
-    </Dialog>
+        )}
+      </div>
+    </div>
   );
 }
 
-function StructureSelect({ label, value, options, onChange }: { label: string; value: string; options: { value: string; label: string }[]; onChange: (v: string) => void }) {
+function StructureRow({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div>
-      <label className="text-xs text-muted-foreground">{label}</label>
-      <select
-        className="border border-border rounded px-2 py-1 text-xs w-full mt-0.5 bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {options.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
+    <div className="grid grid-cols-[240px_1fr] items-center gap-4">
+      <label className="text-sm font-medium">{label}</label>
+      <div>{children}</div>
     </div>
   );
 }

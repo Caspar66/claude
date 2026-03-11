@@ -4,10 +4,14 @@ import { seedPlans, globalOptions } from '@/data/wealthsolverSeed';
 
 // ── Actions ───────────────────────────────────────────────────────────────────
 
+type FeeCategory = 'ongoing' | 'rebates' | 'transactional' | 'commissions';
+
 type Action =
   | { type: 'ADD_PLAN'; plan: WsPlan }
   | { type: 'UPDATE_PLAN'; planId: string; patch: Partial<WsPlan>; changedFields?: string[] }
-  | { type: 'UPDATE_PLAN_FEES'; planId: string; category: 'ongoing' | 'rebates' | 'transactional' | 'commissions'; fee: WsFee }
+  | { type: 'UPDATE_PLAN_FEES'; planId: string; category: FeeCategory; fee: WsFee }
+  | { type: 'OVERRIDE_DERIVED_PLAN_FEE'; planId: string; category: FeeCategory; feeId: string; override: WsFee }
+  | { type: 'UNDO_DERIVED_PLAN_FEE_OVERRIDE'; planId: string; category: FeeCategory; feeId: string }
   | { type: 'ADD_INVESTMENT_OPTION'; planId: string; option: WsInvestmentOption }
   | { type: 'REMOVE_INVESTMENT_OPTION'; planId: string; optionId: string }
   | { type: 'UPDATE_INVESTMENT_OPTION'; planId: string; option: WsInvestmentOption }
@@ -16,6 +20,18 @@ type Action =
   | { type: 'ADD_GLOBAL_OPTION'; option: WsInvestmentOption };
 
 // ── Reducer ───────────────────────────────────────────────────────────────────
+
+function updateFeeInCategory(fees: WsFee[], fee: WsFee): WsFee[] {
+  return fees.map((f) => (f.xplanId === fee.xplanId ? fee : f));
+}
+
+function propagateFeeToCategory(fees: WsFee[], fee: WsFee): WsFee[] {
+  return fees.map((f) => {
+    if (f.xplanId !== fee.xplanId) return f;
+    if (f.overrideFee) return f; // preserve override, don't propagate
+    return { ...fee, overrideFee: undefined };
+  });
+}
 
 function reducer(state: WealthSolverState, action: Action): WealthSolverState {
   switch (action.type) {
@@ -35,6 +51,34 @@ function reducer(state: WealthSolverState, action: Action): WealthSolverState {
       };
 
     case 'UPDATE_PLAN_FEES':
+      // Update source plan fee and propagate to derived plans (unless they have an override)
+      return {
+        ...state,
+        plans: state.plans.map((p) => {
+          if (p.id === action.planId) {
+            return {
+              ...p,
+              fees: {
+                ...p.fees,
+                [action.category]: updateFeeInCategory(p.fees[action.category], action.fee),
+              },
+            };
+          }
+          // Propagate to derived plans
+          if (p.derivedFromId === action.planId) {
+            return {
+              ...p,
+              fees: {
+                ...p.fees,
+                [action.category]: propagateFeeToCategory(p.fees[action.category], action.fee),
+              },
+            };
+          }
+          return p;
+        }),
+      };
+
+    case 'OVERRIDE_DERIVED_PLAN_FEE':
       return {
         ...state,
         plans: state.plans.map((p) => {
@@ -44,7 +88,24 @@ function reducer(state: WealthSolverState, action: Action): WealthSolverState {
             fees: {
               ...p.fees,
               [action.category]: p.fees[action.category].map((f) =>
-                f.xplanId === action.fee.xplanId ? action.fee : f
+                f.xplanId === action.feeId ? { ...f, overrideFee: action.override } : f
+              ),
+            },
+          };
+        }),
+      };
+
+    case 'UNDO_DERIVED_PLAN_FEE_OVERRIDE':
+      return {
+        ...state,
+        plans: state.plans.map((p) => {
+          if (p.id !== action.planId) return p;
+          return {
+            ...p,
+            fees: {
+              ...p.fees,
+              [action.category]: p.fees[action.category].map((f) =>
+                f.xplanId === action.feeId ? { ...f, overrideFee: undefined } : f
               ),
             },
           };
