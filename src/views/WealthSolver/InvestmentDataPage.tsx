@@ -1,11 +1,51 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { X } from 'lucide-react';
 import { useWealthSolver } from '@/context/WealthSolverContext';
-import type { WsInvestmentOption } from '@/types/wealthsolver';
+import type { WsInvestmentOption, WsAssetAllocation } from '@/types/wealthsolver';
 import { allocGrowth, allocDefensive, allocOther, allocTotal } from '@/types/wealthsolver';
 import { fmtPct, fmtAssets, ColHead, DRow, YN } from './components';
+import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const PAGE_SIZE = 20;
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+const EMPTY_ALLOC: WsAssetAllocation = {
+  domEq: 0, intlEq: 0, domProp: 0, intlProp: 0,
+  domFI: 0, intlFI: 0, domCash: 0, intlCash: 0,
+  dirProp: 0, alt: 0, other: 0,
+};
+
+function primaryAlloc(a: WsAssetAllocation): string {
+  const entries = Object.entries(a) as [keyof WsAssetAllocation, number][];
+  const top = entries.reduce((best, cur) => cur[1] > best[1] ? cur : best, entries[0]);
+  const labels: Record<string, string> = {
+    domEq: 'Australian Equity', intlEq: 'International Equity',
+    domProp: 'Property', intlProp: 'Property', domFI: 'Fixed Interest',
+    intlFI: 'Fixed Interest', domCash: 'Cash', intlCash: 'Cash',
+    dirProp: 'Property', alt: 'Alternative', other: 'Diversified',
+  };
+  return labels[top[0]] ?? 'Diversified';
+}
+
+function PctInput({
+  value, onChange, decimals = 4, className = '',
+}: { value: number; onChange: (v: number) => void; decimals?: number; className?: string }) {
+  const [editing, setEditing] = useState(false);
+  const [raw, setRaw] = useState('');
+  return (
+    <input
+      type="text" inputMode="decimal"
+      className={`border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 ${className}`}
+      value={editing ? raw : `${value.toFixed(decimals)}%`}
+      onFocus={() => { setEditing(true); setRaw(String(value)); }}
+      onChange={(e) => setRaw(e.target.value)}
+      onBlur={() => { setEditing(false); const n = parseFloat(raw); onChange(isNaN(n) ? 0 : n); }}
+    />
+  );
+}
 
 // ── SVG Pie Chart ─────────────────────────────────────────────────────────────
 
@@ -49,13 +89,16 @@ const ALLOC_LABELS: Record<string, string> = {
 };
 
 export function InvestmentDataPage() {
-  const { state } = useWealthSolver();
+  const { state, dispatch } = useWealthSolver();
   const navigate = useNavigate();
   const [search, setSearch] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [page, setPage] = useState(1);
   const [selectedId, setSelectedId] = useState<string | null>(state.globalOptions[0]?.id ?? null);
   const [compareSet, setCompareSet] = useState<Set<string>>(new Set());
+  const [showAdd, setShowAdd] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
+  const [showRemoveConfirm, setShowRemoveConfirm] = useState(false);
 
   const filtered = useMemo(() => {
     if (!search) return state.globalOptions;
@@ -123,6 +166,27 @@ export function InvestmentDataPage() {
           >
             Search
           </button>
+        </div>
+
+        {/* Toolbar */}
+        <div className="px-3 py-2 border-b border-border flex gap-2">
+          <Button className="h-7 text-xs px-3 bg-teal-700 hover:bg-teal-800 text-white" onClick={() => setShowAdd(true)}>
+            Add
+          </Button>
+          <Button
+            variant="outline" className="h-7 text-xs px-3"
+            disabled={!selected}
+            onClick={() => setShowEdit(true)}
+          >
+            Edit
+          </Button>
+          <Button
+            variant="outline" className="h-7 text-xs px-3 text-red-600 border-red-300 hover:bg-red-50"
+            disabled={!selected}
+            onClick={() => setShowRemoveConfirm(true)}
+          >
+            Remove
+          </Button>
         </div>
 
         {/* Fund list */}
@@ -305,7 +369,304 @@ export function InvestmentDataPage() {
           </>
         )}
       </div>
+      {/* Add Modal */}
+      {showAdd && (
+        <InvestmentFormModal
+          title="Add Investment Product"
+          onSave={(opt) => {
+            const newId = `custom-${Date.now()}`;
+            dispatch({ type: 'ADD_GLOBAL_OPTION', option: { ...opt, id: newId } });
+            setSelectedId(newId);
+            setShowAdd(false);
+          }}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {showEdit && selected && (
+        <InvestmentFormModal
+          title="Edit Investment Product"
+          initial={selected}
+          onSave={(opt) => {
+            dispatch({ type: 'UPDATE_GLOBAL_OPTION', option: opt });
+            setShowEdit(false);
+          }}
+          onClose={() => setShowEdit(false)}
+        />
+      )}
+
+      {/* Remove Confirm */}
+      {showRemoveConfirm && selected && (
+        <Dialog open onOpenChange={() => setShowRemoveConfirm(false)}>
+          <DialogContent className="max-w-sm p-0 gap-0">
+            <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+              <span className="text-sm font-semibold">Remove Investment Product</span>
+              <DialogClose asChild>
+                <button className="text-muted-foreground hover:text-foreground text-lg leading-none">×</button>
+              </DialogClose>
+            </div>
+            <div className="px-4 py-4 text-sm">
+              <p>Are you sure you want to remove <span className="font-semibold">{selected.name}</span>?</p>
+              <p className="text-muted-foreground text-xs mt-1">This will not affect plans that already use this option.</p>
+            </div>
+            <div className="flex justify-end gap-2 px-4 py-2.5 border-t border-border">
+              <Button
+                className="h-8 text-sm px-4 bg-red-600 hover:bg-red-700 text-white"
+                onClick={() => {
+                  dispatch({ type: 'REMOVE_GLOBAL_OPTION', optionId: selected.id });
+                  setSelectedId(state.globalOptions.find((o) => o.id !== selected.id)?.id ?? null);
+                  setShowRemoveConfirm(false);
+                }}
+              >
+                Remove
+              </Button>
+              <Button variant="outline" className="h-8 text-sm px-4" onClick={() => setShowRemoveConfirm(false)}>
+                Cancel
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
+  );
+}
+
+// ── Investment Form Modal (Add / Edit) ────────────────────────────────────────
+
+const ALLOC_FIELDS: { key: keyof WsAssetAllocation; label: string; group: 'growth' | 'defensive' | 'other' }[] = [
+  { key: 'domEq',    label: 'Domestic Equity',              group: 'growth'    },
+  { key: 'intlEq',   label: 'International Equity',         group: 'growth'    },
+  { key: 'domProp',  label: 'Domestic Property',            group: 'growth'    },
+  { key: 'intlProp', label: 'International Property',       group: 'growth'    },
+  { key: 'domFI',    label: 'Domestic Fixed Interest',      group: 'defensive' },
+  { key: 'intlFI',   label: 'International Fixed Interest', group: 'defensive' },
+  { key: 'domCash',  label: 'Domestic Cash',                group: 'defensive' },
+  { key: 'intlCash', label: 'International Cash',           group: 'defensive' },
+  { key: 'dirProp',  label: 'Direct Property',              group: 'defensive' },
+  { key: 'alt',      label: 'Alternative',                  group: 'other'     },
+  { key: 'other',    label: 'Other',                        group: 'other'     },
+];
+
+function InvestmentFormModal({
+  title,
+  initial,
+  onSave,
+  onClose,
+}: {
+  title: string;
+  initial?: WsInvestmentOption;
+  onSave: (opt: WsInvestmentOption) => void;
+  onClose: () => void;
+}) {
+  const [name, setName]     = useState(initial?.name ?? '');
+  const [apir, setApir]     = useState(initial?.apir ?? '');
+  const [investFees, setInvestFees] = useState(initial?.investFees ?? 0);
+  const [perfFees,   setPerfFees]   = useState(initial?.perfFees   ?? 0);
+  const [transCost,  setTransCost]  = useState(initial?.transCost  ?? 0);
+  const [buyCost,    setBuyCost]    = useState(initial?.buyCost    ?? 0);
+  const [sellCost,   setSellCost]   = useState(initial?.sellCost   ?? 0);
+  const [broadObjectives,   setBroadObjectives]   = useState(initial?.broadObjectives   ?? '');
+  const [redemptionFreq,    setRedemptionFreq]    = useState(initial?.redemptionFreq    ?? 'Daily');
+  const [incomeDistributions, setIncomeDist]      = useState(initial?.incomeDistributions ?? '');
+  const [managerBackground, setManagerBackground] = useState(initial?.managerBackground  ?? '');
+  const [ethical,     setEthical]     = useState(initial?.ethical     ?? false);
+  const [sma,         setSma]         = useState(initial?.sma         ?? false);
+  const [cashAccount, setCashAccount] = useState(initial?.cashAccount ?? false);
+  const [restricted,  setRestricted]  = useState(initial?.restricted  ?? false);
+  const [alloc, setAlloc] = useState<WsAssetAllocation>({ ...EMPTY_ALLOC, ...initial?.alloc });
+
+  const growth    = allocGrowth(alloc);
+  const defensive = allocDefensive(alloc);
+  const other     = allocOther(alloc);
+  const total     = allocTotal(alloc);
+
+  const fieldCls    = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full';
+  const computedCls = 'border border-border rounded px-2 py-1 text-xs w-full text-right bg-gray-50 text-muted-foreground';
+
+  function handleSave() {
+    if (!name.trim() || !apir.trim()) return;
+    const opt: WsInvestmentOption = {
+      id: initial?.id ?? '',
+      name: name.trim(),
+      apir: apir.trim(),
+      type: ethical ? 'Ethical' : '',
+      assetAllocation: primaryAlloc(alloc),
+      investFees,
+      perfFees,
+      transCost,
+      buyCost,
+      sellCost,
+      custom: initial?.custom ?? true,
+      broadObjectives,
+      alloc,
+      cashAccount,
+      ethical,
+      sma,
+      restricted,
+      redemptionFreq,
+      netAssets: initial?.netAssets ?? 0,
+      incomeDistributions,
+      managerBackground,
+      investmentRebate: initial?.investmentRebate ?? 0,
+    };
+    onSave(opt);
+  }
+
+  return (
+    <Dialog open onOpenChange={onClose}>
+      <DialogContent className="flex flex-col p-0 gap-0 overflow-hidden" style={{ width: 760, maxWidth: '95vw', height: 620, maxHeight: '95vh' }}>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white shrink-0">
+          <span className="text-sm font-semibold">{title}</span>
+          <DialogClose asChild>
+            <button className="text-white/80 hover:text-white"><X size={16} /></button>
+          </DialogClose>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto px-5 py-4">
+          {/* Name + APIR */}
+          <div className="grid grid-cols-[160px_1fr] gap-y-2 gap-x-3 mb-4">
+            <label className="text-xs self-center text-muted-foreground">Name</label>
+            <input className={fieldCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="Fund name" autoFocus />
+            <label className="text-xs self-center text-muted-foreground">APIR / Code</label>
+            <input className={`${fieldCls} w-40`} value={apir} onChange={(e) => setApir(e.target.value)} placeholder="e.g. ABC0001AU" />
+          </div>
+
+          {/* Two-column: fees + booleans */}
+          <div className="flex gap-8 mb-4">
+            <div className="flex-shrink-0">
+              {([
+                { label: 'Investment Fees',    val: investFees, set: setInvestFees, dec: 4 },
+                { label: 'Performance Fees',   val: perfFees,   set: setPerfFees,   dec: 3 },
+                { label: 'Transaction Cost',   val: transCost,  set: setTransCost,  dec: 4 },
+                { label: 'Buy Cost',           val: buyCost,    set: setBuyCost,    dec: 3 },
+                { label: 'Sell Cost',          val: sellCost,   set: setSellCost,   dec: 3 },
+              ] as { label: string; val: number; set: (v: number) => void; dec: number }[]).map(({ label, val, set, dec }) => (
+                <div key={label} className="flex items-center gap-3 mb-2">
+                  <span className="text-xs text-muted-foreground w-40 flex-shrink-0">{label}</span>
+                  <PctInput value={val} onChange={set} decimals={dec} className="w-24" />
+                </div>
+              ))}
+            </div>
+            <div className="flex-shrink-0">
+              {([
+                { label: 'Ethical',      val: ethical,     set: setEthical     },
+                { label: 'SMA',          val: sma,         set: setSma         },
+                { label: 'Cash Account', val: cashAccount, set: setCashAccount },
+                { label: 'Restricted',   val: restricted,  set: setRestricted  },
+              ] as { label: string; val: boolean; set: (v: boolean) => void }[]).map(({ label, val, set }) => (
+                <label key={label} className="flex items-center gap-2 mb-2 cursor-pointer">
+                  <input type="checkbox" className="accent-teal-700" checked={val} onChange={(e) => set(e.target.checked)} />
+                  <span className="text-xs text-muted-foreground">{label}</span>
+                </label>
+              ))}
+              <div className="mt-1">
+                <label className="text-xs text-muted-foreground block mb-1">Redemption Frequency</label>
+                <select
+                  className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  value={redemptionFreq}
+                  onChange={(e) => setRedemptionFreq(e.target.value)}
+                >
+                  {['Daily', 'Weekly', 'Monthly', 'Quarterly', 'Annually'].map((f) => (
+                    <option key={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Broad Objectives */}
+          <div className="mb-4">
+            <label className="text-xs text-muted-foreground block mb-1">Broad Objectives</label>
+            <textarea
+              className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full h-16 resize-none"
+              value={broadObjectives}
+              onChange={(e) => setBroadObjectives(e.target.value)}
+            />
+          </div>
+
+          {/* Asset Allocation */}
+          <div className="mb-4">
+            <p className="text-xs font-semibold mb-2">Asset Allocation</p>
+            <div className="grid grid-cols-2 gap-x-8">
+              <div>
+                {ALLOC_FIELDS.filter((f) => f.group === 'growth').map(({ key, label }) => (
+                  <div key={key} className="flex items-center mb-1">
+                    <span className="text-xs text-muted-foreground w-44">{label}</span>
+                    <PctInput value={alloc[key]} onChange={(v) => setAlloc((a) => ({ ...a, [key]: v }))} decimals={3} className="w-20" />
+                  </div>
+                ))}
+                <div className="flex items-center mb-2">
+                  <span className="text-xs font-semibold w-44">Total Growth</span>
+                  <input readOnly className={`${computedCls} w-20`} value={`${growth.toFixed(3)}%`} />
+                </div>
+                {ALLOC_FIELDS.filter((f) => f.group === 'other').map(({ key, label }) => (
+                  <div key={key} className="flex items-center mb-1">
+                    <span className="text-xs text-muted-foreground w-44">{label}</span>
+                    <PctInput value={alloc[key]} onChange={(v) => setAlloc((a) => ({ ...a, [key]: v }))} decimals={3} className="w-20" />
+                  </div>
+                ))}
+                <div className="flex items-center">
+                  <span className="text-xs font-semibold w-44">Total Other</span>
+                  <input readOnly className={`${computedCls} w-20`} value={`${other.toFixed(3)}%`} />
+                </div>
+              </div>
+              <div>
+                {ALLOC_FIELDS.filter((f) => f.group === 'defensive').map(({ key, label }) => (
+                  <div key={key} className="flex items-center mb-1">
+                    <span className="text-xs text-muted-foreground w-44">{label}</span>
+                    <PctInput value={alloc[key]} onChange={(v) => setAlloc((a) => ({ ...a, [key]: v }))} decimals={3} className="w-20" />
+                  </div>
+                ))}
+                <div className="flex items-center mb-2">
+                  <span className="text-xs font-semibold w-44">Total Defensive</span>
+                  <input readOnly className={`${computedCls} w-20`} value={`${defensive.toFixed(3)}%`} />
+                </div>
+                <div className="flex items-center">
+                  <span className="text-xs font-semibold w-44">Grand Total</span>
+                  <input readOnly className={`${computedCls} w-20`} value={`${total.toFixed(3)}%`} />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Manager Background + Income Distributions */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Income Distributions</label>
+              <input
+                className={fieldCls}
+                value={incomeDistributions}
+                onChange={(e) => setIncomeDist(e.target.value)}
+                placeholder="e.g. Quarterly"
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted-foreground block mb-1">Manager Background</label>
+              <textarea
+                className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full h-14 resize-none"
+                value={managerBackground}
+                onChange={(e) => setManagerBackground(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex justify-end gap-2 px-4 py-2.5 border-t border-border shrink-0">
+          <Button
+            className="h-8 text-sm px-5 bg-teal-700 hover:bg-teal-800 text-white"
+            disabled={!name.trim() || !apir.trim()}
+            onClick={handleSave}
+          >
+            {initial ? 'Save Changes' : 'Add'}
+          </Button>
+          <Button variant="outline" className="h-8 text-sm px-5" onClick={onClose}>Cancel</Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

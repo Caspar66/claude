@@ -17,7 +17,9 @@ type Action =
   | { type: 'UPDATE_INVESTMENT_OPTION'; planId: string; option: WsInvestmentOption }
   | { type: 'ADD_DOCUMENT'; planId: string; doc: WsDocument }
   | { type: 'REMOVE_DOCUMENT'; planId: string; docId: number }
-  | { type: 'ADD_GLOBAL_OPTION'; option: WsInvestmentOption };
+  | { type: 'ADD_GLOBAL_OPTION'; option: WsInvestmentOption }
+  | { type: 'UPDATE_GLOBAL_OPTION'; option: WsInvestmentOption }
+  | { type: 'REMOVE_GLOBAL_OPTION'; optionId: string };
 
 // ── Reducer ───────────────────────────────────────────────────────────────────
 
@@ -203,6 +205,12 @@ function reducer(state: WealthSolverState, action: Action): WealthSolverState {
 
     case 'ADD_GLOBAL_OPTION':
       return { ...state, globalOptions: [...state.globalOptions, action.option] };
+
+    case 'UPDATE_GLOBAL_OPTION':
+      return { ...state, globalOptions: state.globalOptions.map((o) => o.id === action.option.id ? action.option : o) };
+
+    case 'REMOVE_GLOBAL_OPTION':
+      return { ...state, globalOptions: state.globalOptions.filter((o) => o.id !== action.optionId) };
 
     default:
       return state;
