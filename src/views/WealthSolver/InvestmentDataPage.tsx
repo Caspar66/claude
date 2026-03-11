@@ -6,7 +6,6 @@ import type { WsInvestmentOption, WsAssetAllocation } from '@/types/wealthsolver
 import { allocGrowth, allocDefensive, allocOther, allocTotal } from '@/types/wealthsolver';
 import { fmtPct, fmtAssets, ColHead, DRow, YN } from './components';
 import { Dialog, DialogContent, DialogClose } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 
 const PAGE_SIZE = 20;
 
@@ -170,23 +169,26 @@ export function InvestmentDataPage() {
 
         {/* Toolbar */}
         <div className="px-3 py-2 border-b border-border flex gap-2">
-          <Button className="h-7 text-xs px-3 bg-teal-700 hover:bg-teal-800 text-white" onClick={() => setShowAdd(true)}>
+          <button
+            className="px-3 py-1 text-xs rounded bg-teal-700 text-white hover:bg-teal-800"
+            onClick={() => setShowAdd(true)}
+          >
             Add
-          </Button>
-          <Button
-            variant="outline" className="h-7 text-xs px-3"
+          </button>
+          <button
+            className="px-3 py-1 text-xs rounded border border-border hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={!selected}
             onClick={() => setShowEdit(true)}
           >
             Edit
-          </Button>
-          <Button
-            variant="outline" className="h-7 text-xs px-3 text-red-600 border-red-300 hover:bg-red-50"
+          </button>
+          <button
+            className="px-3 py-1 text-xs rounded border border-red-300 text-red-600 hover:bg-red-50 disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={!selected}
             onClick={() => setShowRemoveConfirm(true)}
           >
             Remove
-          </Button>
+          </button>
         </div>
 
         {/* Fund list */}
@@ -411,8 +413,8 @@ export function InvestmentDataPage() {
               <p className="text-muted-foreground text-xs mt-1">This will not affect plans that already use this option.</p>
             </div>
             <div className="flex justify-end gap-2 px-4 py-2.5 border-t border-border">
-              <Button
-                className="h-8 text-sm px-4 bg-red-600 hover:bg-red-700 text-white"
+              <button
+                className="px-4 py-1.5 text-sm rounded bg-red-600 hover:bg-red-700 text-white"
                 onClick={() => {
                   dispatch({ type: 'REMOVE_GLOBAL_OPTION', optionId: selected.id });
                   setSelectedId(state.globalOptions.find((o) => o.id !== selected.id)?.id ?? null);
@@ -420,10 +422,13 @@ export function InvestmentDataPage() {
                 }}
               >
                 Remove
-              </Button>
-              <Button variant="outline" className="h-8 text-sm px-4" onClick={() => setShowRemoveConfirm(false)}>
+              </button>
+              <button
+                className="px-4 py-1.5 text-sm rounded border border-border hover:bg-gray-100"
+                onClick={() => setShowRemoveConfirm(false)}
+              >
                 Cancel
-              </Button>
+              </button>
             </div>
           </DialogContent>
         </Dialog>
@@ -656,14 +661,19 @@ function InvestmentFormModal({
 
         {/* Footer */}
         <div className="flex justify-end gap-2 px-4 py-2.5 border-t border-border shrink-0">
-          <Button
-            className="h-8 text-sm px-5 bg-teal-700 hover:bg-teal-800 text-white"
+          <button
+            className="px-5 py-1.5 text-sm rounded bg-teal-700 hover:bg-teal-800 text-white disabled:opacity-40 disabled:cursor-not-allowed"
             disabled={!name.trim() || !apir.trim()}
             onClick={handleSave}
           >
             {initial ? 'Save Changes' : 'Add'}
-          </Button>
-          <Button variant="outline" className="h-8 text-sm px-5" onClick={onClose}>Cancel</Button>
+          </button>
+          <button
+            className="px-5 py-1.5 text-sm rounded border border-border hover:bg-gray-100"
+            onClick={onClose}
+          >
+            Cancel
+          </button>
         </div>
       </DialogContent>
     </Dialog>
