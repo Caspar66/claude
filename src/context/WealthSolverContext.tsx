@@ -112,15 +112,51 @@ function reducer(state: WealthSolverState, action: Action): WealthSolverState {
         }),
       };
 
-    case 'ADD_INVESTMENT_OPTION':
+    case 'ADD_INVESTMENT_OPTION': {
+      const newOpt = action.option;
       return {
         ...state,
-        plans: state.plans.map((p) =>
-          p.id !== action.planId
-            ? p
-            : { ...p, investmentOptions: [...p.investmentOptions, action.option] }
-        ),
+        plans: state.plans.map((p) => {
+          if (p.id !== action.planId) return p;
+          if (!newOpt.custom) {
+            return { ...p, investmentOptions: [...p.investmentOptions, newOpt] };
+          }
+          // Custom option: assign to the default fee set for each fee,
+          // unless the fee uses shareExchanges (exchange-based coverage).
+          const assignToDefault = (fees: WsFee[]): WsFee[] =>
+            fees.map((fee) => {
+              const isOverridden = !!fee.overrideFee;
+              const effectiveSets = isOverridden ? fee.overrideFee!.feeSets : fee.feeSets;
+              const effectiveDefaultSetId = isOverridden
+                ? fee.overrideFee!.defaultSetId
+                : fee.defaultSetId;
+              // Exchange-based fees cover options automatically; skip manual assignment
+              const hasExchangeSets = effectiveSets.some(
+                (s) => (s.shareExchanges ?? []).length > 0
+              );
+              if (hasExchangeSets) return fee;
+              const updatedSets = effectiveSets.map((set) =>
+                set.shortId === effectiveDefaultSetId
+                  ? { ...set, investmentOptionIds: [...(set.investmentOptionIds ?? []), newOpt.id] }
+                  : set
+              );
+              return isOverridden
+                ? { ...fee, overrideFee: { ...fee.overrideFee!, feeSets: updatedSets } }
+                : { ...fee, feeSets: updatedSets };
+            });
+          return {
+            ...p,
+            investmentOptions: [...p.investmentOptions, newOpt],
+            fees: {
+              ongoing: assignToDefault(p.fees.ongoing),
+              rebates: assignToDefault(p.fees.rebates),
+              transactional: assignToDefault(p.fees.transactional),
+              commissions: assignToDefault(p.fees.commissions),
+            },
+          };
+        }),
       };
+    }
 
     case 'REMOVE_INVESTMENT_OPTION':
       return {

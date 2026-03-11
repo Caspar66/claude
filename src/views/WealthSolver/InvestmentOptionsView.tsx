@@ -234,7 +234,16 @@ export function InvestmentOptionsView({ plan }: Props) {
               <th className="px-3 py-2 text-left text-muted-foreground font-semibold w-24">Type</th>
               <th className="px-3 py-2 text-left text-muted-foreground font-semibold w-36">Asset Allocation</th>
               <th className="px-3 py-2 text-right text-muted-foreground font-semibold w-32">Investment Fees and Costs</th>
-              <th className="px-3 py-2 text-right text-muted-foreground font-semibold w-28">Performance Fees</th>
+              <th className="px-3 py-2 text-right text-muted-foreground font-semibold w-28">
+                <span className="inline-flex items-center gap-1">
+                  Performance Fees
+                  <span title="Reported performance fees may vary. See PDS for details." className="cursor-help text-blue-500 text-[10px] leading-none">ℹ</span>
+                </span>
+              </th>
+              <th className="px-3 py-2 text-right text-muted-foreground font-semibold w-28">Transaction Cost</th>
+              <th className="px-3 py-2 text-right text-muted-foreground font-semibold w-20">Buy Cost</th>
+              <th className="px-3 py-2 text-right text-muted-foreground font-semibold w-20">Sell Cost</th>
+              <th className="px-3 py-2 text-right text-muted-foreground font-semibold w-28">Investment Rebate</th>
             </tr>
           </thead>
           <tbody>
@@ -268,11 +277,15 @@ export function InvestmentOptionsView({ plan }: Props) {
                   {fmtPct(opt.investFees)}
                 </td>
                 <td className="px-3 py-2 text-right">{fmtPct(opt.perfFees)}</td>
+                <td className="px-3 py-2 text-right">{fmtPct(opt.transCost)}</td>
+                <td className="px-3 py-2 text-right">{fmtPct(opt.buyCost)}</td>
+                <td className="px-3 py-2 text-right">{fmtPct(opt.sellCost)}</td>
+                <td className="px-3 py-2 text-right">{fmtPct(opt.investmentRebate ?? null)}</td>
               </tr>
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={11} className="px-3 py-6 text-center text-muted-foreground">
                   No investment options found.
                 </td>
               </tr>
@@ -353,6 +366,19 @@ function getFeeSetForOption(fee: WsFee, optionId: string): string {
     }
   }
   return 'Excluded';
+}
+
+/** Preview fee set a brand-new custom option would receive (before it has an ID). */
+function getDefaultFeeSetName(fee: WsFee): string {
+  const effectiveFee = fee.overrideFee ?? fee;
+  // Exchange-based sets cover options via APIR exchange code; custom options
+  // won't match any exchange so they'd remain Excluded for those fees.
+  const hasExchangeSets = effectiveFee.feeSets.some(
+    (s) => (s.shareExchanges ?? []).length > 0
+  );
+  if (hasExchangeSets) return 'Excluded';
+  const defaultSet = effectiveFee.feeSets.find((s) => s.shortId === effectiveFee.defaultSetId);
+  return defaultSet?.name ?? 'Excluded';
 }
 
 function getAllPlanFees(plan: WsPlan): WsFee[] {
@@ -789,9 +815,6 @@ function AddCustomModal({
 
   const planFees = getAllPlanFees(plan);
 
-  // For brand-new custom option, no id yet so all fees will show as "Excluded"
-  const TEMP_ID = '__new__';
-
   const fieldCls = 'border border-border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full';
   const computedCls = 'border border-border rounded px-2 py-0.5 text-xs w-full text-right bg-gray-50 text-muted-foreground';
 
@@ -884,7 +907,7 @@ function AddCustomModal({
             <div className="flex-1 min-w-0">
               <div className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1">
                 {planFees.map((fee) => {
-                  const assignment = getFeeSetForOption(fee, TEMP_ID);
+                  const assignment = getDefaultFeeSetName(fee);
                   return (
                     <div key={fee.xplanId} className="contents">
                       <span className="text-xs text-muted-foreground">{fee.name}:</span>
