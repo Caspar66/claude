@@ -5,11 +5,12 @@ import { useAppContext } from '@/context/AppContext';
 import { InvestmentFundsTab } from './InvestmentFundsTab';
 import { BalancesAggregationTab } from './BalancesAggregationTab';
 
+
 const STUB_TABS = ['Contribution Amounts', 'Pension Details', 'Insurance Premiums'];
 
 export function EditExistingPlanPage() {
   const { scenarioId, platformId } = useParams<{ scenarioId: string; platformId: string }>();
-  const { state } = useAppContext();
+  const { state, dispatch } = useAppContext();
   const navigate = useNavigate();
 
   const scenario = state.clientFile.scenarios.find((s) => s.id === scenarioId);
@@ -45,7 +46,11 @@ export function EditExistingPlanPage() {
           <Button
             size="sm"
             className="bg-teal-700 hover:bg-teal-800 text-white"
-            onClick={() => navigate(`/scenarios/${scenarioId}`)}
+            onClick={() => {
+              const balance = platform.investments.reduce((sum, inv) => sum + inv.amount, 0);
+              dispatch({ type: 'UPDATE_PLATFORM', scenarioId: scenarioId!, platformId: platform.id, patch: { balance } });
+              navigate(`/scenarios/${scenarioId}`);
+            }}
           >
             Save
           </Button>

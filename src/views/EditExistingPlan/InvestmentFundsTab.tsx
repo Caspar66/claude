@@ -28,12 +28,20 @@ export function InvestmentFundsTab({ scenarioId, platform }: Props) {
       const investments = platform.investments.map((inv) =>
         inv.id === id ? { ...inv, amount: num } : inv
       );
-      dispatch({ type: 'UPDATE_PLATFORM', scenarioId, platformId: platform.id, patch: { investments } });
+      const balance = investments.reduce((sum, inv) => sum + inv.amount, 0);
+      dispatch({ type: 'UPDATE_PLATFORM', scenarioId, platformId: platform.id, patch: { investments, balance } });
     }
   }
 
   function handleDelete(invId: string) {
+    const remaining = platform.investments.filter((inv) => inv.id !== invId);
+    const balance = remaining.reduce((sum, inv) => {
+      const raw = amounts[inv.id] ?? String(inv.amount);
+      const n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+      return sum + (isNaN(n) ? inv.amount : n);
+    }, 0);
     dispatch({ type: 'DELETE_INVESTMENT', scenarioId, platformId: platform.id, investmentId: invId });
+    dispatch({ type: 'UPDATE_PLATFORM', scenarioId, platformId: platform.id, patch: { balance } });
     setAmounts((prev) => {
       const next = { ...prev };
       delete next[invId];

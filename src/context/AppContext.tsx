@@ -109,18 +109,13 @@ function reducer(state: AppState, action: Action): AppState {
         ...state,
         clientFile: {
           ...state.clientFile,
-          scenarios: state.clientFile.scenarios.map((s) =>
-            s.id === action.scenarioId
-              ? patchPlatformInScenario(s, action.platformId, {
-                  investments: [
-                    ...(s.entities
-                      .flatMap((e) => e.platforms)
-                      .find((p) => p.id === action.platformId)?.investments ?? []),
-                    action.investment,
-                  ],
-                })
-              : s
-          ),
+          scenarios: state.clientFile.scenarios.map((s) => {
+            if (s.id !== action.scenarioId) return s;
+            const platform = s.entities.flatMap((e) => e.platforms).find((p) => p.id === action.platformId);
+            const investments = [...(platform?.investments ?? []), action.investment];
+            const balance = investments.reduce((sum, inv) => sum + inv.amount, 0);
+            return patchPlatformInScenario(s, action.platformId, { investments, balance });
+          }),
         },
       };
 
@@ -133,9 +128,9 @@ function reducer(state: AppState, action: Action): AppState {
             if (s.id !== action.scenarioId) return s;
             const platform = s.entities.flatMap((e) => e.platforms).find((p) => p.id === action.platformId);
             if (!platform) return s;
-            return patchPlatformInScenario(s, action.platformId, {
-              investments: platform.investments.filter((inv) => inv.id !== action.investmentId),
-            });
+            const investments = platform.investments.filter((inv) => inv.id !== action.investmentId);
+            const balance = investments.reduce((sum, inv) => sum + inv.amount, 0);
+            return patchPlatformInScenario(s, action.platformId, { investments, balance });
           }),
         },
       };
