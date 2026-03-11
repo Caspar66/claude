@@ -228,9 +228,27 @@ export function tierOptionFromCount(count: number): string {
 export function generateFeeDescription(fee: WsFee): string {
   if (fee.researchDescription) return fee.researchDescription;
 
+  const fmtVal = (tier: WsFeeTier) =>
+    fee.isDollar
+      ? `$${tier.feeDollar.toFixed(2)}`
+      : `${tier.feePercent.toFixed(4).replace(/\.?0+$/, '')}%`;
+
+  const fmtAmt = (n: number) =>
+    new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', maximumFractionDigits: 0 }).format(n);
+
+  // Simple case: single set, single flat-rate tier — just show the value
+  if (fee.feeSets.length === 1 && fee.feeSets[0].tiers.length === 1) {
+    const tier = fee.feeSets[0].tiers[0];
+    let desc = fmtVal(tier);
+    if (fee.minMaxApplied === 'Plan' && fee.minDollar > 0) {
+      desc += `\nMinimum $${fee.minDollar.toFixed(2)}`;
+    }
+    return desc;
+  }
+
+  // Multi-set or progressive: show structured description
   const aggrOpt = AGGREGATION_OPTIONS.find((o) => o.value === fee.aggregationOption);
   const aggrLabel = aggrOpt?.label ?? fee.aggregationOption;
-
   const lines: string[] = [`Fee calculated on ${aggrLabel}`];
 
   for (const set of fee.feeSets) {
@@ -239,22 +257,19 @@ export function generateFeeDescription(fee: WsFee): string {
     for (let i = 0; i < set.tiers.length; i++) {
       const tier = set.tiers[i];
       const isLast = i === set.tiers.length - 1;
-      const feeVal = fee.isDollar
-        ? `$${tier.feeDollar.toFixed(2)}`
-        : `${tier.feePercent.toFixed(4)}%`;
+      const val = fmtVal(tier);
       if (isLast) {
-        lines.push(`${feeVal} for the remaining balance`);
+        lines.push(`${val} for the remaining balance`);
       } else {
         const prefix = i === 0 ? 'for the first' : 'for the next';
-        const amt = new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(tier.tierLimit);
-        lines.push(`${feeVal} ${prefix} ${amt}`);
+        lines.push(`${val} ${prefix} ${fmtAmt(tier.tierLimit)}`);
       }
     }
   }
 
   if (fee.minMaxApplied === 'Plan' && fee.minDollar > 0) {
     lines.push('');
-    lines.push(`Minimum fee $${fee.minDollar.toFixed(2)}`);
+    lines.push(`Minimum $${fee.minDollar.toFixed(2)}`);
   }
 
   return lines.join('\n');

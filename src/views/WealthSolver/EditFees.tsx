@@ -36,8 +36,6 @@ function fmtPct(n: number) {
 }
 
 function getFeeDisplayDesc(fee: WsFee): string {
-  if (fee.researchDescription) return fee.researchDescription;
-  if (fee.prodCostDesc) return fee.prodCostDesc;
   return generateFeeDescription(fee);
 }
 
