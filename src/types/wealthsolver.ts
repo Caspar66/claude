@@ -84,7 +84,7 @@ export interface WsFee {
   baseDollar: number;
   feeBasis: string;              // "Account balance" | "Investment balance" | "Fixed"
   aggregationOption: string;     // one of AGGREGATION_OPTION values
-  minMaxApplied: string;         // 'Plan' | 'No min/max'
+  minMaxApplied: string;         // 'Option' | 'Set' | 'Plan' | 'No min/max'
   minDollar: number;             // plan-level fee minimum
   maxDollar: number;             // plan-level fee maximum
   minAggregated: number;         // aggregated fee minimum (for balance aggregation types)

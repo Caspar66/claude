@@ -344,7 +344,7 @@ function FeeEditPage({
   }
 
   const isBalanceAggregation = BALANCE_AGGREGATION_TYPES.includes(fee.aggregationOption);
-  const showMinMax = fee.minMaxApplied === 'Plan';
+  const showMinMax = fee.minMaxApplied === 'Option' || fee.minMaxApplied === 'Set' || fee.minMaxApplied === 'Plan';
   const showAggregatedMinMax = showMinMax && isBalanceAggregation;
   const showBasePerAccount = isBalanceAggregation;
 
@@ -681,6 +681,8 @@ function FeeEditPage({
                 value={fee.minMaxApplied}
                 onChange={(e) => updateFee('minMaxApplied', e.target.value)}
               >
+                <option value="Option">Option</option>
+                <option value="Set">Set</option>
                 <option value="Plan">Plan</option>
                 <option value="No min/max">No min/max</option>
               </select>
