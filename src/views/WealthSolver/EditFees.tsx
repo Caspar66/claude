@@ -721,6 +721,7 @@ function FeeEditPage({
                 value={fee.defaultSetId}
                 onChange={(e) => setDefaultSet(e.target.value)}
               >
+                <option value="excluded">Excluded</option>
                 {fee.feeSets.map((s) => (
                   <option key={s.shortId} value={s.shortId}>{s.name}</option>
                 ))}
