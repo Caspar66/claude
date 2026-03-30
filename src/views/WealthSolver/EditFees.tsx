@@ -3,6 +3,7 @@ import { Pencil, RotateCcw, BarChart2, Settings, ChevronDown, ChevronUp, Plus, X
 import { Button } from '@/components/ui/button';
 import { useWealthSolver } from '@/context/WealthSolverContext';
 import type { WsPlan, WsFee, WsFeeSet } from '@/types/wealthsolver';
+import { FeeCalculator } from './FeeCalculator';
 import {
   AGGREGATION_OPTIONS,
   BALANCE_AGGREGATION_TYPES,
@@ -48,19 +49,35 @@ interface Props {
 
 export function EditFees({ plan, onBack }: Props) {
   const [editingFee, setEditingFee] = useState<{ fee: WsFee; category: FeeCategory } | null>(null);
+  const [calculatingFee, setCalculatingFee] = useState<WsFee | null>(null);
 
-  if (editingFee) {
-    return (
-      <FeeEditPage
-        plan={plan}
-        fee={editingFee.fee}
-        category={editingFee.category}
-        onClose={() => setEditingFee(null)}
-      />
-    );
-  }
-
-  return <FeeListPage plan={plan} onBack={onBack} onEdit={setEditingFee} />;
+  return (
+    <>
+      {editingFee ? (
+        <FeeEditPage
+          plan={plan}
+          fee={editingFee.fee}
+          category={editingFee.category}
+          onClose={() => setEditingFee(null)}
+        />
+      ) : (
+        <FeeListPage
+          plan={plan}
+          onBack={onBack}
+          onEdit={setEditingFee}
+          onCalculate={(fee) => setCalculatingFee(fee)}
+        />
+      )}
+      {calculatingFee && (
+        <FeeCalculator
+          planName={plan.name}
+          isDerived={!!plan.derivedFromId}
+          fee={calculatingFee}
+          onClose={() => setCalculatingFee(null)}
+        />
+      )}
+    </>
+  );
 }
 
 // ── Fee List Page ─────────────────────────────────────────────────────────────
@@ -69,10 +86,12 @@ function FeeListPage({
   plan,
   onBack,
   onEdit,
+  onCalculate,
 }: {
   plan: WsPlan;
   onBack: () => void;
   onEdit: (entry: { fee: WsFee; category: FeeCategory }) => void;
+  onCalculate: (fee: WsFee) => void;
 }) {
   const { state, dispatch } = useWealthSolver();
   const isDerived = !!plan.derivedFromId;
@@ -191,9 +210,13 @@ function FeeListPage({
                           </div>
                         )}
 
-                        {/* Chart icon */}
+                        {/* Fee calculator icon */}
                         <div className="flex justify-end pt-0.5">
-                          <button className="text-teal-700 hover:text-teal-900" title="View chart">
+                          <button
+                            className="text-teal-700 hover:text-teal-900"
+                            title="Fee calculation details"
+                            onClick={() => onCalculate(fee)}
+                          >
                             <BarChart2 size={14} />
                           </button>
                         </div>
