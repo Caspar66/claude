@@ -3,6 +3,7 @@ import { TooltipProvider } from '@/components/ui/tooltip';
 import { AppProvider } from '@/context/AppContext';
 import { WealthSolverProvider } from '@/context/WealthSolverContext';
 import { AppShell } from '@/components/layout/AppShell';
+import { ManagementPortalShell } from '@/components/layout/ManagementPortalShell';
 import { ScenarioIndexPage } from '@/views/ScenarioIndex/ScenarioIndexPage';
 import { ScenarioDetailsPage } from '@/views/ScenarioDetails/ScenarioDetailsPage';
 import { EditExistingPlanPage } from '@/views/EditExistingPlan/EditExistingPlanPage';
@@ -16,6 +17,7 @@ import { PlanDetailPage } from '@/views/WealthSolver/PlanDetailPage';
 import { InvestmentDataPage } from '@/views/WealthSolver/InvestmentDataPage';
 import { AddPlanPage } from '@/views/WealthSolver/AddPlanPage';
 import { DerivePlanPage } from '@/views/WealthSolver/DerivePlanPage';
+import { InvestmentResearchPage } from '@/views/ManagementPortal/InvestmentResearchPage';
 
 export default function App() {
   return (
@@ -67,6 +69,12 @@ export default function App() {
                 <Route path="research/plans/:planId/derive" element={<DerivePlanPage />} />
                 <Route path="research/plans/:planId" element={<PlanDetailPage />} />
                 <Route path="research/investment-data" element={<InvestmentDataPage />} />
+              </Route>
+
+              {/* Management Portal */}
+              <Route path="/management" element={<ManagementPortalShell />}>
+                <Route index element={<Navigate to="/management/reference-data/investment-research" replace />} />
+                <Route path="reference-data/investment-research" element={<InvestmentResearchPage />} />
               </Route>
             </Routes>
           </BrowserRouter>

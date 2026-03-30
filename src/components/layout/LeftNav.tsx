@@ -20,6 +20,12 @@ const navSections: { heading: string; items: NavItem[] }[] = [
       { label: 'Investment data', to: '/research/investment-data' },
     ],
   },
+  {
+    heading: 'Management Portal',
+    items: [
+      { label: 'Investment Research', to: '/management/reference-data/investment-research' },
+    ],
+  },
 ];
 
 export function LeftNav() {
