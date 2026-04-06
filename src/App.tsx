@@ -18,6 +18,7 @@ import { InvestmentDataPage } from '@/views/WealthSolver/InvestmentDataPage';
 import { AddPlanPage } from '@/views/WealthSolver/AddPlanPage';
 import { DerivePlanPage } from '@/views/WealthSolver/DerivePlanPage';
 import { InvestmentResearchPage } from '@/views/ManagementPortal/InvestmentResearchPage';
+import { InsuranceResearchPage } from '@/views/InsuranceResearch/InsuranceResearchPage';
 
 export default function App() {
   return (
@@ -69,6 +70,10 @@ export default function App() {
                 <Route path="research/plans/:planId/derive" element={<DerivePlanPage />} />
                 <Route path="research/plans/:planId" element={<PlanDetailPage />} />
                 <Route path="research/investment-data" element={<InvestmentDataPage />} />
+                <Route
+                  path="scenarios/:scenarioId/research/insurance"
+                  element={<InsuranceResearchPage />}
+                />
               </Route>
 
               {/* Management Portal */}

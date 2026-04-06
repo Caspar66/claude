@@ -18,6 +18,7 @@ const navSections: { heading: string; items: NavItem[] }[] = [
     items: [
       { label: 'View plans', to: '/research/plans' },
       { label: 'Investment data', to: '/research/investment-data' },
+      { label: 'Insurance Research', to: '/scenarios/scenario-1/research/insurance' },
     ],
   },
   {
