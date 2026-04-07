@@ -8,7 +8,11 @@ export interface ClientFormData {
   dateOfBirth: string;
   age: number;
   occupation: string;
+  occupationCode: string;
+  selfEmployed: 'No' | 'Yes';
   annualIncome: string;
+  state: string;
+  loadings: string;
 }
 
 export interface QuoteOptions {
@@ -292,17 +296,27 @@ export function buildPoliciesFromSelection(
 
 // ── Default helpers ───────────────────────────────────────────────────────────
 
-export function getDefaultClientData(firstName: string, lastName: string, age: number): ClientFormData {
+export function getDefaultClientData(
+  firstName: string,
+  lastName: string,
+  age: number,
+  overrides?: Partial<ClientFormData>,
+): ClientFormData {
   const birthYear = new Date().getFullYear() - age;
   return {
     firstName,
     lastName,
     gender: 'Male',
     smoker: 'No',
-    dateOfBirth: `19/09/${birthYear}`,
+    dateOfBirth: `15/06/${birthYear}`,
     age,
     occupation: 'Accountant (qualified)',
-    annualIncome: '$75,000',
+    occupationCode: '1P - Accounting Professionals',
+    selfEmployed: 'No',
+    annualIncome: '$100,000',
+    state: 'Queensland',
+    loadings: 'No Loadings',
+    ...overrides,
   };
 }
 

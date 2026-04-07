@@ -376,6 +376,7 @@ export function InsuranceResearchPage() {
         onComplete={handleComparisonComplete}
         clientName={client.name}
         partnerName={partner.name}
+        existingScenarioNames={insuranceScenarios.map((s) => s.name)}
       />
     </div>
   );

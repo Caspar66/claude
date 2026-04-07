@@ -8,6 +8,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
+import { CreateScenarioModal } from './CreateScenarioModal';
 import { ClientDataCapture } from './ClientDataCapture';
 import { QuoteOptionsSidebar } from './QuoteOptionsSidebar';
 import { ProviderResultsTable } from './ProviderResultsTable';
@@ -41,25 +42,30 @@ interface Props {
   onComplete: (scenarioName: string, policies: InsurancePolicy[]) => void;
   clientName: string;
   partnerName: string;
+  existingScenarioNames: string[];
 }
 
-// Screens: 0=ClientData, 1=InsDetails, 2=InsDetails2, 3=InsDetails3, 4=InsDetails4
-type Screen = 0 | 1 | 2 | 3 | 4;
+// Screens: 'create' | 'personal' | 1 | 2 | 3 | 4
+type Screen = 'create' | 'personal' | 1 | 2 | 3 | 4;
 
-const SCREEN_LABELS: Record<Screen, string> = {
-  0: 'Client Data Capture',
+const DETAIL_LABELS: Record<number, string> = {
   1: 'Insurance Details',
   2: 'Insurance Details 2',
   3: 'Insurance Details 3',
   4: 'Insurance Details 4',
 };
 
-// ── Client summary bar (shown on screens 1-4) ────────────────────────────────
+// ── Client summary bar ──────────────────────────────────────────────────────
 
-function ClientSummaryBar({ client }: { client: ClientFormData }) {
+function ClientSummaryBar({ client, partner }: { client: ClientFormData; partner: ClientFormData | null }) {
+  const people = partner ? [client, partner] : [client];
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white text-xs flex-wrap">
-      <span className="font-bold text-base mr-2">{client.firstName} {client.lastName}</span>
+      {people.map((p, i) => (
+        <span key={i} className="font-bold text-sm mr-1">
+          {p.firstName} {p.lastName}{i < people.length - 1 ? ' &' : ''}
+        </span>
+      ))}
       <span className="bg-slate-600 rounded px-2 py-0.5">Age {client.age}</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -98,14 +104,32 @@ export function InsuranceComparisonDialog({
   onComplete,
   clientName,
   partnerName,
+  existingScenarioNames,
 }: Props) {
-  const [firstName] = clientName.split(' ');
-  const [lastName] = clientName.split(' ').slice(1);
+  const clientParts = clientName.split(' ');
+  const partnerParts = partnerName.split(' ');
 
-  const [screen, setScreen] = useState<Screen>(0);
+  const [screen, setScreen] = useState<Screen>('create');
+  const [scenarioName, setScenarioName] = useState('');
+  const [caseType, setCaseType] = useState('Client & Partner');
+
   const [clientData, setClientData] = useState<ClientFormData>(
-    getDefaultClientData(firstName || 'Sample', lastName || 'Client', 46)
+    getDefaultClientData(clientParts[0] || 'Example', clientParts.slice(1).join(' ') || 'Client', 61, {
+      gender: 'Male',
+      dateOfBirth: '15/06/1964',
+      state: 'Queensland',
+      occupationCode: '1P - Accounting Professionals',
+    })
   );
+  const [partnerData, setPartnerData] = useState<ClientFormData>(
+    getDefaultClientData(partnerParts[0] || 'Example', partnerParts.slice(1).join(' ') || 'Partner', 59, {
+      gender: 'Female',
+      dateOfBirth: '2/07/1966',
+      state: 'Victoria',
+      occupationCode: '2B - Clerical & Administration',
+    })
+  );
+
   const [quoteOptions, setQuoteOptions] = useState<QuoteOptions>(getDefaultQuoteOptions());
   const [lifeCover, setLifeCover] = useState<LifeCoverOptions>(getDefaultLifeCover());
   const [tpd, setTpd] = useState<TpdOptions>(getDefaultTpd());
@@ -113,18 +137,25 @@ export function InsuranceComparisonDialog({
   const [incomeProtection, setIncomeProtection] = useState<IncomeProtectionOptions>(getDefaultIncomeProtection());
   const [businessExpenses, setBusinessExpenses] = useState<BusinessExpensesOptions>({ enabled: false });
 
-  // Screen 1 & 4: basic non-super list
   const [providers, setProviders] = useState<InsuranceProvider[]>(PROVIDER_LIST.map((p) => ({ ...p })));
-  // Screen 2 & 3: show super + non-super
   const [providersMixed, setProvidersMixed] = useState<InsuranceProvider[]>(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
 
   const [premiumFreq, setPremiumFreq] = useState<'Monthly Premium' | 'Annual Premium'>('Monthly Premium');
   const [displayOpts, setDisplayOpts] = useState<Set<DisplayOption>>(new Set());
   const [featuresReportOpen, setFeaturesReportOpen] = useState(false);
 
+  const showPartner = caseType === 'Client & Partner';
+
   function resetState() {
-    setScreen(0);
-    setClientData(getDefaultClientData(firstName || 'Sample', lastName || 'Client', 46));
+    setScreen('create');
+    setScenarioName('');
+    setCaseType('Client & Partner');
+    setClientData(getDefaultClientData(clientParts[0] || 'Example', clientParts.slice(1).join(' ') || 'Client', 61, {
+      gender: 'Male', dateOfBirth: '15/06/1964', state: 'Queensland', occupationCode: '1P - Accounting Professionals',
+    }));
+    setPartnerData(getDefaultClientData(partnerParts[0] || 'Example', partnerParts.slice(1).join(' ') || 'Partner', 59, {
+      gender: 'Female', dateOfBirth: '2/07/1966', state: 'Victoria', occupationCode: '2B - Clerical & Administration',
+    }));
     setQuoteOptions(getDefaultQuoteOptions());
     setLifeCover(getDefaultLifeCover());
     setTpd(getDefaultTpd());
@@ -140,6 +171,12 @@ export function InsuranceComparisonDialog({
   function handleClose() {
     resetState();
     onClose();
+  }
+
+  function handleCreateSave(name: string, selectedCase: string) {
+    setScenarioName(name);
+    setCaseType(selectedCase);
+    setScreen('personal');
   }
 
   function handleGetQuotes() {
@@ -162,8 +199,7 @@ export function InsuranceComparisonDialog({
     setProvidersMixed((prev) => prev.map((p) => (p.id === id ? { ...p, selected: !p.selected } : p)));
   }
 
-  function handleSave() {
-    const name = `Insurance Comparison ${new Date().toLocaleDateString('en-AU')}`;
+  function handleSaveToScenario() {
     const allProviders = [...providers, ...providersMixed];
     const selected = allProviders.filter((p) => p.selected);
     const policies = buildPoliciesFromSelection(
@@ -173,86 +209,85 @@ export function InsuranceComparisonDialog({
       incomeProtection,
       clientName,
     );
-    onComplete(name, policies);
+    onComplete(scenarioName, policies);
     resetState();
   }
 
-  // Current active providers list based on screen
   const activeProviders = screen === 2 || screen === 3 ? providersMixed : providers;
   const activeToggle = screen === 2 || screen === 3 ? toggleProviderMixed : toggleProvider;
 
+  // ── Screen: Create Scenario modal ────────────────────────────────────────
+  if (screen === 'create') {
+    return (
+      <CreateScenarioModal
+        open={open}
+        onSave={handleCreateSave}
+        onCancel={handleClose}
+        existingNames={existingScenarioNames}
+      />
+    );
+  }
+
+  // ── Screens: Personal Details + Insurance Details 1-4 ────────────────────
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-[95vw] w-[1400px] p-0 overflow-hidden" style={{ height: '90vh', maxHeight: '90vh' }}>
         <div className="flex flex-col h-full">
-          {/* Screen 0: Client Data Capture */}
-          {screen === 0 && (
+          {/* Top header bar */}
+          <div className="flex items-center justify-between px-4 py-2 bg-slate-800 text-white">
+            <div className="flex items-center gap-4 text-xs">
+              <span className="font-bold text-sm text-orange-400">OmniLife</span>
+              <button className="hover:underline">DOCUMENTS</button>
+              <button className="hover:underline">RESEARCH</button>
+              <button className="hover:underline">LIVE DATA</button>
+              <button className="hover:underline">HELP</button>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-lg font-light tracking-wide">
+                {scenarioName}
+              </span>
+              <button
+                className="text-white/70 hover:text-white p-1 rounded hover:bg-white/10 ml-4"
+                onClick={handleClose}
+              >
+                <X size={16} />
+              </button>
+            </div>
+          </div>
+
+          {/* Personal Details screen */}
+          {screen === 'personal' && (
             <>
-              <div className="flex items-center justify-between px-4 py-2 bg-slate-800 text-white">
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="font-bold text-sm text-orange-400">OmniLife</span>
-                  <button className="hover:underline">DOCUMENTS</button>
-                  <button className="hover:underline">RESEARCH</button>
-                  <button className="hover:underline">LIVE DATA</button>
-                  <button className="hover:underline">HELP</button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-light tracking-wide">Premiums</span>
-                  <button
-                    className="text-white/70 hover:text-white p-1 rounded hover:bg-white/10 ml-4"
-                    onClick={handleClose}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-              <div className="flex-1 overflow-auto">
-                <ClientDataCapture
-                  data={clientData}
-                  onChange={setClientData}
-                  onLaunchNeedsAnalysis={() => {}}
-                  onGetQuotes={handleGetQuotes}
-                />
-              </div>
+              <ClientDataCapture
+                clientData={clientData}
+                partnerData={showPartner ? partnerData : null}
+                onClientChange={setClientData}
+                onPartnerChange={setPartnerData}
+                onLaunchNeedsAnalysis={() => {}}
+                onGetQuotes={handleGetQuotes}
+              />
             </>
           )}
 
-          {/* Screens 1-4: Quote results layout */}
-          {screen >= 1 && (
+          {/* Insurance Details screens 1-4 */}
+          {typeof screen === 'number' && screen >= 1 && (
             <>
-              {/* Top header bar */}
-              <div className="flex items-center justify-between px-4 py-2 bg-slate-800 text-white">
-                <div className="flex items-center gap-4 text-xs">
-                  <span className="font-bold text-sm text-orange-400">OmniLife</span>
-                  <button className="hover:underline">DOCUMENTS</button>
-                  <button className="hover:underline">RESEARCH</button>
-                  <button className="hover:underline">LIVE DATA</button>
-                  <button className="hover:underline">HELP</button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-lg font-light tracking-wide">Premiums</span>
-                  <button
-                    className="text-white/70 hover:text-white p-1 rounded hover:bg-white/10 ml-4"
-                    onClick={handleClose}
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-              </div>
-
               {/* Client summary */}
-              <ClientSummaryBar client={clientData} />
+              <ClientSummaryBar
+                client={clientData}
+                partner={showPartner ? partnerData : null}
+              />
 
               {/* Screen nav tabs */}
               <div className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 border-b border-gray-200 text-xs">
                 <button
-                  onClick={() => setScreen(0)}
+                  onClick={() => setScreen('personal')}
                   className="flex items-center gap-1 text-teal-700 hover:underline mr-2"
                 >
                   <ArrowLeft size={12} />
-                  Client Data
+                  Personal Details
                 </button>
-                {([1, 2, 3, 4] as Screen[]).map((s) => (
+                {([1, 2, 3, 4] as const).map((s) => (
                   <button
                     key={s}
                     onClick={() => setScreen(s)}
@@ -262,14 +297,14 @@ export function InsuranceComparisonDialog({
                         : 'bg-white border border-gray-300 text-slate-600 hover:bg-gray-50'
                     }`}
                   >
-                    {SCREEN_LABELS[s]}
+                    {DETAIL_LABELS[s]}
                   </button>
                 ))}
                 <div className="flex-1" />
                 <Button
                   size="sm"
                   className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7"
-                  onClick={handleSave}
+                  onClick={handleSaveToScenario}
                 >
                   Save to Scenario
                 </Button>
@@ -304,7 +339,7 @@ export function InsuranceComparisonDialog({
                 />
               </div>
 
-              {/* Features Report Modal (Screen 3 feature) */}
+              {/* Features Report Modal */}
               <FeaturesReportModal
                 open={featuresReportOpen}
                 onClose={() => setFeaturesReportOpen(false)}
