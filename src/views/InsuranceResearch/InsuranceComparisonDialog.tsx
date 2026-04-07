@@ -18,6 +18,7 @@ import {
   getDefaultLifeCover,
   getDefaultTpd,
   getDefaultIncomeProtection,
+  buildPoliciesFromSelection,
   PROVIDER_LIST,
   PROVIDER_LIST_SUPER,
 } from './insuranceData';
@@ -30,13 +31,14 @@ import type {
   IncomeProtectionOptions,
   BusinessExpensesOptions,
   InsuranceProvider,
+  InsurancePolicy,
   DisplayOption,
 } from './insuranceData';
 
 interface Props {
   open: boolean;
   onClose: () => void;
-  onComplete: (scenarioName: string) => void;
+  onComplete: (scenarioName: string, policies: InsurancePolicy[]) => void;
   clientName: string;
   partnerName: string;
 }
@@ -162,7 +164,16 @@ export function InsuranceComparisonDialog({
 
   function handleSave() {
     const name = `Insurance Comparison ${new Date().toLocaleDateString('en-AU')}`;
-    onComplete(name);
+    const allProviders = [...providers, ...providersMixed];
+    const selected = allProviders.filter((p) => p.selected);
+    const policies = buildPoliciesFromSelection(
+      selected.length > 0 ? selected : providers.slice(0, 3),
+      lifeCover,
+      tpd,
+      incomeProtection,
+      clientName,
+    );
+    onComplete(name, policies);
     resetState();
   }
 

@@ -10,6 +10,9 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { useAppContext } from '@/context/AppContext';
 import { InsuranceComparisonDialog } from './InsuranceComparisonDialog';
+import { InsuranceScenarioDetail } from './InsuranceScenarioDetail';
+import { SEED_POLICIES } from './insuranceData';
+import type { InsurancePolicy } from './insuranceData';
 
 const STEPS = [
   'About You',
@@ -34,6 +37,7 @@ interface InsuranceScenario {
   lastModifiedDate: string;
   lastModifiedBy: string;
   includedInPlan: boolean;
+  policies: InsurancePolicy[];
 }
 
 const SEED_SCENARIOS: InsuranceScenario[] = [
@@ -46,6 +50,7 @@ const SEED_SCENARIOS: InsuranceScenario[] = [
     lastModifiedDate: '24 November 2025, 01:03 AM',
     lastModifiedBy: 'Aron Satchell',
     includedInPlan: true,
+    policies: SEED_POLICIES,
   },
 ];
 
@@ -62,6 +67,10 @@ export function InsuranceResearchPage() {
   const [activeTab, setActiveTab] = useState<ResearchTab>('insurance');
   const [insuranceScenarios, setInsuranceScenarios] = useState<InsuranceScenario[]>(SEED_SCENARIOS);
   const [comparisonOpen, setComparisonOpen] = useState(false);
+
+  // View state: 'list' shows scenario table, 'detail' shows policy detail
+  const [viewMode, setViewMode] = useState<'list' | 'detail'>('list');
+  const [activeScenarioId, setActiveScenarioId] = useState<string | null>(null);
 
   if (!scenario) {
     return (
@@ -80,7 +89,17 @@ export function InsuranceResearchPage() {
     );
   }
 
-  function handleComparisonComplete(name: string) {
+  function handleViewScenario(id: string) {
+    setActiveScenarioId(id);
+    setViewMode('detail');
+  }
+
+  function handleBackToList() {
+    setViewMode('list');
+    setActiveScenarioId(null);
+  }
+
+  function handleComparisonComplete(name: string, policies: InsurancePolicy[]) {
     const newScenario: InsuranceScenario = {
       id: `ins-${Date.now()}`,
       name,
@@ -104,12 +123,18 @@ export function InsuranceResearchPage() {
       }),
       lastModifiedBy: 'Caspar Jacobs',
       includedInPlan: false,
+      policies,
     };
     setInsuranceScenarios((prev) => [...prev, newScenario]);
     setComparisonOpen(false);
+
+    // Navigate into the newly created scenario detail view
+    setActiveScenarioId(newScenario.id);
+    setViewMode('detail');
   }
 
   const { client, partner } = state.clientFile;
+  const activeInsuranceScenario = insuranceScenarios.find((s) => s.id === activeScenarioId);
 
   return (
     <div className="min-h-full bg-gray-50">
@@ -210,7 +235,17 @@ export function InsuranceResearchPage() {
 
       {/* Tab content */}
       <div className="p-6">
-        {activeTab === 'insurance' && (
+        {activeTab === 'insurance' && viewMode === 'detail' && activeInsuranceScenario && (
+          <div className="bg-white rounded-lg border border-border shadow-sm">
+            <InsuranceScenarioDetail
+              scenarioName={activeInsuranceScenario.name}
+              policies={activeInsuranceScenario.policies}
+              onBack={handleBackToList}
+            />
+          </div>
+        )}
+
+        {activeTab === 'insurance' && viewMode === 'list' && (
           <div className="bg-white rounded-lg border border-border shadow-sm">
             {/* Insurance Research header */}
             <div className="px-6 py-4 border-b border-border flex items-center justify-between">
@@ -295,7 +330,9 @@ export function InsuranceResearchPage() {
                           </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-48">
-                          <DropdownMenuItem>View Scenario</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleViewScenario(s.id)}>
+                            View Scenario
+                          </DropdownMenuItem>
                           <DropdownMenuItem>View Replacement</DropdownMenuItem>
                           <DropdownMenuItem>View Like for Like</DropdownMenuItem>
                           <DropdownMenuItem>View Alternatives</DropdownMenuItem>
