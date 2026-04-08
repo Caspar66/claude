@@ -219,15 +219,27 @@ function PremiumLoadingForm({ form, onChange }: { form: QuoteFormState; onChange
   return <Inp label="Loading" value={d.loading} onChange={(v) => up({ loading: v })} />;
 }
 
-function ExistingPoliciesForm({ form, onChange }: { form: QuoteFormState; onChange: (f: QuoteFormState) => void }) {
+function ExistingPoliciesForm({ form, onChange, onMapPolicies }: { form: QuoteFormState; onChange: (f: QuoteFormState) => void; onMapPolicies?: () => void }) {
   const d = form.existingPolicies;
   const up = (patch: Partial<typeof d>) => onChange({ ...form, existingPolicies: { ...d, ...patch } });
-  return <NumInp label="No. of Policies" value={d.count} onChange={(v) => up({ count: v })} />;
+  return (
+    <>
+      <NumInp label="No. of Policies" value={d.count} onChange={(v) => up({ count: v })} />
+      {onMapPolicies && (
+        <button
+          className="mt-1 text-xs text-teal-700 hover:text-teal-800 hover:underline font-medium"
+          onClick={onMapPolicies}
+        >
+          Map Existing Policy...
+        </button>
+      )}
+    </>
+  );
 }
 
 // ── Section key → form body mapping ──────────────────────────────────────────
 
-const SECTION_FORMS: Record<QuoteSectionKey, React.FC<{ form: QuoteFormState; onChange: (f: QuoteFormState) => void }>> = {
+const SECTION_FORMS: Record<QuoteSectionKey, React.FC<{ form: QuoteFormState; onChange: (f: QuoteFormState) => void; onMapPolicies?: () => void }>> = {
   lifeInsured: LifeInsuredForm,
   termLife: TermLifeForm,
   tpdExtension: TpdExtensionForm,
@@ -265,9 +277,10 @@ interface Props {
   onReset: () => void;
   onSaveQuotes: () => void;
   onUpdateQuotes: () => void;
+  onMapExistingPolicies?: () => void;
 }
 
-export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdateQuotes }: Props) {
+export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdateQuotes, onMapExistingPolicies }: Props) {
   const [expandedSections, setExpandedSections] = useState<Set<QuoteSectionKey>>(new Set(['lifeInsured']));
 
   function toggleSection(key: QuoteSectionKey) {
@@ -298,7 +311,11 @@ export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdate
               expanded={expandedSections.has(key)}
               onToggle={() => toggleSection(key)}
             >
-              <FormBody form={form} onChange={onChange} />
+              <FormBody
+                form={form}
+                onChange={onChange}
+                onMapPolicies={key === 'existingPolicies' ? onMapExistingPolicies : undefined}
+              />
             </SectionCard>
           );
         })}

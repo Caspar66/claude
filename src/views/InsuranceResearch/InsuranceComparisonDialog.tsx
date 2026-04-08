@@ -13,6 +13,8 @@ import { ClientDataCapture } from './ClientDataCapture';
 import { QuoteLeftPanel } from './QuoteLeftPanel';
 import { QuoteResultsPanel } from './QuoteResultsPanel';
 import { FeaturesReportModal } from './FeaturesReportModal';
+import { MapExistingPolicyModal } from './MapExistingPolicyModal';
+import type { MappedPolicy } from './MapExistingPolicyModal';
 import {
   getDefaultClientData,
   getDefaultQuoteOptions,
@@ -152,6 +154,8 @@ export function InsuranceComparisonDialog({
   const [premiumFreq, setPremiumFreq] = useState<'Monthly Premium' | 'Annual Premium'>('Monthly Premium');
   const [displayOpts, setDisplayOpts] = useState<Set<DisplayOption>>(new Set());
   const [featuresReportOpen, setFeaturesReportOpen] = useState(false);
+  const [mapPolicyOpen, setMapPolicyOpen] = useState(false);
+  const [mappedPolicies, setMappedPolicies] = useState<MappedPolicy[]>([]);
 
   const showPartner = caseType === 'Client & Partner';
 
@@ -177,6 +181,8 @@ export function InsuranceComparisonDialog({
     setProvidersMixed(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
     setDisplayOpts(new Set());
     setFeaturesReportOpen(false);
+    setMapPolicyOpen(false);
+    setMappedPolicies([]);
   }
 
   function handleClose() {
@@ -212,6 +218,15 @@ export function InsuranceComparisonDialog({
 
   function handleUpdateQuotes() {
     setQuoteResults(generateMockQuoteResults());
+  }
+
+  function handleMapPolicyClose(policies: MappedPolicy[]) {
+    setMappedPolicies(policies);
+    setQuoteForm((prev) => ({
+      ...prev,
+      existingPolicies: { count: policies.length },
+    }));
+    setMapPolicyOpen(false);
   }
 
   function handleToggleQuoteSelect(id: string) {
@@ -343,6 +358,7 @@ export function InsuranceComparisonDialog({
                   }}
                   onSaveQuotes={handleSaveToScenario}
                   onUpdateQuotes={handleUpdateQuotes}
+                  onMapExistingPolicies={() => setMapPolicyOpen(true)}
                 />
                 <QuoteResultsPanel
                   results={quoteResults}
@@ -356,6 +372,13 @@ export function InsuranceComparisonDialog({
                 open={featuresReportOpen}
                 onClose={() => setFeaturesReportOpen(false)}
                 providers={activeProviders}
+              />
+
+              {/* Map Existing Policy Modal */}
+              <MapExistingPolicyModal
+                open={mapPolicyOpen}
+                onClose={handleMapPolicyClose}
+                existingPolicies={mappedPolicies}
               />
             </>
           )}
