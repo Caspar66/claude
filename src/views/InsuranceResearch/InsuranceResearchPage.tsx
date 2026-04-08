@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, MoreVertical, Shield, TrendingUp, FileText, Plus, Check } from 'lucide-react';
+import { ChevronLeft, ChevronRight, MoreVertical, Shield, TrendingUp, FileText, Plus, Check, ArrowLeft, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -13,6 +13,7 @@ import { InsuranceComparisonDialog } from './InsuranceComparisonDialog';
 import { InsuranceScenarioDetail } from './InsuranceScenarioDetail';
 import { SEED_POLICIES } from './insuranceData';
 import type { InsurancePolicy } from './insuranceData';
+import { persistResearchState, restoreResearchState } from './integrationHooks';
 
 const STEPS = [
   'About You',
@@ -135,21 +136,140 @@ export function InsuranceResearchPage() {
 
   const { client, partner } = state.clientFile;
   const activeInsuranceScenario = insuranceScenarios.find((s) => s.id === activeScenarioId);
+  const [activeClient, setActiveClient] = useState<'client' | 'partner'>('client');
+
+  // ── State persistence ─────────────────────────────────────────────────
+  useEffect(() => {
+    const saved = restoreResearchState();
+    if (saved) {
+      if (saved.viewMode === 'detail' && saved.activeScenarioId) {
+        const exists = insuranceScenarios.some((s) => s.id === saved.activeScenarioId);
+        if (exists) {
+          setActiveScenarioId(saved.activeScenarioId);
+          setViewMode('detail');
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    persistResearchState({
+      activeScenarioId,
+      viewMode,
+      comparisonOpen,
+      lastUpdated: new Date().toISOString(),
+    });
+  }, [activeScenarioId, viewMode, comparisonOpen]);
+
+  // ── Top navigation tabs ───────────────────────────────────────────────
+  const TOP_NAV_TABS = [
+    'Client Home', 'Fact Find 2.0', 'Assets/Liabilities', 'Cash Flow',
+    'Portfolio', 'Tasks', 'File Notes', 'Document Vault', 'Reports',
+    'Digital Advice', 'myDataLogic', 'Compliance',
+  ] as const;
 
   return (
-    <div className="min-h-full bg-gray-50">
-      {/* Client header bar */}
-      <div className="bg-white border-b border-border px-6 py-3">
+    <div className="min-h-full bg-gray-50 flex flex-col">
+      {/* ── Back link + Top navigation tabs ──────────────────────────────── */}
+      <div className="bg-slate-800 text-white">
+        <div className="flex items-center px-4 py-1.5 border-b border-slate-700">
+          <button
+            className="flex items-center gap-1 text-xs text-slate-300 hover:text-white mr-4"
+            onClick={() => navigate('/scenarios')}
+          >
+            <ArrowLeft size={12} />
+            Back to Advice Tools
+          </button>
+          <div className="flex items-center gap-0.5 overflow-x-auto">
+            {TOP_NAV_TABS.map((tab) => (
+              <button
+                key={tab}
+                className={`px-2.5 py-1.5 text-[11px] font-medium whitespace-nowrap rounded transition-colors ${
+                  tab === 'Digital Advice'
+                    ? 'bg-teal-600 text-white'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Digital Advice sub-nav ──────────────────────────────────────── */}
+        <div className="flex items-center px-4 py-1 text-xs gap-0.5 border-b border-slate-700">
+          <button className="px-2 py-1 text-slate-400 hover:text-white rounded hover:bg-slate-700">Asset Allocation Comparison</button>
+          <span className="text-slate-600 mx-1">|</span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mr-1">Super</span>
+          <button className="px-2 py-1 text-slate-400 hover:text-white rounded hover:bg-slate-700">Super Research</button>
+          <button className="px-2 py-1 text-slate-400 hover:text-white rounded hover:bg-slate-700">Super Fee Comparison</button>
+          <span className="text-slate-600 mx-1">|</span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mr-1">Insurance</span>
+          <button className="px-2 py-1 text-slate-400 hover:text-white rounded hover:bg-slate-700">Needs Analysis</button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="px-2 py-1 bg-teal-600 text-white rounded flex items-center gap-1 font-medium">
+                <Check size={10} />
+                Quoting &amp; Research
+                <ChevronDown size={10} />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-56">
+              <DropdownMenuItem>Asset Allocation Comparison</DropdownMenuItem>
+              <DropdownMenuItem className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold" disabled>Super</DropdownMenuItem>
+              <DropdownMenuItem>Super Research</DropdownMenuItem>
+              <DropdownMenuItem>Super Fee Comparison</DropdownMenuItem>
+              <DropdownMenuItem className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold" disabled>Insurance</DropdownMenuItem>
+              <DropdownMenuItem>Needs Analysis</DropdownMenuItem>
+              <DropdownMenuItem className="font-medium">
+                <Check size={12} className="mr-1.5" />
+                Quoting &amp; Research
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-[10px] text-muted-foreground uppercase tracking-wider font-bold" disabled>Non-Super</DropdownMenuItem>
+              <DropdownMenuItem>Platform Research</DropdownMenuItem>
+              <DropdownMenuItem>Platform Fee Comparison</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <span className="text-slate-600 mx-1">|</span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider font-bold mr-1">Non-Super</span>
+          <button className="px-2 py-1 text-slate-400 hover:text-white rounded hover:bg-slate-700">Platform Research</button>
+          <button className="px-2 py-1 text-slate-400 hover:text-white rounded hover:bg-slate-700">Platform Fee Comparison</button>
+        </div>
+      </div>
+
+      {/* ── Client context bar ───────────────────────────────────────────── */}
+      <div className="bg-white border-b border-border px-6 py-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full bg-teal-700 flex items-center justify-center">
               <Shield size={14} className="text-white" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">
-                {client.name} &amp; {partner.name}
-              </h1>
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+              <div className="flex items-center gap-2">
+                {/* Client/Partner toggle pills */}
+                <button
+                  onClick={() => setActiveClient('client')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    activeClient === 'client'
+                      ? 'bg-blue-600 text-white'
+                      : 'bg-gray-100 text-slate-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {client.name}
+                </button>
+                <button
+                  onClick={() => setActiveClient('partner')}
+                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
+                    activeClient === 'partner'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-100 text-slate-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {partner.name}
+                </button>
+              </div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                 <span>All Tools</span>
                 <span>|</span>
                 <span>Dated: {new Date().toLocaleDateString('en-AU')}</span>
