@@ -144,16 +144,66 @@ function PopoutInp({ label, value, onChange }: { label: string; value: string; o
 }
 
 function PopoutSel({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  // Parse comma-separated values
+  const selected = new Set(value.split(',').map((s) => s.trim()).filter(Boolean));
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  function toggle(opt: string) {
+    const next = new Set(selected);
+    if (next.has(opt)) {
+      next.delete(opt);
+      // If nothing left, keep the clicked one (at least one must be selected)
+      if (next.size === 0) return;
+    } else {
+      next.add(opt);
+    }
+    onChange(Array.from(next).join(', '));
+  }
+
+  const displayText = selected.size <= 1
+    ? Array.from(selected)[0] || options[0]
+    : `${selected.size} Selected`;
+
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-0.5 relative" ref={ref}>
       <label className="text-[10px] text-slate-500">{label}</label>
-      <select
-        className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
+      <button
+        type="button"
+        className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white text-left flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-blue-500 hover:border-gray-400"
+        onClick={() => setOpen(!open)}
       >
-        {options.map((o) => <option key={o} value={o}>{o}</option>)}
-      </select>
+        <span className={`truncate ${selected.size > 1 ? 'text-blue-600 font-medium' : ''}`}>{displayText}</span>
+        <ChevronDown size={12} className="text-gray-400 shrink-0 ml-1" />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-10 bg-white border border-gray-300 rounded shadow-lg mt-0.5 py-1 max-h-40 overflow-y-auto">
+          {options.map((opt) => (
+            <label
+              key={opt}
+              className="flex items-center gap-2 px-2 py-1 hover:bg-blue-50 cursor-pointer text-xs"
+            >
+              <input
+                type="checkbox"
+                checked={selected.has(opt)}
+                onChange={() => toggle(opt)}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+              />
+              <span className="text-slate-700">{opt}</span>
+            </label>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -267,6 +317,14 @@ function TermLifePopout({
   );
 }
 
+// ── Multi-value display helper ──────────────────────────────────────────────
+
+function multiLabel(value: string): string {
+  const parts = value.split(',').map((s) => s.trim()).filter(Boolean);
+  if (parts.length <= 1) return parts[0] || '—';
+  return `${parts.length} Selected`;
+}
+
 // ── Popout-enabled section card for Term Life group ─────────────────────────
 
 function TermLifeSectionCard({
@@ -308,15 +366,15 @@ function TermLifeSectionCard({
         <div className="grid grid-cols-3 gap-1 px-3 pb-2 text-[10px]">
           <div>
             <div className="text-slate-400">Premium Structure</div>
-            <div className="text-slate-600 font-medium">{life.premiumStructure}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(life.premiumStructure)}</div>
           </div>
           <div>
             <div className="text-slate-400">Ownership</div>
-            <div className="text-slate-600 font-medium">{life.ownership}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(life.ownership)}</div>
           </div>
           <div>
             <div className="text-slate-400">Premium Waiver</div>
-            <div className="text-slate-600 font-medium">{life.premiumWaiver}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(life.premiumWaiver)}</div>
           </div>
         </div>
       </div>
@@ -333,15 +391,15 @@ function TermLifeSectionCard({
         <div className="grid grid-cols-3 gap-1 px-3 pb-2 text-[10px]">
           <div>
             <div className="text-slate-400">Premium Structure</div>
-            <div className="text-slate-600 font-medium">{tpd.premiumStructure}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(tpd.premiumStructure)}</div>
           </div>
           <div>
             <div className="text-slate-400">Ownership</div>
-            <div className="text-slate-600 font-medium">{tpd.ownership}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(tpd.ownership)}</div>
           </div>
           <div>
             <div className="text-slate-400">Premium Waiver</div>
-            <div className="text-slate-600 font-medium">{tpd.premiumWaiver}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(tpd.premiumWaiver)}</div>
           </div>
         </div>
       </div>
@@ -358,15 +416,15 @@ function TermLifeSectionCard({
         <div className="grid grid-cols-3 gap-1 px-3 pb-2 text-[10px]">
           <div>
             <div className="text-slate-400">Premium Structure</div>
-            <div className="text-slate-600 font-medium">{trauma.premiumStructure}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(trauma.premiumStructure)}</div>
           </div>
           <div>
             <div className="text-slate-400">Trauma Features</div>
-            <div className="text-slate-600 font-medium">{trauma.traumaFeatures}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(trauma.traumaFeatures)}</div>
           </div>
           <div>
             <div className="text-slate-400">Premium Waiver</div>
-            <div className="text-slate-600 font-medium">{trauma.premiumWaiver}</div>
+            <div className="text-slate-600 font-medium">{multiLabel(trauma.premiumWaiver)}</div>
           </div>
         </div>
       </div>
