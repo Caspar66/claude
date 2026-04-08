@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CreateScenarioModal } from './CreateScenarioModal';
 import { ClientDataCapture } from './ClientDataCapture';
-import { QuoteOptionsSidebar } from './QuoteOptionsSidebar';
+import { QuoteLeftPanel } from './QuoteLeftPanel';
 import { ProviderResultsTable } from './ProviderResultsTable';
 import { FeaturesReportModal } from './FeaturesReportModal';
 import {
@@ -23,6 +23,8 @@ import {
   PROVIDER_LIST,
   PROVIDER_LIST_SUPER,
 } from './insuranceData';
+import { getDefaultQuoteForm } from './quoteFormTypes';
+import type { QuoteFormState } from './quoteFormTypes';
 import type {
   ClientFormData,
   QuoteOptions,
@@ -137,6 +139,10 @@ export function InsuranceComparisonDialog({
   const [incomeProtection, setIncomeProtection] = useState<IncomeProtectionOptions>(getDefaultIncomeProtection());
   const [businessExpenses, setBusinessExpenses] = useState<BusinessExpensesOptions>({ enabled: false });
 
+  const [quoteForm, setQuoteForm] = useState<QuoteFormState>(
+    getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland')
+  );
+
   const [providers, setProviders] = useState<InsuranceProvider[]>(PROVIDER_LIST.map((p) => ({ ...p })));
   const [providersMixed, setProvidersMixed] = useState<InsuranceProvider[]>(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
 
@@ -162,6 +168,7 @@ export function InsuranceComparisonDialog({
     setTrauma({ enabled: false });
     setIncomeProtection(getDefaultIncomeProtection());
     setBusinessExpenses({ enabled: false });
+    setQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
     setProviders(PROVIDER_LIST.map((p) => ({ ...p })));
     setProvidersMixed(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
     setDisplayOpts(new Set());
@@ -312,19 +319,12 @@ export function InsuranceComparisonDialog({
 
               {/* Main content: sidebar + table */}
               <div className="flex flex-1 overflow-hidden">
-                <QuoteOptionsSidebar
-                  quoteOptions={quoteOptions}
-                  lifeCover={lifeCover}
-                  tpd={tpd}
-                  trauma={trauma}
-                  incomeProtection={incomeProtection}
-                  businessExpenses={businessExpenses}
-                  onQuoteOptionsChange={setQuoteOptions}
-                  onLifeCoverChange={setLifeCover}
-                  onTpdChange={setTpd}
-                  onTraumaChange={setTrauma}
-                  onIncomeProtectionChange={setIncomeProtection}
-                  onBusinessExpensesChange={setBusinessExpenses}
+                <QuoteLeftPanel
+                  form={quoteForm}
+                  onChange={setQuoteForm}
+                  onReset={() => setQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'))}
+                  onSaveQuotes={handleSaveToScenario}
+                  onUpdateQuotes={() => {}}
                 />
                 <ProviderResultsTable
                   providers={activeProviders}
