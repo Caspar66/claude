@@ -11,7 +11,7 @@ import {
 import { CreateScenarioModal } from './CreateScenarioModal';
 import { ClientDataCapture } from './ClientDataCapture';
 import { QuoteLeftPanel } from './QuoteLeftPanel';
-import { ProviderResultsTable } from './ProviderResultsTable';
+import { QuoteResultsPanel } from './QuoteResultsPanel';
 import { FeaturesReportModal } from './FeaturesReportModal';
 import {
   getDefaultClientData,
@@ -25,6 +25,8 @@ import {
 } from './insuranceData';
 import { getDefaultQuoteForm } from './quoteFormTypes';
 import type { QuoteFormState } from './quoteFormTypes';
+import { generateMockQuoteResults, getEmptyQuoteResults } from './quoteResultsData';
+import type { QuoteResults } from './quoteResultsData';
 import type {
   ClientFormData,
   QuoteOptions,
@@ -142,6 +144,7 @@ export function InsuranceComparisonDialog({
   const [quoteForm, setQuoteForm] = useState<QuoteFormState>(
     getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland')
   );
+  const [quoteResults, setQuoteResults] = useState<QuoteResults>(getEmptyQuoteResults());
 
   const [providers, setProviders] = useState<InsuranceProvider[]>(PROVIDER_LIST.map((p) => ({ ...p })));
   const [providersMixed, setProvidersMixed] = useState<InsuranceProvider[]>(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
@@ -169,6 +172,7 @@ export function InsuranceComparisonDialog({
     setIncomeProtection(getDefaultIncomeProtection());
     setBusinessExpenses({ enabled: false });
     setQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
+    setQuoteResults(getEmptyQuoteResults());
     setProviders(PROVIDER_LIST.map((p) => ({ ...p })));
     setProvidersMixed(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
     setDisplayOpts(new Set());
@@ -204,6 +208,17 @@ export function InsuranceComparisonDialog({
   }
   function toggleProviderMixed(id: string) {
     setProvidersMixed((prev) => prev.map((p) => (p.id === id ? { ...p, selected: !p.selected } : p)));
+  }
+
+  function handleUpdateQuotes() {
+    setQuoteResults(generateMockQuoteResults());
+  }
+
+  function handleToggleQuoteSelect(id: string) {
+    setQuoteResults((prev) => ({
+      ...prev,
+      rows: prev.rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)),
+    }));
   }
 
   function handleSaveToScenario() {
@@ -322,20 +337,17 @@ export function InsuranceComparisonDialog({
                 <QuoteLeftPanel
                   form={quoteForm}
                   onChange={setQuoteForm}
-                  onReset={() => setQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'))}
+                  onReset={() => {
+                    setQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
+                    setQuoteResults(getEmptyQuoteResults());
+                  }}
                   onSaveQuotes={handleSaveToScenario}
-                  onUpdateQuotes={() => {}}
+                  onUpdateQuotes={handleUpdateQuotes}
                 />
-                <ProviderResultsTable
-                  providers={activeProviders}
-                  onToggleProvider={activeToggle}
-                  premiumFrequency={premiumFreq}
-                  onPremiumFrequencyChange={setPremiumFreq}
-                  displayOptions={displayOpts}
-                  onToggleDisplayOption={toggleDisplayOption}
-                  onViewFeatures={() => {}}
-                  onCompareFeatures={screen === 3 ? () => {} : undefined}
-                  onReport={() => setFeaturesReportOpen(true)}
+                <QuoteResultsPanel
+                  results={quoteResults}
+                  onToggleSelect={handleToggleQuoteSelect}
+                  onCompareProducts={() => {}}
                 />
               </div>
 
