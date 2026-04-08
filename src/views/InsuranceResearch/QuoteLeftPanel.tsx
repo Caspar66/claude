@@ -1,11 +1,19 @@
-import { useState } from 'react';
-import { Edit3, ChevronDown, ChevronRight } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Edit3, ChevronDown, ChevronRight, Save, FolderOpen, Trash2, CircleDot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type {
   QuoteFormState,
   QuoteSectionKey,
 } from './quoteFormTypes';
 import { SECTION_LABELS, getSectionSummary } from './quoteFormTypes';
+import {
+  loadSavedQuoteSets,
+  saveQuoteSet,
+  deleteSavedQuoteSet,
+  generateQuoteName,
+  isFormDirty,
+} from './savedQuotes';
+import type { SavedQuoteSet } from './savedQuotes';
 
 // ── Tiny form helpers ────────────────────────────────────────────────────────
 
@@ -269,6 +277,134 @@ const ALL_SECTIONS: QuoteSectionKey[] = [
   'existingPolicies',
 ];
 
+// ── Save quote inline dialog ─────────────────────────────────────────────────
+
+function SaveQuoteInline({
+  suggestedName,
+  onSave,
+  onCancel,
+}: {
+  suggestedName: string;
+  onSave: (name: string) => void;
+  onCancel: () => void;
+}) {
+  const [name, setName] = useState(suggestedName);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  return (
+    <div className="px-2.5 py-2 bg-teal-50 border-b border-teal-200 space-y-1.5">
+      <label className="text-[11px] font-semibold text-teal-800">Save Quote Set As:</label>
+      <input
+        ref={inputRef}
+        type="text"
+        className="w-full border border-teal-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && name.trim()) onSave(name.trim());
+          if (e.key === 'Escape') onCancel();
+        }}
+      />
+      <div className="flex items-center gap-1.5">
+        <Button
+          size="sm"
+          className="bg-teal-700 hover:bg-teal-800 text-white text-[11px] h-6 flex-1"
+          disabled={!name.trim()}
+          onClick={() => onSave(name.trim())}
+        >
+          Save
+        </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-[11px] h-6 flex-1"
+          onClick={onCancel}
+        >
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ── Saved quotes dropdown ────────────────────────────────────────────────────
+
+function SavedQuotesDropdown({
+  open,
+  onClose,
+  onLoad,
+}: {
+  open: boolean;
+  onClose: () => void;
+  onLoad: (set: SavedQuoteSet) => void;
+}) {
+  const [sets, setSets] = useState<SavedQuoteSet[]>([]);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (open) setSets(loadSavedQuoteSets());
+  }, [open]);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open, onClose]);
+
+  if (!open) return null;
+
+  function handleDelete(id: string) {
+    deleteSavedQuoteSet(id);
+    setSets(loadSavedQuoteSets());
+  }
+
+  return (
+    <div
+      ref={ref}
+      className="absolute left-0 right-0 top-full z-20 bg-white border border-gray-200 rounded-b-md shadow-lg max-h-60 overflow-y-auto"
+    >
+      {sets.length === 0 ? (
+        <div className="px-3 py-4 text-center text-xs text-muted-foreground">
+          No saved quote sets yet.
+        </div>
+      ) : (
+        sets.map((s) => {
+          const date = new Date(s.savedAt);
+          const dateStr = `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+          return (
+            <div
+              key={s.id}
+              className="flex items-center gap-2 px-3 py-2 hover:bg-teal-50 border-b border-gray-100 last:border-b-0 group cursor-pointer"
+              onClick={() => { onLoad(s); onClose(); }}
+            >
+              <div className="flex-1 min-w-0">
+                <div className="text-xs font-medium text-slate-700 truncate">{s.name}</div>
+                <div className="text-[10px] text-slate-400">{dateStr}</div>
+              </div>
+              <button
+                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 p-0.5 transition-opacity"
+                onClick={(e) => { e.stopPropagation(); handleDelete(s.id); }}
+                title="Delete saved set"
+              >
+                <Trash2 size={12} />
+              </button>
+            </div>
+          );
+        })
+      )}
+    </div>
+  );
+}
+
 // ── Main panel ───────────────────────────────────────────────────────────────
 
 interface Props {
@@ -283,6 +419,33 @@ interface Props {
 export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdateQuotes, onMapExistingPolicies }: Props) {
   const [expandedSections, setExpandedSections] = useState<Set<QuoteSectionKey>>(new Set(['lifeInsured']));
 
+  // ── Saved quotes state ──────────────────────────────────────────────────
+  const [showSaveInline, setShowSaveInline] = useState(false);
+  const [showSavedList, setShowSavedList] = useState(false);
+  const [savedBaseline, setSavedBaseline] = useState<QuoteFormState | null>(null);
+  const [activeSavedName, setActiveSavedName] = useState<string | null>(null);
+
+  const dirty = isFormDirty(form, savedBaseline);
+
+  function handleSaveQuoteSet(name: string) {
+    saveQuoteSet(name, form);
+    setSavedBaseline(structuredClone(form));
+    setActiveSavedName(name);
+    setShowSaveInline(false);
+  }
+
+  function handleLoadQuoteSet(set: SavedQuoteSet) {
+    onChange(structuredClone(set.form));
+    setSavedBaseline(structuredClone(set.form));
+    setActiveSavedName(set.name);
+  }
+
+  function handleReset() {
+    onReset();
+    setSavedBaseline(null);
+    setActiveSavedName(null);
+  }
+
   function toggleSection(key: QuoteSectionKey) {
     setExpandedSections((prev) => {
       const next = new Set(prev);
@@ -294,10 +457,66 @@ export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdate
 
   return (
     <div className="w-[300px] shrink-0 border-r border-gray-200 bg-gray-50 flex flex-col overflow-hidden">
-      {/* Header */}
-      <div className="px-3 py-2.5 border-b border-gray-200 bg-white">
-        <h3 className="text-sm font-bold text-slate-800">Quote Parameters</h3>
+      {/* Header with saved quotes controls */}
+      <div className="border-b border-gray-200 bg-white relative">
+        <div className="flex items-center justify-between px-3 py-2">
+          <h3 className="text-sm font-bold text-slate-800">Quote Parameters</h3>
+          <div className="flex items-center gap-1">
+            <button
+              className="text-slate-400 hover:text-teal-600 p-1 rounded transition-colors"
+              title="View Saved Quotes"
+              onClick={() => { setShowSavedList(!showSavedList); setShowSaveInline(false); }}
+            >
+              <FolderOpen size={14} />
+            </button>
+            <button
+              className="text-slate-400 hover:text-teal-600 p-1 rounded transition-colors"
+              title="Save Current Parameters"
+              onClick={() => { setShowSaveInline(!showSaveInline); setShowSavedList(false); }}
+            >
+              <Save size={14} />
+            </button>
+          </div>
+        </div>
+
+        {/* Active saved name + dirty indicator */}
+        <div className="flex items-center gap-1.5 px-3 pb-2 -mt-0.5">
+          {activeSavedName ? (
+            <>
+              <span className="text-[11px] text-slate-500 truncate max-w-[200px]">{activeSavedName}</span>
+              {dirty ? (
+                <span className="flex items-center gap-0.5 text-[10px] text-amber-600 font-medium shrink-0">
+                  <CircleDot size={10} />
+                  Unsaved
+                </span>
+              ) : (
+                <span className="text-[10px] text-emerald-600 font-medium shrink-0">Saved</span>
+              )}
+            </>
+          ) : (
+            <span className="flex items-center gap-0.5 text-[10px] text-amber-600 font-medium">
+              <CircleDot size={10} />
+              Unsaved Quotes
+            </span>
+          )}
+        </div>
+
+        {/* Saved quotes list dropdown */}
+        <SavedQuotesDropdown
+          open={showSavedList}
+          onClose={() => setShowSavedList(false)}
+          onLoad={handleLoadQuoteSet}
+        />
       </div>
+
+      {/* Save inline form (shown when save icon clicked) */}
+      {showSaveInline && (
+        <SaveQuoteInline
+          suggestedName={activeSavedName && !dirty ? activeSavedName : generateQuoteName(form)}
+          onSave={handleSaveQuoteSet}
+          onCancel={() => setShowSaveInline(false)}
+        />
+      )}
 
       {/* Scrollable cards */}
       <div className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-1.5">
@@ -327,14 +546,17 @@ export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdate
           variant="outline"
           size="sm"
           className="text-xs h-7 flex-1"
-          onClick={onReset}
+          onClick={handleReset}
         >
           Reset
         </Button>
         <Button
           size="sm"
           className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 flex-1"
-          onClick={onSaveQuotes}
+          onClick={() => {
+            setShowSaveInline(true);
+            setShowSavedList(false);
+          }}
         >
           Save Quotes
         </Button>
