@@ -92,7 +92,6 @@ function ClientSummaryBar({
       </button>
       {partner && (
         <>
-          <span className="text-slate-400 font-bold text-sm">&amp;</span>
           <button
             onClick={() => onToggleClient('partner')}
             className={`font-bold text-sm mr-1 px-2 py-0.5 rounded transition-colors ${
@@ -176,10 +175,14 @@ export function InsuranceComparisonDialog({
   const [incomeProtection, setIncomeProtection] = useState<IncomeProtectionOptions>(getDefaultIncomeProtection());
   const [businessExpenses, setBusinessExpenses] = useState<BusinessExpensesOptions>({ enabled: false });
 
-  const [quoteForm, setQuoteForm] = useState<QuoteFormState>(
+  const [clientQuoteForm, setClientQuoteForm] = useState<QuoteFormState>(
     getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland')
   );
-  const [quoteResults, setQuoteResults] = useState<QuoteResults>(getEmptyQuoteResults());
+  const [partnerQuoteForm, setPartnerQuoteForm] = useState<QuoteFormState>(
+    getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'Victoria')
+  );
+  const [clientQuoteResults, setClientQuoteResults] = useState<QuoteResults>(getEmptyQuoteResults());
+  const [partnerQuoteResults, setPartnerQuoteResults] = useState<QuoteResults>(getEmptyQuoteResults());
 
   const [providers, setProviders] = useState<InsuranceProvider[]>(PROVIDER_LIST.map((p) => ({ ...p })));
   const [providersMixed, setProvidersMixed] = useState<InsuranceProvider[]>(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
@@ -208,8 +211,11 @@ export function InsuranceComparisonDialog({
     setTrauma({ enabled: false });
     setIncomeProtection(getDefaultIncomeProtection());
     setBusinessExpenses({ enabled: false });
-    setQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
-    setQuoteResults(getEmptyQuoteResults());
+    setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
+    setPartnerQuoteForm(getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'Victoria'));
+    setClientQuoteResults(getEmptyQuoteResults());
+    setPartnerQuoteResults(getEmptyQuoteResults());
+    setActiveClient('client');
     setProviders(PROVIDER_LIST.map((p) => ({ ...p })));
     setProvidersMixed(PROVIDER_LIST_SUPER.map((p) => ({ ...p })));
     setDisplayOpts(new Set());
@@ -263,6 +269,13 @@ export function InsuranceComparisonDialog({
   }
 
   const [activeClient, setActiveClient] = useState<'client' | 'partner'>('client');
+
+  // Derived: active quote form & results based on selected entity
+  const quoteForm = activeClient === 'partner' ? partnerQuoteForm : clientQuoteForm;
+  const setQuoteForm = activeClient === 'partner' ? setPartnerQuoteForm : setClientQuoteForm;
+  const quoteResults = activeClient === 'partner' ? partnerQuoteResults : clientQuoteResults;
+  const setQuoteResults = activeClient === 'partner' ? setPartnerQuoteResults : setClientQuoteResults;
+
   const [preCompareScreen, setPreCompareScreen] = useState<Screen>(1);
   const [preOptionsScreen, setPreOptionsScreen] = useState<Screen>(1);
   const [optionsTab, setOptionsTab] = useState<OptionsTab>('riskLogicDefaults');
@@ -420,8 +433,13 @@ export function InsuranceComparisonDialog({
                   form={quoteForm}
                   onChange={setQuoteForm}
                   onReset={() => {
-                    setQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
-                    setQuoteResults(getEmptyQuoteResults());
+                    if (activeClient === 'partner') {
+                      setPartnerQuoteForm(getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'Victoria'));
+                      setPartnerQuoteResults(getEmptyQuoteResults());
+                    } else {
+                      setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
+                      setClientQuoteResults(getEmptyQuoteResults());
+                    }
                   }}
                   onSaveQuotes={handleSaveToScenario}
                   onUpdateQuotes={handleUpdateQuotes}
