@@ -15,6 +15,7 @@ import { QuoteResultsPanel } from './QuoteResultsPanel';
 import { FeaturesReportModal } from './FeaturesReportModal';
 import { MapExistingPolicyModal } from './MapExistingPolicyModal';
 import type { MappedPolicy } from './MapExistingPolicyModal';
+import { ProductComparisonPage } from './ProductComparisonPage';
 import {
   getDefaultClientData,
   getDefaultQuoteOptions,
@@ -51,8 +52,8 @@ interface Props {
   existingScenarioNames: string[];
 }
 
-// Screens: 'create' | 'personal' | 1 | 2 | 3 | 4
-type Screen = 'create' | 'personal' | 1 | 2 | 3 | 4;
+// Screens: 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare'
+type Screen = 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare';
 
 const DETAIL_LABELS: Record<number, string> = {
   1: 'Insurance Details',
@@ -229,11 +230,18 @@ export function InsuranceComparisonDialog({
     setMapPolicyOpen(false);
   }
 
+  const [preCompareScreen, setPreCompareScreen] = useState<Screen>(1);
+
   function handleToggleQuoteSelect(id: string) {
     setQuoteResults((prev) => ({
       ...prev,
       rows: prev.rows.map((r) => (r.id === id ? { ...r, selected: !r.selected } : r)),
     }));
+  }
+
+  function handleCompareProducts() {
+    setPreCompareScreen(screen);
+    setScreen('compare');
   }
 
   function handleSaveToScenario() {
@@ -363,7 +371,7 @@ export function InsuranceComparisonDialog({
                 <QuoteResultsPanel
                   results={quoteResults}
                   onToggleSelect={handleToggleQuoteSelect}
-                  onCompareProducts={() => {}}
+                  onCompareProducts={handleCompareProducts}
                 />
               </div>
 
@@ -381,6 +389,19 @@ export function InsuranceComparisonDialog({
                 existingPolicies={mappedPolicies}
               />
             </>
+          )}
+
+          {/* Compare Products screen */}
+          {screen === 'compare' && (
+            <ProductComparisonPage
+              selectedRows={
+                quoteResults.rows.filter((r) => r.selected).length > 0
+                  ? quoteResults.rows.filter((r) => r.selected)
+                  : quoteResults.rows.slice(0, 4)
+              }
+              existingRowId={mappedPolicies.length > 0 ? (quoteResults.rows.find((r) => r.selected)?.id ?? null) : null}
+              onBack={() => setScreen(preCompareScreen)}
+            />
           )}
         </div>
       </DialogContent>
