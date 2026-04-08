@@ -136,7 +136,6 @@ export function InsuranceResearchPage() {
 
   const { client, partner } = state.clientFile;
   const activeInsuranceScenario = insuranceScenarios.find((s) => s.id === activeScenarioId);
-  const [activeClient, setActiveClient] = useState<'client' | 'partner'>('client');
 
   // ── State persistence ─────────────────────────────────────────────────
   useEffect(() => {
@@ -172,28 +171,10 @@ export function InsuranceResearchPage() {
               <Shield size={14} className="text-white" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                {/* Client/Partner toggle pills */}
-                <button
-                  onClick={() => setActiveClient('client')}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                    activeClient === 'client'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-slate-500 hover:bg-gray-200'
-                  }`}
-                >
-                  {client.name}
-                </button>
-                <button
-                  onClick={() => setActiveClient('partner')}
-                  className={`px-3 py-1 rounded-full text-xs font-semibold transition-colors ${
-                    activeClient === 'partner'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-100 text-slate-500 hover:bg-gray-200'
-                  }`}
-                >
-                  {partner.name}
-                </button>
+              <div className="flex items-center gap-1">
+                <span className="text-sm font-semibold text-foreground">{client.name}</span>
+                <span className="text-sm text-muted-foreground">&amp;</span>
+                <span className="text-sm font-semibold text-foreground">{partner.name}</span>
               </div>
               <div className="flex items-center gap-2 text-xs text-muted-foreground mt-0.5">
                 <span>All Tools</span>

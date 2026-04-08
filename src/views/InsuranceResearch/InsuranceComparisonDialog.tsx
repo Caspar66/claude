@@ -66,20 +66,50 @@ const DETAIL_LABELS: Record<number, string> = {
 
 // ── Client summary bar ──────────────────────────────────────────────────────
 
-function ClientSummaryBar({ client, partner }: { client: ClientFormData; partner: ClientFormData | null }) {
-  const people = partner ? [client, partner] : [client];
+function ClientSummaryBar({
+  client,
+  partner,
+  activeClient,
+  onToggleClient,
+}: {
+  client: ClientFormData;
+  partner: ClientFormData | null;
+  activeClient: 'client' | 'partner';
+  onToggleClient: (who: 'client' | 'partner') => void;
+}) {
+  const displayed = activeClient === 'partner' && partner ? partner : client;
   return (
     <div className="flex items-center gap-2 px-4 py-2 bg-slate-700 text-white text-xs flex-wrap">
-      {people.map((p, i) => (
-        <span key={i} className="font-bold text-sm mr-1">
-          {p.firstName} {p.lastName}{i < people.length - 1 ? ' &' : ''}
-        </span>
-      ))}
-      <span className="bg-slate-600 rounded px-2 py-0.5">Age {client.age}</span>
+      <button
+        onClick={() => onToggleClient('client')}
+        className={`font-bold text-sm mr-0.5 px-2 py-0.5 rounded transition-colors ${
+          activeClient === 'client'
+            ? 'bg-blue-600 text-white'
+            : 'text-slate-300 hover:text-white'
+        }`}
+      >
+        {client.firstName} {client.lastName}
+      </button>
+      {partner && (
+        <>
+          <span className="text-slate-400 font-bold text-sm">&amp;</span>
+          <button
+            onClick={() => onToggleClient('partner')}
+            className={`font-bold text-sm mr-1 px-2 py-0.5 rounded transition-colors ${
+              activeClient === 'partner'
+                ? 'bg-purple-600 text-white'
+                : 'text-slate-300 hover:text-white'
+            }`}
+          >
+            {partner.firstName} {partner.lastName}
+          </button>
+        </>
+      )}
+      <span className="bg-slate-600 rounded px-2 py-0.5">Age {displayed.age}</span>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="bg-slate-600 rounded px-2 py-0.5 flex items-center gap-1 hover:bg-slate-500">
-            {client.gender} <ChevronDown size={10} />
+            {displayed.gender} <ChevronDown size={10} />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent><DropdownMenuItem>Male</DropdownMenuItem><DropdownMenuItem>Female</DropdownMenuItem></DropdownMenuContent>
@@ -87,13 +117,13 @@ function ClientSummaryBar({ client, partner }: { client: ClientFormData; partner
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <button className="bg-slate-600 rounded px-2 py-0.5 flex items-center gap-1 hover:bg-slate-500">
-            {client.smoker === 'No' ? 'Non Smoker' : 'Smoker'} <ChevronDown size={10} />
+            {displayed.smoker === 'No' ? 'Non Smoker' : 'Smoker'} <ChevronDown size={10} />
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent><DropdownMenuItem>Non Smoker</DropdownMenuItem><DropdownMenuItem>Smoker</DropdownMenuItem></DropdownMenuContent>
       </DropdownMenu>
-      <span className="bg-slate-600 rounded px-2 py-0.5">Income {client.annualIncome}</span>
-      <span className="bg-slate-600 rounded px-2 py-0.5">{client.occupation}</span>
+      <span className="bg-slate-600 rounded px-2 py-0.5">Income {displayed.annualIncome}</span>
+      <span className="bg-slate-600 rounded px-2 py-0.5">{displayed.occupation}</span>
       <div className="flex-1" />
       <button className="text-xs hover:underline">Occupation Ratings</button>
       <button className="text-xs hover:underline">Loadings</button>
@@ -232,6 +262,7 @@ export function InsuranceComparisonDialog({
     setMapPolicyOpen(false);
   }
 
+  const [activeClient, setActiveClient] = useState<'client' | 'partner'>('client');
   const [preCompareScreen, setPreCompareScreen] = useState<Screen>(1);
   const [preOptionsScreen, setPreOptionsScreen] = useState<Screen>(1);
   const [optionsTab, setOptionsTab] = useState<OptionsTab>('riskLogicDefaults');
@@ -347,6 +378,8 @@ export function InsuranceComparisonDialog({
               <ClientSummaryBar
                 client={clientData}
                 partner={showPartner ? partnerData : null}
+                activeClient={activeClient}
+                onToggleClient={setActiveClient}
               />
 
               {/* Screen nav tabs */}
