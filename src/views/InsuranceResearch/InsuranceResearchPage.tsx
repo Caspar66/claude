@@ -95,6 +95,11 @@ export function InsuranceResearchPage() {
     setViewMode('detail');
   }
 
+  function handleEditScenario(_id: string) {
+    // Re-open the comparison tool to edit this scenario
+    setComparisonOpen(true);
+  }
+
   function handleBackToList() {
     setViewMode('list');
     setActiveScenarioId(null);
@@ -365,7 +370,13 @@ export function InsuranceResearchPage() {
                           <DropdownMenuItem>View Alternatives</DropdownMenuItem>
                           <DropdownMenuItem>View Reports</DropdownMenuItem>
                           <DropdownMenuItem>View Needs Analysis</DropdownMenuItem>
-                          <DropdownMenuItem>Refresh Scenario</DropdownMenuItem>
+                          {s.source === 'Insurance Comparison' ? (
+                            <DropdownMenuItem onClick={() => handleEditScenario(s.id)}>
+                              Edit Scenario
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem>Refresh Scenario</DropdownMenuItem>
+                          )}
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </td>
