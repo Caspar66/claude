@@ -592,25 +592,27 @@ export function MapExistingPolicyModal({ open, onClose, existingPolicies }: Prop
           </div>
 
           {/* Step content */}
-          {step === 'search' && (
-            <StepProviderSearch onNext={handleProviderNext} />
-          )}
-          {step === 'covers' && (
-            <StepCoverSelection
-              provider={currentProvider}
-              version={currentVersion}
-              onBack={() => setStep('search')}
-              onSave={handleCoverSave}
-            />
-          )}
-          {step === 'confirm' && lastMapped && (
-            <StepConfirmation
-              policy={lastMapped}
-              totalPolicies={policies.length}
-              onAddAnother={handleAddAnother}
-              onDone={handleDone}
-            />
-          )}
+          <div className="flex-1 min-h-0">
+            {step === 'search' && (
+              <StepProviderSearch onNext={handleProviderNext} />
+            )}
+            {step === 'covers' && (
+              <StepCoverSelection
+                provider={currentProvider}
+                version={currentVersion}
+                onBack={() => setStep('search')}
+                onSave={handleCoverSave}
+              />
+            )}
+            {step === 'confirm' && lastMapped && (
+              <StepConfirmation
+                policy={lastMapped}
+                totalPolicies={policies.length}
+                onAddAnother={handleAddAnother}
+                onDone={handleDone}
+              />
+            )}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
