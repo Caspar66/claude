@@ -11,22 +11,35 @@ export interface LifeInsuredDetails {
 
 export interface TermLifeOptions {
   sumInsured: string;
-  premiumStructure: 'Stepped' | 'Level';
+  premiumStructure: string;
   ownership: 'Non-Super' | 'Super';
   premiumWaiver: 'Exclude' | 'Include';
+  payByRollover: string;
+  lifeBuyBack: string;
+  doubleTpd: string;
+  occupationType: string;
+  reinstatement: string;
 }
 
 export interface TpdExtensionOptions {
   sumInsured: string;
-  premiumStructure: 'Stepped' | 'Level';
+  premiumStructure: string;
   ownership: 'Non-Super' | 'Super';
   premiumWaiver: 'Exclude' | 'Include';
+  payByRollover: string;
+  lifeBuyBack: string;
+  doubleTpd: string;
 }
 
 export interface TraumaExtensionOptions {
   sumInsured: string;
+  premiumStructure: string;
   traumaFeatures: 'Basic' | 'Intermediate' | 'Comprehensive';
   premiumWaiver: 'Exclude' | 'Include';
+  lifeBuyBack: string;
+  doubleTrauma: string;
+  babyCare: string;
+  reinstatement: string;
 }
 
 export interface TpdStandaloneOptions {
@@ -133,17 +146,30 @@ export function getDefaultQuoteForm(clientAge: number, clientGender: 'Male' | 'F
       premiumStructure: 'Stepped',
       ownership: 'Non-Super',
       premiumWaiver: 'Exclude',
+      payByRollover: 'Exclude',
+      lifeBuyBack: 'Exclude',
+      doubleTpd: 'Exclude if possible',
+      occupationType: 'Best available',
+      reinstatement: 'Exclude if possible',
     },
     tpdExtension: {
       sumInsured: '$650,000',
       premiumStructure: 'Stepped',
       ownership: 'Non-Super',
       premiumWaiver: 'Exclude',
+      payByRollover: 'Exclude',
+      lifeBuyBack: 'Exclude if possible / Lowest pr.',
+      doubleTpd: 'Exclude if possible',
     },
     traumaExtension: {
       sumInsured: '$200,000',
+      premiumStructure: 'Stepped',
       traumaFeatures: 'Comprehensive',
       premiumWaiver: 'Exclude',
+      lifeBuyBack: 'Exclude if possible / Lowest pr.',
+      doubleTrauma: 'Exclude if possible',
+      babyCare: 'Exclude',
+      reinstatement: 'Exclude if possible',
     },
     tpdStandalone: { sumInsured: '' },
     traumaStandalone: { sumInsured: '' },

@@ -117,6 +117,263 @@ function SectionCard({
   );
 }
 
+// ── Premium structure options ────────────────────────────────────────────────
+
+const PREMIUM_STRUCTURE_OPTIONS = ['Stepped', 'Blended', 'Level to 65', 'Level to 70'];
+const LIFE_BUY_BACK_OPTIONS = ['Exclude', 'Exclude if possible / Lowest pr.', 'Include'];
+const DOUBLE_TPD_OPTIONS = ['Exclude if possible', 'Include'];
+const OCCUPATION_TYPE_OPTIONS = ['Best available', 'Own occupation', 'Any occupation', 'Suited occupation'];
+const REINSTATEMENT_OPTIONS = ['Exclude if possible', 'Include'];
+const DOUBLE_TRAUMA_OPTIONS = ['Exclude if possible', 'Include'];
+const BABY_CARE_OPTIONS = ['Exclude', 'Include'];
+const PAY_BY_ROLLOVER_OPTIONS = ['Exclude', 'Include'];
+
+// ── Popout form field helpers ───────────────────────────────────────────────
+
+function PopoutInp({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-0.5">
+      <label className="text-[10px] text-blue-600 font-medium">{label}</label>
+      <input
+        className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      />
+    </div>
+  );
+}
+
+function PopoutSel({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+  return (
+    <div className="space-y-0.5">
+      <label className="text-[10px] text-slate-500">{label}</label>
+      <select
+        className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {options.map((o) => <option key={o} value={o}>{o}</option>)}
+      </select>
+    </div>
+  );
+}
+
+// ── Term Life and Extensions Popout ─────────────────────────────────────────
+
+function TermLifePopout({
+  form,
+  onChange,
+  onClose,
+}: {
+  form: QuoteFormState;
+  onChange: (f: QuoteFormState) => void;
+  onClose: () => void;
+}) {
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [draft, setDraft] = useState<QuoteFormState>(structuredClone(form));
+
+  // Close on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (panelRef.current && !panelRef.current.contains(e.target as Node)) onClose();
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [onClose]);
+
+  const life = draft.termLife;
+  const tpd = draft.tpdExtension;
+  const trauma = draft.traumaExtension;
+
+  const upLife = (patch: Partial<typeof life>) => setDraft((prev) => ({ ...prev, termLife: { ...prev.termLife, ...patch } }));
+  const upTpd = (patch: Partial<typeof tpd>) => setDraft((prev) => ({ ...prev, tpdExtension: { ...prev.tpdExtension, ...patch } }));
+  const upTrauma = (patch: Partial<typeof trauma>) => setDraft((prev) => ({ ...prev, traumaExtension: { ...prev.traumaExtension, ...patch } }));
+
+  function handleSave() {
+    onChange(draft);
+    onClose();
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center pt-[80px]" style={{ background: 'rgba(0,0,0,0.15)' }}>
+      <div ref={panelRef} className="bg-white rounded-lg shadow-2xl border border-gray-200 w-[720px] max-h-[70vh] flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-2.5 border-b border-gray-200">
+          <h3 className="text-sm font-bold text-slate-800">Term Life and Extensions</h3>
+          <button
+            className="w-6 h-6 rounded-full bg-red-500 hover:bg-red-600 text-white flex items-center justify-center text-xs font-bold"
+            onClick={onClose}
+          >
+            ✕
+          </button>
+        </div>
+
+        {/* 3 column grid */}
+        <div className="flex-1 overflow-y-auto px-4 py-3">
+          <div className="grid grid-cols-3 gap-4">
+            {/* Life column */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-700 border-b border-blue-200 pb-1">Life</h4>
+              <PopoutInp label="Sum Insured" value={life.sumInsured} onChange={(v) => upLife({ sumInsured: v })} />
+              <PopoutSel label="Premium Structure" value={life.premiumStructure} options={PREMIUM_STRUCTURE_OPTIONS} onChange={(v) => upLife({ premiumStructure: v })} />
+              <PopoutSel label="Ownership" value={life.ownership} options={['Non-Super', 'Super']} onChange={(v) => upLife({ ownership: v as 'Non-Super' | 'Super' })} />
+              <PopoutSel label="Premium Waiver" value={life.premiumWaiver} options={['Exclude', 'Include']} onChange={(v) => upLife({ premiumWaiver: v as 'Exclude' | 'Include' })} />
+              <PopoutSel label="Pay by Rollover" value={life.payByRollover} options={PAY_BY_ROLLOVER_OPTIONS} onChange={(v) => upLife({ payByRollover: v })} />
+              <PopoutSel label="Life Buy Back" value={life.lifeBuyBack} options={LIFE_BUY_BACK_OPTIONS} onChange={(v) => upLife({ lifeBuyBack: v })} />
+              <PopoutSel label="Double TPD" value={life.doubleTpd} options={DOUBLE_TPD_OPTIONS} onChange={(v) => upLife({ doubleTpd: v })} />
+              <PopoutSel label="Occupation Type" value={life.occupationType} options={OCCUPATION_TYPE_OPTIONS} onChange={(v) => upLife({ occupationType: v })} />
+              <PopoutSel label="Reinstatement" value={life.reinstatement} options={REINSTATEMENT_OPTIONS} onChange={(v) => upLife({ reinstatement: v })} />
+            </div>
+
+            {/* TPD Extension column */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-700 border-b border-blue-200 pb-1">TPD Extension</h4>
+              <PopoutInp label="Sum Insured" value={tpd.sumInsured} onChange={(v) => upTpd({ sumInsured: v })} />
+              <PopoutSel label="Premium Structure" value={tpd.premiumStructure} options={PREMIUM_STRUCTURE_OPTIONS} onChange={(v) => upTpd({ premiumStructure: v })} />
+              <PopoutSel label="Ownership" value={tpd.ownership} options={['Non-Super', 'Super']} onChange={(v) => upTpd({ ownership: v as 'Non-Super' | 'Super' })} />
+              <PopoutSel label="Premium Waiver" value={tpd.premiumWaiver} options={['Exclude', 'Include']} onChange={(v) => upTpd({ premiumWaiver: v as 'Exclude' | 'Include' })} />
+              <PopoutSel label="Pay by Rollover" value={tpd.payByRollover} options={PAY_BY_ROLLOVER_OPTIONS} onChange={(v) => upTpd({ payByRollover: v })} />
+              <PopoutSel label="Life Buy Back" value={tpd.lifeBuyBack} options={LIFE_BUY_BACK_OPTIONS} onChange={(v) => upTpd({ lifeBuyBack: v })} />
+              <PopoutSel label="Double TPD" value={tpd.doubleTpd} options={DOUBLE_TPD_OPTIONS} onChange={(v) => upTpd({ doubleTpd: v })} />
+            </div>
+
+            {/* Trauma Extension column */}
+            <div className="space-y-2">
+              <h4 className="text-xs font-bold text-slate-700 border-b border-blue-200 pb-1">Trauma Extension</h4>
+              <PopoutInp label="Sum Insured" value={trauma.sumInsured} onChange={(v) => upTrauma({ sumInsured: v })} />
+              <PopoutSel label="Premium Structure" value={trauma.premiumStructure} options={PREMIUM_STRUCTURE_OPTIONS} onChange={(v) => upTrauma({ premiumStructure: v })} />
+              <PopoutSel label="Trauma Features" value={trauma.traumaFeatures} options={['Basic', 'Intermediate', 'Comprehensive']} onChange={(v) => upTrauma({ traumaFeatures: v as 'Basic' | 'Intermediate' | 'Comprehensive' })} />
+              <PopoutSel label="Premium Waiver" value={trauma.premiumWaiver} options={['Exclude', 'Include']} onChange={(v) => upTrauma({ premiumWaiver: v as 'Exclude' | 'Include' })} />
+              <PopoutSel label="Life Buy Back" value={trauma.lifeBuyBack} options={LIFE_BUY_BACK_OPTIONS} onChange={(v) => upTrauma({ lifeBuyBack: v })} />
+              <PopoutSel label="Double Trauma" value={trauma.doubleTrauma} options={DOUBLE_TRAUMA_OPTIONS} onChange={(v) => upTrauma({ doubleTrauma: v })} />
+              <PopoutSel label="Baby Care" value={trauma.babyCare} options={BABY_CARE_OPTIONS} onChange={(v) => upTrauma({ babyCare: v })} />
+              <PopoutSel label="Reinstatement" value={trauma.reinstatement} options={REINSTATEMENT_OPTIONS} onChange={(v) => upTrauma({ reinstatement: v })} />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end px-4 py-2.5 border-t border-gray-200">
+          <Button
+            size="sm"
+            className="bg-teal-700 hover:bg-teal-800 text-white text-xs px-6"
+            onClick={handleSave}
+          >
+            SAVE CHANGES
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Popout-enabled section card for Term Life group ─────────────────────────
+
+function TermLifeSectionCard({
+  form,
+  onOpenPopout,
+}: {
+  form: QuoteFormState;
+  onOpenPopout: () => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  const life = form.termLife;
+  const tpd = form.tpdExtension;
+  const trauma = form.traumaExtension;
+
+  // Count how many extensions are active (have a sum insured)
+  const selectedCount = [life.sumInsured, tpd.sumInsured, trauma.sumInsured].filter(Boolean).length;
+
+  return (
+    <div className="space-y-1.5">
+      {/* Term Life and Extensions */}
+      <div
+        className="border border-blue-200 rounded-md bg-blue-50/40 cursor-pointer hover:bg-blue-50"
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        onClick={onOpenPopout}
+      >
+        <div className="flex items-center gap-2 px-3 py-2">
+          <ChevronRight size={14} className="text-slate-500 shrink-0" />
+          <span className="text-xs font-bold text-slate-800 flex-1">Term Life and Extensions</span>
+          {hovered && (
+            <button className="text-slate-400 hover:text-teal-600 p-0.5 rounded transition-colors">
+              <Edit3 size={12} />
+            </button>
+          )}
+        </div>
+        <div className="px-3 pb-2 -mt-0.5 text-[10px] text-slate-500">
+          {selectedCount > 0 && <span>{selectedCount} Selected</span>}
+        </div>
+        <div className="grid grid-cols-3 gap-1 px-3 pb-2 text-[10px]">
+          <div>
+            <div className="text-slate-400">Premium Structure</div>
+            <div className="text-slate-600 font-medium">{life.premiumStructure}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">Ownership</div>
+            <div className="text-slate-600 font-medium">{life.ownership}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">Premium Waiver</div>
+            <div className="text-slate-600 font-medium">{life.premiumWaiver}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* TPD Extension */}
+      <div
+        className="border border-gray-200 rounded-md bg-white cursor-pointer hover:bg-gray-50/50"
+        onClick={onOpenPopout}
+      >
+        <div className="flex items-center gap-2 px-3 py-2">
+          <ChevronRight size={14} className="text-slate-500 shrink-0" />
+          <span className="text-xs font-bold text-slate-800 flex-1">TPD Extension</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1 px-3 pb-2 text-[10px]">
+          <div>
+            <div className="text-slate-400">Premium Structure</div>
+            <div className="text-slate-600 font-medium">{tpd.premiumStructure}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">Ownership</div>
+            <div className="text-slate-600 font-medium">{tpd.ownership}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">Premium Waiver</div>
+            <div className="text-slate-600 font-medium">{tpd.premiumWaiver}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Trauma Extension */}
+      <div
+        className="border border-gray-200 rounded-md bg-white cursor-pointer hover:bg-gray-50/50"
+        onClick={onOpenPopout}
+      >
+        <div className="flex items-center gap-2 px-3 py-2">
+          <ChevronRight size={14} className="text-slate-500 shrink-0" />
+          <span className="text-xs font-bold text-slate-800 flex-1">Trauma Extension</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1 px-3 pb-2 text-[10px]">
+          <div>
+            <div className="text-slate-400">Premium Structure</div>
+            <div className="text-slate-600 font-medium">{trauma.premiumStructure}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">Trauma Features</div>
+            <div className="text-slate-600 font-medium">{trauma.traumaFeatures}</div>
+          </div>
+          <div>
+            <div className="text-slate-400">Premium Waiver</div>
+            <div className="text-slate-600 font-medium">{trauma.premiumWaiver}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Section form bodies ──────────────────────────────────────────────────────
 
 function LifeInsuredForm({ form, onChange }: { form: QuoteFormState; onChange: (f: QuoteFormState) => void }) {
@@ -416,8 +673,11 @@ interface Props {
   onMapExistingPolicies?: () => void;
 }
 
+const POPOUT_SECTIONS = new Set<QuoteSectionKey>(['termLife', 'tpdExtension', 'traumaExtension']);
+
 export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdateQuotes, onMapExistingPolicies }: Props) {
   const [expandedSections, setExpandedSections] = useState<Set<QuoteSectionKey>>(new Set(['lifeInsured']));
+  const [termLifePopoutOpen, setTermLifePopoutOpen] = useState(false);
 
   // ── Saved quotes state ──────────────────────────────────────────────────
   const [showSaveInline, setShowSaveInline] = useState(false);
@@ -521,6 +781,20 @@ export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdate
       {/* Scrollable cards */}
       <div className="flex-1 overflow-y-auto px-2.5 py-2.5 space-y-1.5">
         {ALL_SECTIONS.map((key) => {
+          // Skip tpdExtension and traumaExtension — they're rendered inside the Term Life group
+          if (key === 'tpdExtension' || key === 'traumaExtension') return null;
+
+          // Term Life group: render the popout-enabled section card
+          if (key === 'termLife') {
+            return (
+              <TermLifeSectionCard
+                key="termLifeGroup"
+                form={form}
+                onOpenPopout={() => setTermLifePopoutOpen(true)}
+              />
+            );
+          }
+
           const FormBody = SECTION_FORMS[key];
           return (
             <SectionCard
@@ -539,6 +813,15 @@ export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdate
           );
         })}
       </div>
+
+      {/* Term Life and Extensions popout */}
+      {termLifePopoutOpen && (
+        <TermLifePopout
+          form={form}
+          onChange={onChange}
+          onClose={() => setTermLifePopoutOpen(false)}
+        />
+      )}
 
       {/* Bottom action buttons */}
       <div className="flex items-center gap-2 px-3 py-2.5 border-t border-gray-200 bg-white">
