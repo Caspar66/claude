@@ -11,7 +11,7 @@ interface Props {
   onGetQuotes: () => void;
 }
 
-function InputField({ value, onChange, className = '' }: { value: string; onChange: (v: string) => void; className?: string }) {
+function Inp({ value, onChange, className = '' }: { value: string; onChange: (v: string) => void; className?: string }) {
   return (
     <input
       type="text"
@@ -22,7 +22,7 @@ function InputField({ value, onChange, className = '' }: { value: string; onChan
   );
 }
 
-function SelectField({ value, onChange, options, className = '' }: { value: string; onChange: (v: string) => void; options: string[]; className?: string }) {
+function Sel({ value, onChange, options, className = '' }: { value: string; onChange: (v: string) => void; options: string[]; className?: string }) {
   return (
     <select
       className={`border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${className}`}
@@ -34,104 +34,91 @@ function SelectField({ value, onChange, options, className = '' }: { value: stri
   );
 }
 
-function PersonColumn({
+const OCCUPATION_OPTIONS = [
+  '1P - Accounting Professionals',
+  '1P - Actuarial Professionals',
+  '2B - Clerical & Administration',
+  '3A - Sales Representatives',
+  '4A - Trades & Labour',
+];
+
+const STATE_OPTIONS = ['Queensland', 'New South Wales', 'Victoria', 'Western Australia', 'South Australia', 'Tasmania', 'ACT', 'Northern Territory'];
+
+function PersonFields({
   data,
   onChange,
-  label,
 }: {
   data: ClientFormData;
   onChange: (d: ClientFormData) => void;
-  label: string;
 }) {
   function update(field: keyof ClientFormData, value: string | number) {
     onChange({ ...data, [field]: value });
   }
 
-  return (
-    <div className="flex-1 space-y-3">
-      {/* Name header */}
-      <div className="text-sm font-semibold text-slate-700 mb-2">{label}</div>
-
-      {/* Occupation keyword search */}
+  return {
+    name: (
       <div className="flex items-center gap-2">
-        <InputField value="" onChange={() => {}} className="w-36" />
-        <span className="text-xs text-blue-600 cursor-pointer hover:underline">(Keyword Search)</span>
+        <Inp value="" onChange={() => {}} className="w-36" />
+        <span className="text-xs text-orange-500 cursor-pointer hover:underline">(Keyword Search)</span>
       </div>
-
-      {/* Occupation dropdown */}
+    ),
+    occupation: (
       <div className="flex items-center gap-1.5">
-        <SelectField
-          value={data.occupationCode}
-          onChange={(v) => update('occupationCode', v)}
-          options={[
-            '1P - Accounting Professionals',
-            '1P - Actuarial Professionals',
-            '2B - Clerical & Administration',
-            '3A - Sales Representatives',
-            '4A - Trades & Labour',
-          ]}
-          className="w-64"
-        />
-        <button className="text-blue-500 hover:text-blue-700" title="Occupation info">
-          <Info size={14} />
-        </button>
+        <Sel value={data.occupationCode} onChange={(v) => update('occupationCode', v)} options={OCCUPATION_OPTIONS} className="w-60" />
+        <button className="text-blue-500 hover:text-blue-700" title="Occupation info"><Info size={14} /></button>
       </div>
-
-      {/* Self Employed */}
-      <SelectField
-        value={data.selfEmployed}
-        onChange={(v) => update('selfEmployed', v)}
-        options={['No', 'Yes']}
-        className="w-16"
-      />
-
-      {/* Date of Birth */}
+    ),
+    selfEmployed: (
+      <Sel value={data.selfEmployed} onChange={(v) => update('selfEmployed', v)} options={['No', 'Yes']} className="w-16" />
+    ),
+    dob: (
       <div className="flex items-center gap-1.5">
-        <InputField value={data.dateOfBirth} onChange={(v) => update('dateOfBirth', v)} className="w-28" />
-        <button className="text-slate-400 hover:text-slate-600">
-          <Calendar size={14} />
-        </button>
+        <Inp value={data.dateOfBirth} onChange={(v) => update('dateOfBirth', v)} className="w-28" />
+        <button className="text-slate-400 hover:text-slate-600"><Calendar size={14} /></button>
       </div>
-
-      {/* Gender */}
-      <SelectField
-        value={data.gender}
-        onChange={(v) => update('gender', v)}
-        options={['Male', 'Female']}
-        className="w-20"
-      />
-
-      {/* Smoker Status */}
-      <SelectField
+    ),
+    gender: (
+      <Sel value={data.gender} onChange={(v) => update('gender', v)} options={['Male', 'Female']} className="w-20" />
+    ),
+    smoker: (
+      <Sel
         value={data.smoker === 'No' ? 'Non-Smoker' : 'Smoker'}
         onChange={(v) => update('smoker', v === 'Non-Smoker' ? 'No' : 'Yes')}
         options={['Non-Smoker', 'Smoker']}
         className="w-32"
       />
-
-      {/* State */}
-      <SelectField
-        value={data.state}
-        onChange={(v) => update('state', v)}
-        options={['Queensland', 'New South Wales', 'Victoria', 'Western Australia', 'South Australia', 'Tasmania', 'ACT', 'Northern Territory']}
-        className="w-40"
-      />
-
-      {/* Annual Income */}
-      <InputField
-        value={data.annualIncome}
-        onChange={(v) => update('annualIncome', v)}
-        className="w-28"
-      />
-
-      {/* Loadings */}
+    ),
+    state: (
+      <Sel value={data.state} onChange={(v) => update('state', v)} options={STATE_OPTIONS} className="w-40" />
+    ),
+    income: (
+      <Inp value={data.annualIncome} onChange={(v) => update('annualIncome', v)} className="w-28" />
+    ),
+    loadings: (
       <div className="flex items-center gap-2">
         <span className="text-sm text-slate-600">{data.loadings}</span>
-        <button className="text-blue-500 hover:text-blue-700" title="Edit loadings">
-          <Edit3 size={12} />
-        </button>
+        <button className="text-blue-500 hover:text-blue-700" title="Edit loadings"><Edit3 size={12} /></button>
       </div>
-    </div>
+    ),
+  };
+}
+
+interface RowProps {
+  label: string;
+  labelColor?: string;
+  clientField: React.ReactNode;
+  partnerField?: React.ReactNode;
+}
+
+function FormRow({ label, labelColor = 'text-slate-700', clientField, partnerField }: RowProps) {
+  return (
+    <tr>
+      <td className={`py-2 pr-6 text-sm font-semibold ${labelColor} align-top whitespace-nowrap`}>
+        {label}
+      </td>
+      <td className="py-2 pr-10 align-top">{clientField}</td>
+      {partnerField !== undefined && <td className="py-2 align-top">{partnerField}</td>}
+    </tr>
   );
 }
 
@@ -144,67 +131,55 @@ export function ClientDataCapture({
   onGetQuotes,
 }: Props) {
   const showPartner = partnerData !== null;
+  const c = PersonFields({ data: clientData, onChange: onClientChange });
+  const p = showPartner && partnerData ? PersonFields({ data: partnerData, onChange: onPartnerChange }) : null;
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto flex flex-col">
       {/* Section header */}
       <div className="flex items-center justify-between px-5 py-2.5 bg-blue-700 text-white">
         <h2 className="text-sm font-bold">Personal Details</h2>
         <div className="flex items-center gap-2 text-white/80">
-          <button className="hover:text-white" title="Settings">
-            <Info size={14} />
-          </button>
+          <button className="hover:text-white" title="Settings"><Info size={14} /></button>
         </div>
       </div>
 
       {/* Form body */}
-      <div className="px-5 py-4">
-        {/* Labels column + person columns */}
-        <div className="flex gap-6">
-          {/* Labels */}
-          <div className="w-28 shrink-0 space-y-3 pt-8">
-            <div className="text-sm font-semibold text-blue-800 h-[34px] flex items-center">Name</div>
-            <div className="text-sm font-semibold text-slate-600 h-[34px] flex items-center">Occupation</div>
-            <div className="h-[34px] flex items-center" />
-            <div className="text-sm font-semibold text-slate-600 h-[34px] flex items-center">Self Employed</div>
-            <div className="text-sm font-semibold text-slate-600 h-[34px] flex items-center">Date of Birth</div>
-            <div className="text-sm font-semibold text-slate-600 h-[34px] flex items-center">Gender</div>
-            <div className="text-sm font-semibold text-slate-600 h-[34px] flex items-center">Smoker Status</div>
-            <div className="text-sm font-semibold text-slate-600 h-[34px] flex items-center">State</div>
-            <div className="text-sm font-semibold text-slate-600 h-[34px] flex items-center">Annual Income (ex super)</div>
-            <div className="text-sm font-semibold text-blue-800 h-[34px] flex items-center">Loadings</div>
-          </div>
-
-          {/* Client column */}
-          <PersonColumn
-            data={clientData}
-            onChange={onClientChange}
-            label={`${clientData.firstName}, ${clientData.lastName}`}
-          />
-
-          {/* Partner column */}
-          {showPartner && partnerData && (
-            <PersonColumn
-              data={partnerData}
-              onChange={onPartnerChange}
-              label={`${partnerData.firstName}, ${partnerData.lastName}`}
-            />
-          )}
-        </div>
+      <div className="flex-1 px-8 py-5">
+        <table className="text-sm">
+          <thead>
+            <tr>
+              <th />
+              <th className="text-left pb-3 pr-10 text-sm font-semibold text-slate-700">
+                {clientData.firstName}, {clientData.lastName}
+              </th>
+              {showPartner && partnerData && (
+                <th className="text-left pb-3 text-sm font-semibold text-slate-700">
+                  {partnerData.firstName}, {partnerData.lastName}
+                </th>
+              )}
+            </tr>
+          </thead>
+          <tbody>
+            <FormRow label="Name" labelColor="text-blue-800" clientField={c.name} partnerField={p?.name} />
+            <FormRow label="Occupation" clientField={c.occupation} partnerField={p?.occupation} />
+            <FormRow label="Self Employed" clientField={c.selfEmployed} partnerField={p?.selfEmployed} />
+            <FormRow label="Date of Birth" clientField={c.dob} partnerField={p?.dob} />
+            <FormRow label="Gender" clientField={c.gender} partnerField={p?.gender} />
+            <FormRow label="Smoker Status" clientField={c.smoker} partnerField={p?.smoker} />
+            <FormRow label="State" clientField={c.state} partnerField={p?.state} />
+            <FormRow label="Annual Income&#10;(ex super)" clientField={c.income} partnerField={p?.income} />
+            <FormRow label="Loadings" labelColor="text-blue-800" clientField={c.loadings} partnerField={p?.loadings} />
+          </tbody>
+        </table>
       </div>
 
       {/* Action buttons */}
       <div className="flex justify-center gap-3 py-4 border-t border-gray-200 bg-gray-50">
-        <Button
-          className="bg-teal-700 hover:bg-teal-800 text-white px-6"
-          onClick={onLaunchNeedsAnalysis}
-        >
+        <Button className="bg-teal-700 hover:bg-teal-800 text-white px-6" onClick={onLaunchNeedsAnalysis}>
           Launch Needs Analysis
         </Button>
-        <Button
-          className="bg-teal-700 hover:bg-teal-800 text-white px-6"
-          onClick={onGetQuotes}
-        >
+        <Button className="bg-teal-700 hover:bg-teal-800 text-white px-6" onClick={onGetQuotes}>
           Get Quotes
         </Button>
       </div>
