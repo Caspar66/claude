@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, ChevronDown, ArrowLeft } from 'lucide-react';
+import { X, ChevronDown, ArrowLeft, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
@@ -16,6 +16,8 @@ import { FeaturesReportModal } from './FeaturesReportModal';
 import { MapExistingPolicyModal } from './MapExistingPolicyModal';
 import type { MappedPolicy } from './MapExistingPolicyModal';
 import { ProductComparisonPage } from './ProductComparisonPage';
+import { OptionsModalContent } from './OptionsPanel';
+import type { OptionsTab } from './OptionsPanel';
 import {
   getDefaultClientData,
   getDefaultQuoteOptions,
@@ -52,8 +54,8 @@ interface Props {
   existingScenarioNames: string[];
 }
 
-// Screens: 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare'
-type Screen = 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare';
+// Screens: 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare' | 'options'
+type Screen = 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare' | 'options';
 
 const DETAIL_LABELS: Record<number, string> = {
   1: 'Insurance Details',
@@ -231,6 +233,8 @@ export function InsuranceComparisonDialog({
   }
 
   const [preCompareScreen, setPreCompareScreen] = useState<Screen>(1);
+  const [preOptionsScreen, setPreOptionsScreen] = useState<Screen>(1);
+  const [optionsTab, setOptionsTab] = useState<OptionsTab>('riskLogicDefaults');
 
   function handleToggleQuoteSelect(id: string) {
     setQuoteResults((prev) => ({
@@ -291,8 +295,30 @@ export function InsuranceComparisonDialog({
               <span className="text-lg font-light tracking-wide">
                 {scenarioName}
               </span>
+              {/* Options dropdown */}
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="text-white/70 hover:text-white p-1 rounded hover:bg-white/10 ml-2" title="Options">
+                    <Settings size={15} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-52">
+                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('riskLogicDefaults'); setScreen('options'); }}>
+                    RiskLogic Defaults
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('includedInsurers'); setScreen('options'); }}>
+                    Included Insurers & Products
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('insurerLogins'); setScreen('options'); }}>
+                    Insurer Logins
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('commissions'); setScreen('options'); }}>
+                    Commissions
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <button
-                className="text-white/70 hover:text-white p-1 rounded hover:bg-white/10 ml-4"
+                className="text-white/70 hover:text-white p-1 rounded hover:bg-white/10 ml-2"
                 onClick={handleClose}
               >
                 <X size={16} />
@@ -401,6 +427,15 @@ export function InsuranceComparisonDialog({
               }
               existingRowId={mappedPolicies.length > 0 ? (quoteResults.rows.find((r) => r.selected)?.id ?? null) : null}
               onBack={() => setScreen(preCompareScreen)}
+            />
+          )}
+
+          {/* Options screen */}
+          {screen === 'options' && (
+            <OptionsModalContent
+              activeTab={optionsTab}
+              onTabChange={setOptionsTab}
+              onClose={() => setScreen(preOptionsScreen)}
             />
           )}
         </div>
