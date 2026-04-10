@@ -3,6 +3,8 @@ import { NavLink } from 'react-router-dom';
 import { HelpCircle, Link2, Bell, MoreVertical, Shield, TrendingUp, Users, Filter } from 'lucide-react';
 import { useAppContext } from '@/context/AppContext';
 import { InsuranceResearchContent } from '@/views/InsuranceResearch/InsuranceResearchContent';
+import { ScenarioSelectionPanel } from '@/views/ScenarioIndex/ScenarioSelectionPanel';
+import { ScenarioTable } from '@/views/ScenarioIndex/ScenarioTable';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -249,9 +251,10 @@ export function ClientPage() {
                 )}
 
                 {researchSubTab === 'investment' && (
-                  <div className="bg-white rounded-lg border border-border shadow-sm p-8 text-center text-muted-foreground">
-                    Investment research content will appear here.
-                  </div>
+                  <>
+                    <ScenarioSelectionPanel />
+                    <ScenarioTable />
+                  </>
                 )}
               </div>
             </>
