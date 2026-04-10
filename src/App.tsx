@@ -19,6 +19,7 @@ import { AddPlanPage } from '@/views/WealthSolver/AddPlanPage';
 import { DerivePlanPage } from '@/views/WealthSolver/DerivePlanPage';
 import { InvestmentResearchPage } from '@/views/ManagementPortal/InvestmentResearchPage';
 import { InsuranceResearchPage } from '@/views/InsuranceResearch/InsuranceResearchPage';
+import { ClientPage } from '@/views/Client/ClientPage';
 
 export default function App() {
   return (
@@ -75,6 +76,9 @@ export default function App() {
                   element={<InsuranceResearchPage />}
                 />
               </Route>
+
+              {/* Client Page */}
+              <Route path="clients" element={<ClientPage />} />
 
               {/* Management Portal */}
               <Route path="/management" element={<ManagementPortalShell />}>

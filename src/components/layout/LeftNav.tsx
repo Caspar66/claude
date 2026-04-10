@@ -8,6 +8,12 @@ interface NavItem {
 
 const navSections: { heading: string; items: NavItem[] }[] = [
   {
+    heading: 'Clients',
+    items: [
+      { label: 'Client Page', to: '/clients' },
+    ],
+  },
+  {
     heading: 'Scenario Modelling',
     items: [
       { label: 'Scenario Index', to: '/scenarios' },
