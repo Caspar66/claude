@@ -6,6 +6,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { InsuranceComparisonDialog } from './InsuranceComparisonDialog';
 import { InsuranceScenarioDetail } from './InsuranceScenarioDetail';
@@ -63,6 +64,45 @@ export function InsuranceResearchContent({ clientName, partnerName }: Props) {
 
   function handleEditScenario(_id: string) {
     setComparisonOpen(true);
+  }
+
+  function handleDeleteScenario(id: string) {
+    setInsuranceScenarios((prev) => prev.filter((s) => s.id !== id));
+    if (activeScenarioId === id) {
+      setActiveScenarioId(null);
+      setViewMode('list');
+    }
+  }
+
+  function handleCopyScenario(id: string) {
+    const original = insuranceScenarios.find((s) => s.id === id);
+    if (!original) return;
+    const now = new Date().toLocaleString('en-AU', {
+      day: 'numeric', month: 'long', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    });
+    const copy: InsuranceScenario = {
+      ...original,
+      id: `ins-${Date.now()}`,
+      name: `${original.name} (Copy)`,
+      createdDate: now,
+      createdBy: 'Caspar Jacobs',
+      lastModifiedDate: now,
+      lastModifiedBy: 'Caspar Jacobs',
+      includedInPlan: false,
+    };
+    setInsuranceScenarios((prev) => [...prev, copy]);
+  }
+
+  function handleRenameScenario(id: string) {
+    const original = insuranceScenarios.find((s) => s.id === id);
+    if (!original) return;
+    const newName = window.prompt('Rename scenario:', original.name);
+    if (newName && newName.trim()) {
+      setInsuranceScenarios((prev) =>
+        prev.map((s) => s.id === id ? { ...s, name: newName.trim() } : s)
+      );
+    }
   }
 
   function handleBackToList() {
@@ -230,6 +270,19 @@ export function InsuranceResearchContent({ clientName, partnerName }: Props) {
                         ) : (
                           <DropdownMenuItem>Refresh Scenario</DropdownMenuItem>
                         )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => handleRenameScenario(s.id)}>
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleCopyScenario(s.id)}>
+                          Copy
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-red-600 focus:text-red-600"
+                          onClick={() => handleDeleteScenario(s.id)}
+                        >
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </td>
