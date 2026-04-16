@@ -1,5 +1,6 @@
-import { Edit3, Info, Calendar } from 'lucide-react';
+import { Edit3, Info, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useOccupations } from '@/hooks/useOccupations';
 import type { ClientFormData } from './insuranceData';
 
 interface Props {
@@ -34,26 +35,27 @@ function Sel({ value, onChange, options, className = '' }: { value: string; onCh
   );
 }
 
-const OCCUPATION_OPTIONS = [
-  '1P - Accounting Professionals',
-  '1P - Actuarial Professionals',
-  '2B - Clerical & Administration',
-  '3A - Sales Representatives',
-  '4A - Trades & Labour',
-];
-
 const STATE_OPTIONS = ['Queensland', 'New South Wales', 'Victoria', 'Western Australia', 'South Australia', 'Tasmania', 'ACT', 'Northern Territory'];
 
 function PersonFields({
   data,
   onChange,
+  occupationOptions,
+  occupationsLoading,
 }: {
   data: ClientFormData;
   onChange: (d: ClientFormData) => void;
+  occupationOptions: string[];
+  occupationsLoading: boolean;
 }) {
   function update(field: keyof ClientFormData, value: string | number) {
     onChange({ ...data, [field]: value });
   }
+
+  // Ensure the current value is included in the options so it always renders
+  const opts = occupationOptions.includes(data.occupationCode)
+    ? occupationOptions
+    : [data.occupationCode, ...occupationOptions].filter(Boolean);
 
   return {
     name: (
@@ -64,7 +66,13 @@ function PersonFields({
     ),
     occupation: (
       <div className="flex items-center gap-1.5">
-        <Sel value={data.occupationCode} onChange={(v) => update('occupationCode', v)} options={OCCUPATION_OPTIONS} className="w-60" />
+        <Sel
+          value={data.occupationCode}
+          onChange={(v) => update('occupationCode', v)}
+          options={opts}
+          className="w-60"
+        />
+        {occupationsLoading && <Loader2 size={14} className="text-blue-500 animate-spin" />}
         <button className="text-blue-500 hover:text-blue-700" title="Occupation info"><Info size={14} /></button>
       </div>
     ),
@@ -131,8 +139,23 @@ export function ClientDataCapture({
   onGetQuotes,
 }: Props) {
   const showPartner = partnerData !== null;
-  const c = PersonFields({ data: clientData, onChange: onClientChange });
-  const p = showPartner && partnerData ? PersonFields({ data: partnerData, onChange: onPartnerChange }) : null;
+  const { options: occupations, loading: occupationsLoading, error: occupationsError, usingFallback } = useOccupations();
+  const occupationLabels = occupations.map((o) => o.label);
+
+  const c = PersonFields({
+    data: clientData,
+    onChange: onClientChange,
+    occupationOptions: occupationLabels,
+    occupationsLoading,
+  });
+  const p = showPartner && partnerData
+    ? PersonFields({
+        data: partnerData,
+        onChange: onPartnerChange,
+        occupationOptions: occupationLabels,
+        occupationsLoading,
+      })
+    : null;
 
   return (
     <div className="flex-1 overflow-auto flex flex-col">
@@ -143,6 +166,13 @@ export function ClientDataCapture({
           <button className="hover:text-white" title="Settings"><Info size={14} /></button>
         </div>
       </div>
+
+      {/* API fallback banner */}
+      {usingFallback && occupationsError && (
+        <div className="px-8 pt-3 -mb-2 text-xs text-amber-700">
+          Using local occupations list — OmniLife API unreachable ({occupationsError}).
+        </div>
+      )}
 
       {/* Form body */}
       <div className="flex-1 px-8 py-5">
