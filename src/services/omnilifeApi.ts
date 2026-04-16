@@ -6,9 +6,12 @@
 // calls through a backend endpoint and pass the Authorization header server-
 // side. This module is intended for a UAT prototype only.
 
-const BASE_URL =
+const OMNILIFE_DIRECT_URL =
   (import.meta.env.VITE_OMNILIFE_BASE_URL as string | undefined) ??
   'https://uat.omnilife.com.au/API/4';
+
+// In dev mode, use the Vite proxy to avoid CORS issues
+const BASE_URL = import.meta.env.DEV ? '/api/omnilife' : OMNILIFE_DIRECT_URL;
 
 const USERNAME =
   (import.meta.env.VITE_OMNILIFE_USERNAME as string | undefined) ?? 'FinuraDigital';

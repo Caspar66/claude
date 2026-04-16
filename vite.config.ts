@@ -12,5 +12,13 @@ export default defineConfig({
   },
   server: {
     host: true,
+    proxy: {
+      '/api/omnilife': {
+        target: 'https://uat.omnilife.com.au/API/4',
+        changeOrigin: true,
+        rewrite: (p) => p.replace(/^\/api\/omnilife/, ''),
+        secure: true,
+      },
+    },
   },
 })

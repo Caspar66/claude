@@ -53,8 +53,9 @@ function TopNav() {
 
       <div className="flex-1" />
 
-      {/* Right side icons */}
+      {/* Version stamp + Right side icons */}
       <div className="flex items-center gap-3 text-slate-300">
+        <span className="text-[10px] text-slate-400 font-mono">v 16 Apr 2026 18:30</span>
         <button className="hover:text-white"><HelpCircle size={18} /></button>
         <button className="hover:text-white"><Link2 size={18} /></button>
         <button className="hover:text-white"><Bell size={18} /></button>
