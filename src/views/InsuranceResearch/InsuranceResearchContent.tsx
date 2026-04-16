@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, MoreVertical, Plus, Check } from 'lucide-react';
+import { MoreVertical, Plus, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -199,14 +199,6 @@ export function InsuranceResearchContent({ clientName, partnerName }: Props) {
                 <Plus size={14} />
                 Add
               </Button>
-              <div className="flex items-center gap-1">
-                <button className="text-red-500 hover:text-red-600 p-1">
-                  <ChevronLeft size={24} strokeWidth={3} />
-                </button>
-                <button className="text-red-500 hover:text-red-600 p-1">
-                  <ChevronRight size={24} strokeWidth={3} />
-                </button>
-              </div>
             </div>
           </div>
 
@@ -225,7 +217,14 @@ export function InsuranceResearchContent({ clientName, partnerName }: Props) {
             <tbody>
               {insuranceScenarios.map((s) => (
                 <tr key={s.id} className="border-b border-border hover:bg-gray-50/50">
-                  <td className="px-6 py-3 text-muted-foreground">{s.name}</td>
+                  <td className="px-6 py-3">
+                    <button
+                      onClick={() => handleViewScenario(s.id)}
+                      className="text-teal-700 hover:text-teal-800 hover:underline font-medium text-left"
+                    >
+                      {s.name}
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-muted-foreground">{s.source}</td>
                   <td className="px-4 py-3">
                     <div className="text-foreground">{s.createdDate}</div>
