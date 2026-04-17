@@ -1,5 +1,19 @@
 // ── Shared types ──────────────────────────────────────────────────────────────
 
+export type EmploymentStatus = 'E' | 'T' | 'Q' | 'O' | 'H' | 'R' | 'P' | 'U' | 'S';
+
+export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {
+  E: 'Employee',
+  T: 'Self Employed - Sole Trader',
+  Q: 'Self Employed - Partnership',
+  O: 'Self Employed - Business Owner',
+  H: 'Home Duties',
+  R: 'Retired',
+  P: 'Pensioner',
+  U: 'Unemployed',
+  S: 'Student',
+};
+
 export interface ClientFormData {
   firstName: string;
   lastName: string;
@@ -9,7 +23,7 @@ export interface ClientFormData {
   age: number;
   occupation: string;
   occupationCode: string;
-  selfEmployed: 'No' | 'Yes';
+  employmentStatus: EmploymentStatus;
   annualIncome: string;
   state: string;
   loadings: string;
@@ -312,7 +326,7 @@ export function getDefaultClientData(
     age,
     occupation: 'Accountant (qualified)',
     occupationCode: '1P - Accounting Professionals',
-    selfEmployed: 'No',
+    employmentStatus: 'E',
     annualIncome: '$100,000',
     state: 'Queensland',
     loadings: 'No Loadings',

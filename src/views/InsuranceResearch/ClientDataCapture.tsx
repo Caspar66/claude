@@ -1,7 +1,8 @@
 import { Edit3, Info, Calendar, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOccupations } from '@/hooks/useOccupations';
-import type { ClientFormData } from './insuranceData';
+import type { ClientFormData, EmploymentStatus } from './insuranceData';
+import { EMPLOYMENT_STATUS_LABELS } from './insuranceData';
 
 interface Props {
   clientData: ClientFormData;
@@ -76,8 +77,16 @@ function PersonFields({
         <button className="text-blue-500 hover:text-blue-700" title="Occupation info"><Info size={14} /></button>
       </div>
     ),
-    selfEmployed: (
-      <Sel value={data.selfEmployed} onChange={(v) => update('selfEmployed', v)} options={['No', 'Yes']} className="w-16" />
+    employmentStatus: (
+      <select
+        className="border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-60"
+        value={data.employmentStatus}
+        onChange={(e) => update('employmentStatus', e.target.value as EmploymentStatus)}
+      >
+        {(Object.entries(EMPLOYMENT_STATUS_LABELS) as [EmploymentStatus, string][]).map(([code, label]) => (
+          <option key={code} value={code}>{label}</option>
+        ))}
+      </select>
     ),
     dob: (
       <div className="flex items-center gap-1.5">
@@ -193,7 +202,7 @@ export function ClientDataCapture({
           <tbody>
             <FormRow label="Name" labelColor="text-blue-800" clientField={c.name} partnerField={p?.name} />
             <FormRow label="Occupation" clientField={c.occupation} partnerField={p?.occupation} />
-            <FormRow label="Self Employed" clientField={c.selfEmployed} partnerField={p?.selfEmployed} />
+            <FormRow label="Employment Status" clientField={c.employmentStatus} partnerField={p?.employmentStatus} />
             <FormRow label="Date of Birth" clientField={c.dob} partnerField={p?.dob} />
             <FormRow label="Gender" clientField={c.gender} partnerField={p?.gender} />
             <FormRow label="Smoker Status" clientField={c.smoker} partnerField={p?.smoker} />
