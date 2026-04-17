@@ -20,10 +20,10 @@ export default defineConfig(({ mode }) => {
     server: {
       host: true,
       proxy: {
-        '/api/omnilife': {
-          target,
+        '/api/occupations': {
+          target: target + '/occupations',
           changeOrigin: true,
-          rewrite: (p) => p.replace(/^\/api\/omnilife/, ''),
+          rewrite: () => '',
           secure: true,
           headers: {
             Authorization: authHeader,
