@@ -2,7 +2,17 @@ import { useEffect, useState } from 'react';
 import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSuppliers } from '@/hooks/useSuppliers';
-import type { Supplier } from '@/services/omnilifeApi';
+import type { CommissionChoice, Supplier } from '@/services/omnilifeApi';
+
+// Format a commission option as "{structure} ({upfront%}/ {ongoing%}): {name}",
+// falling back to the plain name when structure/percentage fields aren't returned.
+function formatCommissionLabel(c: CommissionChoice): string {
+  const name = c.name || c.code;
+  if (c.structure && c.upfrontPercentage !== undefined && c.ongoingPercentage !== undefined) {
+    return `${c.structure} (${Math.round(c.upfrontPercentage)}% / ${Math.round(c.ongoingPercentage)}%): ${name}`;
+  }
+  return name;
+}
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -391,7 +401,7 @@ function InsurerOptions({ onClose, defaultsMode }: { onClose: () => void; defaul
                     onChange={(e) => updateCommission(selectedSupplier.code, e.target.value)}
                   >
                     {commissionChoicesFor(selectedSupplier).map((c) => (
-                      <option key={c.code} value={c.code}>{c.name || c.code}</option>
+                      <option key={c.code} value={c.code}>{formatCommissionLabel(c)}</option>
                     ))}
                     {commissionChoicesFor(selectedSupplier).length === 0 && (
                       <option value="">No commission options</option>

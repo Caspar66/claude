@@ -53,6 +53,9 @@ export interface SupplierProduct {
 export interface CommissionChoice {
   code: string;
   name: string;
+  structure?: string;
+  upfrontPercentage?: number;
+  ongoingPercentage?: number;
 }
 
 export interface Supplier {
@@ -92,6 +95,9 @@ function normaliseSupplier(raw: Record<string, unknown>): Supplier | null {
         .map((c) => ({
           code: typeof c.code === 'string' ? c.code : '',
           name: typeof c.name === 'string' ? c.name : (typeof c.description === 'string' ? c.description : ''),
+          structure: typeof c.structure === 'string' ? c.structure : undefined,
+          upfrontPercentage: typeof c.upfrontPercentage === 'number' ? c.upfrontPercentage : undefined,
+          ongoingPercentage: typeof c.ongoingPercentage === 'number' ? c.ongoingPercentage : undefined,
         }))
         .filter((c) => c.code)
     : undefined;
