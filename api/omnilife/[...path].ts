@@ -1,6 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
-const BASE_URL = process.env.OMNILIFE_BASE_URL ?? 'https://uat.omnilife.com.au/API/4';
+// NOTE: the path case matters. `/api/4/*` returns JSON; `/API/4/*` returns
+// the HTML documentation test page.
+const BASE_URL = process.env.OMNILIFE_BASE_URL ?? 'https://uat.omnilife.com.au/api/4';
 const USERNAME = process.env.OMNILIFE_USERNAME ?? 'FinuraDigital';
 const PASSWORD = process.env.OMNILIFE_PASSWORD ?? '16HahIceQ42WpmurCIdP';
 
