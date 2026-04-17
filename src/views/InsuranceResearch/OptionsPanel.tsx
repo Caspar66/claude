@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { Check, Search } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import type { Supplier } from '@/services/omnilifeApi';
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
 
@@ -77,44 +79,17 @@ const DEFAULT_POLICY: PolicyDefaults = {
   minCommissionPref: 'No',
 };
 
-type DefaultsMode = 'adviser' | 'my';
+export type DefaultsMode = 'adviser' | 'my';
 
-function DefaultsPanel({ onClose }: { onClose: () => void }) {
+function DefaultsPanel({ onClose, defaultsMode }: { onClose: () => void; defaultsMode: DefaultsMode }) {
   const [tab, setTab] = useState<RiskTab>('POLICY DEFAULTS');
   const [form, setForm] = useState<PolicyDefaults>({ ...DEFAULT_POLICY });
-  const [defaultsMode, setDefaultsMode] = useState<DefaultsMode>('adviser');
 
   const up = (patch: Partial<PolicyDefaults>) => setForm((f) => ({ ...f, ...patch }));
   const isMyDefaults = defaultsMode === 'my';
 
   return (
     <div className="flex flex-col h-full">
-      {/* Defaults mode selector */}
-      <div className="px-4 py-3 border-b border-gray-200 bg-slate-50">
-        <div className="flex items-center justify-between gap-3">
-          <label className="text-xs font-semibold text-slate-700">Defaults</label>
-          <div className="flex rounded border border-gray-300 overflow-hidden">
-            <button
-              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'adviser' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
-              onClick={() => setDefaultsMode('adviser')}
-            >
-              Use Adviser defaults
-            </button>
-            <button
-              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'my' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
-              onClick={() => setDefaultsMode('my')}
-            >
-              Use my defaults
-            </button>
-          </div>
-        </div>
-        <p className="text-[10px] text-slate-400 mt-1.5">
-          {defaultsMode === 'adviser'
-            ? 'Adviser defaults from your adviser profile will be applied to quotes.'
-            : 'Your custom defaults below (including selected Insurers & Products) will be applied to quotes.'}
-        </p>
-      </div>
-
       {/* Tabs */}
       <div className="flex flex-wrap gap-0 border-b border-gray-200 bg-gray-50 px-1 pt-1">
         {RISK_TABS.map((t) => (
@@ -202,125 +177,257 @@ function DefaultsPanel({ onClose }: { onClose: () => void }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 2. INCLUDED INSURERS AND PRODUCTS
+// 2. INSURER OPTIONS — suppliers & products from /suppliers API
 // ═══════════════════════════════════════════════════════════════════════════════
 
-interface InsurerGroup {
-  label: string;
-  items: string[];
-}
+function InsurerOptions({ onClose }: { onClose: () => void }) {
+  const { suppliers, loading, error } = useSuppliers();
+  const [selectedSupplierCode, setSelectedSupplierCode] = useState<string | null>(null);
+  const [checkedSuppliers, setCheckedSuppliers] = useState<Set<string>>(new Set());
+  const [checkedProducts, setCheckedProducts] = useState<Set<string>>(new Set());
+  const [commissionBySupplier, setCommissionBySupplier] = useState<Record<string, string>>({});
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
+  const [initialised, setInitialised] = useState(false);
 
-const INSURER_GROUPS: InsurerGroup[] = [
-  {
-    label: 'Retail',
-    items: [
-      'AIA Priority Protection',
-      'AMP Elevate (Members)',
-      'BT Protection Plans',
-      'ClearView Life Assurance',
-      'Encompass Protection',
-      'Integrity Life',
-      'MLC Insurance',
-      'MetLife Protect',
-      'NEOS Life',
-      'OnePath Life',
-      'PPS Mutual',
-      'TAL Accelerated Protection',
-      'Zurich Protection',
-    ],
-  },
-  {
-    label: 'Retail Super',
-    items: [
-      'Asgard Employee Super',
-      'AMG Personal Super',
-      'AMP Signature Super',
-      'Australian Ethical Super',
-      'BT Business Super',
-      'BT Super for Life',
-      'Commonwealth Essential Super',
-      'Commonwealth Group Super',
-      'FirstChoice Employer Super',
-      'FirstChoice Personal Super',
-      'FirstWrap LifeProtect Super',
-    ],
-  },
-];
+  // On first load, tick every supplier and all their products by default, and
+  // seed the commission selection from each supplier's defaultCommissionCode.
+  useEffect(() => {
+    if (initialised || suppliers.length === 0) return;
+    const sup = new Set<string>();
+    const prod = new Set<string>();
+    const commission: Record<string, string> = {};
+    const fundTypes = new Set<string>();
+    for (const s of suppliers) {
+      sup.add(s.code);
+      s.products.forEach((p) => prod.add(`${s.code}::${p.code}`));
+      if (s.defaultCommissionCode) commission[s.code] = s.defaultCommissionCode;
+      fundTypes.add(s.fundType);
+    }
+    setCheckedSuppliers(sup);
+    setCheckedProducts(prod);
+    setCommissionBySupplier(commission);
+    setExpandedGroups(fundTypes);
+    setSelectedSupplierCode((prev) => prev ?? suppliers[0]?.code ?? null);
+    setInitialised(true);
+  }, [suppliers, initialised]);
 
-const DEFAULT_PRODUCTS = [
-  'Life Protection',
-  'Life and TPD Protection',
-  'Salary Continuance Insurance',
-  'Trauma Cover',
-  'Business Expenses Cover',
-  'Child Cover',
-];
+  // Group suppliers by fundType, preserving API order within each group.
+  const grouped = suppliers.reduce<Record<string, Supplier[]>>((acc, s) => {
+    (acc[s.fundType] ??= []).push(s);
+    return acc;
+  }, {});
+  const fundTypeOrder = Object.keys(grouped);
 
-function IncludedInsurers({ onClose }: { onClose: () => void }) {
-  const [checkedInsurers, setCheckedInsurers] = useState<Set<string>>(() => {
-    const all = new Set<string>();
-    INSURER_GROUPS.forEach((g) => g.items.forEach((i) => all.add(i)));
-    return all;
-  });
-  const [checkedProducts, setCheckedProducts] = useState<Set<string>>(new Set(DEFAULT_PRODUCTS.slice(0, 3)));
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(INSURER_GROUPS.map((g) => g.label)));
-  const [applyToFuture, setApplyToFuture] = useState(false);
+  const selectedSupplier = suppliers.find((s) => s.code === selectedSupplierCode) ?? null;
 
-  function toggleInsurer(name: string) {
-    setCheckedInsurers((prev) => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n; });
+  function toggleGroup(fundType: string) {
+    setExpandedGroups((prev) => {
+      const n = new Set(prev);
+      if (n.has(fundType)) n.delete(fundType); else n.add(fundType);
+      return n;
+    });
   }
-  function toggleProduct(name: string) {
-    setCheckedProducts((prev) => { const n = new Set(prev); if (n.has(name)) n.delete(name); else n.add(name); return n; });
+
+  function selectAllInFundType(fundType: string) {
+    const groupSuppliers = grouped[fundType] ?? [];
+    const allChecked = groupSuppliers.every((s) => checkedSuppliers.has(s.code));
+    setCheckedSuppliers((prev) => {
+      const n = new Set(prev);
+      groupSuppliers.forEach((s) => {
+        if (allChecked) n.delete(s.code);
+        else n.add(s.code);
+      });
+      return n;
+    });
+    setCheckedProducts((prev) => {
+      const n = new Set(prev);
+      groupSuppliers.forEach((s) => {
+        s.products.forEach((p) => {
+          const key = `${s.code}::${p.code}`;
+          if (allChecked) n.delete(key);
+          else n.add(key);
+        });
+      });
+      return n;
+    });
   }
-  function toggleGroup(label: string) {
-    setExpandedGroups((prev) => { const n = new Set(prev); if (n.has(label)) n.delete(label); else n.add(label); return n; });
+
+  function toggleSupplier(supplier: Supplier) {
+    const isChecked = checkedSuppliers.has(supplier.code);
+    setCheckedSuppliers((prev) => {
+      const n = new Set(prev);
+      if (isChecked) n.delete(supplier.code); else n.add(supplier.code);
+      return n;
+    });
+    // When toggling a supplier, add/remove all its products in bulk.
+    setCheckedProducts((prev) => {
+      const n = new Set(prev);
+      supplier.products.forEach((p) => {
+        const key = `${supplier.code}::${p.code}`;
+        if (isChecked) n.delete(key);
+        else n.add(key);
+      });
+      return n;
+    });
+  }
+
+  function toggleProduct(supplierCode: string, productCode: string) {
+    const key = `${supplierCode}::${productCode}`;
+    setCheckedProducts((prev) => {
+      const n = new Set(prev);
+      if (n.has(key)) n.delete(key); else n.add(key);
+      return n;
+    });
+  }
+
+  function updateCommission(supplierCode: string, code: string) {
+    setCommissionBySupplier((prev) => ({ ...prev, [supplierCode]: code }));
+  }
+
+  // Prefer the supplier's commissionOptions; if absent, synthesise from default/minimum codes.
+  function commissionChoicesFor(s: Supplier): { code: string; name: string }[] {
+    if (s.commissionOptions && s.commissionOptions.length > 0) return s.commissionOptions;
+    const choices: { code: string; name: string }[] = [];
+    if (s.defaultCommissionCode) choices.push({ code: s.defaultCommissionCode, name: s.defaultCommissionCode });
+    if (s.minimumCommissionCode && s.minimumCommissionCode !== s.defaultCommissionCode) {
+      choices.push({ code: s.minimumCommissionCode, name: s.minimumCommissionCode });
+    }
+    return choices;
   }
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex-1 overflow-y-auto">
-        <div className="flex gap-0 h-full">
-          {/* Left: Insurers */}
-          <div className="flex-1 border-r border-gray-200 p-3 overflow-y-auto">
-            <h4 className="text-xs font-bold text-slate-700 mb-2">Suppliers</h4>
-            {INSURER_GROUPS.map((g) => (
-              <div key={g.label} className="mb-2">
-                <button className="flex items-center gap-1 text-xs font-semibold text-slate-600 mb-1" onClick={() => toggleGroup(g.label)}>
-                  {expandedGroups.has(g.label) ? '▾' : '▸'} {g.label}
-                </button>
-                {expandedGroups.has(g.label) && (
-                  <div className="pl-3 space-y-0.5">
-                    {g.items.map((item) => (
-                      <Chk key={item} label={item} checked={checkedInsurers.has(item)} onChange={() => toggleInsurer(item)} />
-                    ))}
+      {error && (
+        <div className="px-4 py-2 text-xs text-amber-700 bg-amber-50 border-b border-amber-200">
+          Could not load suppliers — {error}
+        </div>
+      )}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left: suppliers grouped by fundType */}
+        <div className="w-72 border-r border-gray-200 overflow-y-auto bg-gray-50">
+          {loading && (
+            <div className="px-3 py-4 text-xs text-slate-400 flex items-center gap-2">
+              <Loader2 size={12} className="animate-spin" /> Loading suppliers…
+            </div>
+          )}
+          {fundTypeOrder.map((fundType) => {
+            const group = grouped[fundType];
+            const expanded = expandedGroups.has(fundType);
+            const allChecked = group.every((s) => checkedSuppliers.has(s.code));
+            const someChecked = group.some((s) => checkedSuppliers.has(s.code));
+            return (
+              <div key={fundType} className="border-b border-gray-200">
+                <div className="flex items-center justify-between px-3 py-1.5 bg-slate-100">
+                  <button className="flex items-center gap-1 text-xs font-bold text-slate-700" onClick={() => toggleGroup(fundType)}>
+                    {expanded ? '▾' : '▸'} {fundType}
+                    <span className="text-[10px] font-normal text-slate-400 ml-1">
+                      ({group.filter((s) => checkedSuppliers.has(s.code)).length}/{group.length})
+                    </span>
+                  </button>
+                  <button
+                    className="text-[10px] font-medium text-teal-700 hover:text-teal-900 hover:underline"
+                    onClick={() => selectAllInFundType(fundType)}
+                  >
+                    {allChecked ? 'Select None' : 'Select All'}
+                  </button>
+                </div>
+                {expanded && (
+                  <div>
+                    {group.map((s) => {
+                      const isSelected = selectedSupplierCode === s.code;
+                      return (
+                        <div
+                          key={s.code}
+                          className={`flex items-center gap-2 px-3 py-1.5 border-t border-gray-100 cursor-pointer ${
+                            isSelected ? 'bg-teal-50 border-l-2 border-l-teal-600' : 'hover:bg-gray-100'
+                          }`}
+                          onClick={() => setSelectedSupplierCode(s.code)}
+                        >
+                          <button
+                            className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${
+                              checkedSuppliers.has(s.code)
+                                ? 'bg-teal-600 border-teal-600 text-white'
+                                : 'border-gray-300 bg-white'
+                            }`}
+                            onClick={(e) => { e.stopPropagation(); toggleSupplier(s); }}
+                          >
+                            {checkedSuppliers.has(s.code) && <Check size={10} strokeWidth={3} />}
+                          </button>
+                          <span className={`text-xs ${isSelected ? 'font-semibold text-teal-800' : 'text-slate-700'}`}>
+                            {s.name}
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
+                {!expanded && someChecked && !allChecked && (
+                  <span className="hidden" />
+                )}
               </div>
-            ))}
-          </div>
-          {/* Right: Products */}
-          <div className="flex-1 p-3 overflow-y-auto">
-            <h4 className="text-xs font-bold text-slate-700 mb-2">Default Products</h4>
-            <div className="space-y-0.5">
-              {DEFAULT_PRODUCTS.map((p) => (
-                <Chk key={p} label={p} checked={checkedProducts.has(p)} onChange={() => toggleProduct(p)} />
-              ))}
+            );
+          })}
+          {!loading && suppliers.length === 0 && (
+            <div className="px-3 py-4 text-xs text-slate-400">No suppliers returned.</div>
+          )}
+        </div>
+
+        {/* Right: products + commission for selected supplier */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {selectedSupplier ? (
+            <>
+              <div className="px-4 py-3 border-b border-gray-200 bg-slate-50">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <h4 className="text-sm font-bold text-slate-800">{selectedSupplier.name}</h4>
+                  <span className="text-[10px] text-slate-400">{selectedSupplier.fundType}</span>
+                </div>
+                <div className="flex items-center gap-3">
+                  <label className="text-xs font-medium text-slate-600 shrink-0">Default Commission</label>
+                  <select
+                    className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 flex-1 max-w-[280px]"
+                    value={commissionBySupplier[selectedSupplier.code] ?? selectedSupplier.defaultCommissionCode ?? ''}
+                    onChange={(e) => updateCommission(selectedSupplier.code, e.target.value)}
+                  >
+                    {commissionChoicesFor(selectedSupplier).map((c) => (
+                      <option key={c.code} value={c.code}>{c.name || c.code}</option>
+                    ))}
+                    {commissionChoicesFor(selectedSupplier).length === 0 && (
+                      <option value="">No commission options</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+              <div className="flex-1 overflow-y-auto p-3">
+                <h5 className="text-xs font-bold text-slate-700 mb-2">Products</h5>
+                {selectedSupplier.products.length === 0 && (
+                  <div className="text-xs text-slate-400">No products for this supplier.</div>
+                )}
+                <div className="space-y-0.5">
+                  {selectedSupplier.products.map((p) => {
+                    const key = `${selectedSupplier.code}::${p.code}`;
+                    return (
+                      <Chk
+                        key={key}
+                        label={p.name || p.code}
+                        checked={checkedProducts.has(key)}
+                        onChange={() => toggleProduct(selectedSupplier.code, p.code)}
+                      />
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="flex-1 flex items-center justify-center text-xs text-slate-400">
+              {loading ? 'Loading…' : 'Select a supplier on the left to view its products.'}
             </div>
-          </div>
+          )}
         </div>
       </div>
+
       {/* Footer */}
-      <div className="border-t border-gray-200 bg-gray-50 px-4 py-2.5 space-y-2">
-        <Chk label="Apply these settings to all future quotes" checked={applyToFuture} onChange={setApplyToFuture} />
-        <div className="flex items-center justify-end gap-2">
-          <Button variant="outline" size="sm" className="text-xs h-7" onClick={() => {
-            const all = new Set<string>();
-            INSURER_GROUPS.forEach((g) => g.items.forEach((i) => all.add(i)));
-            setCheckedInsurers(all);
-            setCheckedProducts(new Set(DEFAULT_PRODUCTS.slice(0, 3)));
-          }}>Reset</Button>
-          <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={onClose}>Update</Button>
-        </div>
+      <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
+        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={onClose}>Update</Button>
       </div>
     </div>
   );
@@ -527,11 +634,11 @@ function CommissionsPanel({ onClose }: { onClose: () => void }) {
 // OPTIONS MODAL — wraps the 4 panels
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type OptionsTab = 'defaults' | 'includedInsurers' | 'insurerLogins' | 'commissions';
+export type OptionsTab = 'defaults' | 'insurerOptions' | 'insurerLogins' | 'commissions';
 
 const OPTIONS_LABELS: Record<OptionsTab, string> = {
   defaults: 'Defaults',
-  includedInsurers: 'Included Insurers & Products',
+  insurerOptions: 'Insurer Options',
   insurerLogins: 'Insurer Logins',
   commissions: 'Commissions',
 };
@@ -543,8 +650,39 @@ interface OptionsModalProps {
 }
 
 export function OptionsModalContent({ activeTab, onTabChange, onClose }: OptionsModalProps) {
+  const [defaultsMode, setDefaultsMode] = useState<DefaultsMode>('adviser');
+
   return (
     <div className="flex flex-col h-full">
+      {/* Defaults mode selector — applies to the Defaults tab (and, when set
+          to "my", Insurer Options below also become the active defaults). */}
+      <div className="px-4 py-3 border-b border-gray-200 bg-slate-50">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <label className="text-xs font-semibold text-slate-700">Defaults</label>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              {defaultsMode === 'adviser'
+                ? 'Adviser defaults from your adviser profile will be applied to quotes.'
+                : 'Your custom defaults (including selected Insurers & Products) will be applied to quotes.'}
+            </p>
+          </div>
+          <div className="flex rounded border border-gray-300 overflow-hidden shrink-0">
+            <button
+              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'adviser' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
+              onClick={() => setDefaultsMode('adviser')}
+            >
+              Use Adviser defaults
+            </button>
+            <button
+              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'my' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
+              onClick={() => setDefaultsMode('my')}
+            >
+              Use my defaults
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Tab bar */}
       <div className="flex border-b border-gray-200 bg-slate-50 px-2 pt-2">
         {(Object.entries(OPTIONS_LABELS) as [OptionsTab, string][]).map(([key, label]) => (
@@ -564,8 +702,8 @@ export function OptionsModalContent({ activeTab, onTabChange, onClose }: Options
 
       {/* Panel content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'defaults' && <DefaultsPanel onClose={onClose} />}
-        {activeTab === 'includedInsurers' && <IncludedInsurers onClose={onClose} />}
+        {activeTab === 'defaults' && <DefaultsPanel onClose={onClose} defaultsMode={defaultsMode} />}
+        {activeTab === 'insurerOptions' && <InsurerOptions onClose={onClose} />}
         {activeTab === 'insurerLogins' && <InsurerLogins onClose={onClose} />}
         {activeTab === 'commissions' && <CommissionsPanel onClose={onClose} />}
       </div>

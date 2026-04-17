@@ -29,6 +29,15 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/suppliers': {
+          target: target + '/suppliers',
+          changeOrigin: true,
+          rewrite: () => '',
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
       },
     },
   }

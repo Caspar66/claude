@@ -350,8 +350,8 @@ export function InsuranceComparisonDialog({
                   <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('defaults'); setScreen('options'); }}>
                     Defaults
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('includedInsurers'); setScreen('options'); }}>
-                    Included Insurers & Products
+                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('insurerOptions'); setScreen('options'); }}>
+                    Insurer Options
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('insurerLogins'); setScreen('options'); }}>
                     Insurer Logins
