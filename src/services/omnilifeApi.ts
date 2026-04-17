@@ -23,7 +23,7 @@ function normalise(raw: RawOccupation): OccupationOption | null {
   if (!code && !name) return null;
   return {
     code: String(code || name),
-    label: code && name ? `${code} - ${name}` : String(code || name),
+    label: String(name || code),
   };
 }
 

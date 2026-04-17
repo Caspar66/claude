@@ -139,7 +139,7 @@ export function ClientDataCapture({
   onGetQuotes,
 }: Props) {
   const showPartner = partnerData !== null;
-  const { options: occupations, loading: occupationsLoading, error: occupationsError, usingFallback } = useOccupations();
+  const { options: occupations, loading: occupationsLoading, error: occupationsError } = useOccupations();
   const occupationLabels = occupations.map((o) => o.label);
 
   const c = PersonFields({
@@ -167,10 +167,10 @@ export function ClientDataCapture({
         </div>
       </div>
 
-      {/* API fallback banner */}
-      {usingFallback && occupationsError && (
+      {/* API error banner */}
+      {occupationsError && (
         <div className="px-8 pt-3 -mb-2 text-xs text-amber-700">
-          Using local occupations list — OmniLife API unreachable ({occupationsError}).
+          Could not load occupations — {occupationsError}
         </div>
       )}
 
