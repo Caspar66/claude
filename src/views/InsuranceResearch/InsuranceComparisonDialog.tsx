@@ -356,9 +356,6 @@ export function InsuranceComparisonDialog({
                   <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('insurerLogins'); setScreen('options'); }}>
                     Insurer Logins
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('commissions'); setScreen('options'); }}>
-                    Commissions
-                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <button

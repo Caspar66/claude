@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, Loader2, Search } from 'lucide-react';
+import { Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import type { Supplier } from '@/services/omnilifeApi';
@@ -180,7 +180,7 @@ function DefaultsPanel({ onClose, defaultsMode }: { onClose: () => void; default
 // 2. INSURER OPTIONS — suppliers & products from /suppliers API
 // ═══════════════════════════════════════════════════════════════════════════════
 
-function InsurerOptions({ onClose }: { onClose: () => void }) {
+function InsurerOptions({ onClose, defaultsMode }: { onClose: () => void; defaultsMode: DefaultsMode }) {
   const { suppliers, loading, error } = useSuppliers();
   const [selectedSupplierCode, setSelectedSupplierCode] = useState<string | null>(null);
   const [checkedSuppliers, setCheckedSuppliers] = useState<Set<string>>(new Set());
@@ -295,6 +295,8 @@ function InsurerOptions({ onClose }: { onClose: () => void }) {
     return choices;
   }
 
+  const isAdviser = defaultsMode === 'adviser';
+
   return (
     <div className="flex flex-col h-full">
       {error && (
@@ -302,7 +304,7 @@ function InsurerOptions({ onClose }: { onClose: () => void }) {
           Could not load suppliers — {error}
         </div>
       )}
-      <div className="flex-1 flex overflow-hidden">
+      <div className={`flex-1 flex overflow-hidden ${isAdviser ? 'opacity-40 pointer-events-none' : ''}`}>
         {/* Left: suppliers grouped by fundType */}
         <div className="w-72 border-r border-gray-200 overflow-y-auto bg-gray-50">
           {loading && (
@@ -427,7 +429,8 @@ function InsurerOptions({ onClose }: { onClose: () => void }) {
 
       {/* Footer */}
       <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
-        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={onClose}>Update</Button>
+        <Button variant="outline" size="sm" className="text-xs h-7" onClick={onClose}>Cancel</Button>
+        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={onClose}>Save</Button>
       </div>
     </div>
   );
@@ -509,138 +512,15 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 4. COMMISSIONS
+// OPTIONS MODAL — wraps the 3 panels
 // ═══════════════════════════════════════════════════════════════════════════════
 
-interface CommissionEntry {
-  provider: string;
-  commissionType: string;
-  options: string[];
-}
-
-interface CommissionSection {
-  label: string;
-  entries: CommissionEntry[];
-}
-
-const COMMISSION_SECTIONS: CommissionSection[] = [
-  {
-    label: 'Retail',
-    entries: [
-      { provider: 'Encompass', commissionType: 'Upfront (66/22)', options: ['Upfront (66/22)', 'Upfront (60/20)', 'Hybrid (66/22)', 'Level (22/22)', 'Nil'] },
-      { provider: 'Integrity', commissionType: 'Higher Initial (0% Discount)', options: ['Higher Initial (0% Discount)', 'Higher Initial (5% Discount)', 'Hybrid (0% Discount)', 'Level', 'Nil'] },
-      { provider: 'OnePath', commissionType: 'Hybrid - DD All Years - 0%', options: ['Hybrid - DD All Years - 0%', 'Hybrid - DD All Years - 5%', 'Upfront (66/22)', 'Level', 'Nil'] },
-      { provider: 'Zurich Life Active', commissionType: 'Hybrid - 0%', options: ['Hybrid - 0%', 'Hybrid - 5%', 'Upfront (66/22)', 'Level', 'Nil'] },
-      { provider: 'MLC', commissionType: 'Hybrid Premium Discount - 0%', options: ['Hybrid Premium Discount - 0%', 'Hybrid Premium Discount - 5%', 'Upfront (66/22)', 'Level', 'Nil'] },
-      { provider: 'MetLife', commissionType: 'Hybrid (66/22)', options: ['Hybrid (66/22)', 'Upfront (66/22)', 'Level (22/22)', 'Nil'] },
-      { provider: 'NEOS', commissionType: 'Upfront (66/22)', options: ['Upfront (66/22)', 'Hybrid (66/22)', 'Level (22/22)', 'Nil'] },
-      { provider: 'PPS Mutual', commissionType: 'Hybrid 0% Sacrifice', options: ['Hybrid 0% Sacrifice', 'Hybrid 5% Sacrifice', 'Upfront', 'Level', 'Nil'] },
-      { provider: 'BT', commissionType: 'Upfront Commission (ALL) 0%', options: ['Upfront Commission (ALL) 0%', 'Upfront Commission (ALL) 5%', 'Hybrid', 'Level', 'Nil'] },
-      { provider: 'Zurich', commissionType: 'Hybrid - 0%', options: ['Hybrid - 0%', 'Hybrid - 5%', 'Upfront (66/22)', 'Level', 'Nil'] },
-    ],
-  },
-  {
-    label: 'Retail Super',
-    entries: [
-      { provider: 'AMP Signature Super', commissionType: 'Hybrid - 0%', options: ['Hybrid - 0%', 'Level', 'Nil'] },
-      { provider: 'BT Super for Life', commissionType: 'Upfront (ALL) 0%', options: ['Upfront (ALL) 0%', 'Level', 'Nil'] },
-      { provider: 'Australian Ethical Super', commissionType: 'Nil', options: ['Nil'] },
-      { provider: 'Australian Super', commissionType: 'Nil', options: ['Nil'] },
-    ],
-  },
-  {
-    label: 'Group',
-    entries: [
-      { provider: 'AMIST Super', commissionType: 'Nil', options: ['Nil'] },
-      { provider: 'ANZ Staff Super', commissionType: 'Nil', options: ['Nil'] },
-      { provider: 'Acclaim Super', commissionType: 'Nil', options: ['Nil'] },
-    ],
-  },
-];
-
-function CommissionsPanel({ onClose }: { onClose: () => void }) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selections, setSelections] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {};
-    COMMISSION_SECTIONS.forEach((s) => s.entries.forEach((e) => { init[e.provider] = e.commissionType; }));
-    return init;
-  });
-
-  function updateCommission(provider: string, value: string) {
-    setSelections((prev) => ({ ...prev, [provider]: value }));
-  }
-
-  const filtered = COMMISSION_SECTIONS.map((section) => ({
-    ...section,
-    entries: section.entries.filter((e) =>
-      !searchTerm || e.provider.toLowerCase().includes(searchTerm.toLowerCase()) || e.commissionType.toLowerCase().includes(searchTerm.toLowerCase())
-    ),
-  })).filter((s) => s.entries.length > 0);
-
-  return (
-    <div className="flex flex-col h-full">
-      {/* Search */}
-      <div className="px-4 py-2.5 border-b border-gray-200 bg-gray-50">
-        <div className="relative">
-          <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search providers..."
-            className="w-full pl-7 pr-3 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* Commission list */}
-      <div className="flex-1 overflow-y-auto">
-        {filtered.map((section) => (
-          <div key={section.label}>
-            <div className="px-4 py-1.5 bg-slate-100 border-y border-gray-200">
-              <span className="text-[11px] font-bold text-slate-600 uppercase tracking-wide">{section.label}</span>
-            </div>
-            {section.entries.map((entry) => (
-              <div key={entry.provider} className="flex items-center justify-between gap-3 px-4 py-2 border-b border-gray-100 hover:bg-gray-50/50">
-                <span className="text-xs font-medium text-slate-700 shrink-0 w-40">{entry.provider}</span>
-                <select
-                  className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 flex-1 max-w-[280px]"
-                  value={selections[entry.provider] || entry.commissionType}
-                  onChange={(e) => updateCommission(entry.provider, e.target.value)}
-                >
-                  {entry.options.map((o) => <option key={o} value={o}>{o}</option>)}
-                </select>
-              </div>
-            ))}
-          </div>
-        ))}
-        {filtered.length === 0 && (
-          <div className="px-4 py-8 text-center text-xs text-muted-foreground">
-            No providers match "{searchTerm}"
-          </div>
-        )}
-      </div>
-
-      {/* Footer */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
-        <Button variant="outline" size="sm" className="text-xs h-7" onClick={onClose}>Cancel</Button>
-        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={onClose}>Save</Button>
-      </div>
-    </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// OPTIONS MODAL — wraps the 4 panels
-// ═══════════════════════════════════════════════════════════════════════════════
-
-export type OptionsTab = 'defaults' | 'insurerOptions' | 'insurerLogins' | 'commissions';
+export type OptionsTab = 'defaults' | 'insurerOptions' | 'insurerLogins';
 
 const OPTIONS_LABELS: Record<OptionsTab, string> = {
   defaults: 'Defaults',
   insurerOptions: 'Insurer Options',
   insurerLogins: 'Insurer Logins',
-  commissions: 'Commissions',
 };
 
 interface OptionsModalProps {
@@ -703,9 +583,8 @@ export function OptionsModalContent({ activeTab, onTabChange, onClose }: Options
       {/* Panel content */}
       <div className="flex-1 overflow-hidden">
         {activeTab === 'defaults' && <DefaultsPanel onClose={onClose} defaultsMode={defaultsMode} />}
-        {activeTab === 'insurerOptions' && <InsurerOptions onClose={onClose} />}
+        {activeTab === 'insurerOptions' && <InsurerOptions onClose={onClose} defaultsMode={defaultsMode} />}
         {activeTab === 'insurerLogins' && <InsurerLogins onClose={onClose} />}
-        {activeTab === 'commissions' && <CommissionsPanel onClose={onClose} />}
       </div>
     </div>
   );
