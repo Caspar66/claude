@@ -1,36 +1,16 @@
 // ── OmniLife API Client ──────────────────────────────────────────────────────
 //
-// ⚠️ SECURITY WARNING
-// Calling OmniLife directly from the browser exposes these credentials in the
-// compiled JS bundle and will typically fail CORS. For production, proxy these
-// calls through a backend endpoint and pass the Authorization header server-
-// side. This module is intended for a UAT prototype only.
+// All requests go through /api/omnilife/* which is proxied server-side:
+//   - Dev: Vite dev server proxy (vite.config.ts)
+//   - Production: Vercel serverless function (api/omnilife/[...path].ts)
+// This avoids CORS and keeps credentials out of the client bundle.
 
-const OMNILIFE_DIRECT_URL =
-  (import.meta.env.VITE_OMNILIFE_BASE_URL as string | undefined) ??
-  'https://uat.omnilife.com.au/API/4';
-
-// In dev mode, use the Vite proxy to avoid CORS issues
-const BASE_URL = import.meta.env.DEV ? '/api/omnilife' : OMNILIFE_DIRECT_URL;
-
-const USERNAME =
-  (import.meta.env.VITE_OMNILIFE_USERNAME as string | undefined) ?? 'FinuraDigital';
-
-const PASSWORD =
-  (import.meta.env.VITE_OMNILIFE_PASSWORD as string | undefined) ??
-  '16HahIceQ42WpmurCIdP';
-
-function authHeader(): string {
-  return `Basic ${btoa(`${USERNAME}:${PASSWORD}`)}`;
-}
+const BASE_URL = '/api/omnilife';
 
 async function get<T>(path: string): Promise<T> {
   const res = await fetch(`${BASE_URL}${path}`, {
     method: 'GET',
-    headers: {
-      Authorization: authHeader(),
-      Accept: 'application/json',
-    },
+    headers: { Accept: 'application/json' },
   });
 
   if (!res.ok) {

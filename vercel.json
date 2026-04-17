@@ -1,5 +1,6 @@
 {
   "rewrites": [
+    { "source": "/api/omnilife/:path*", "destination": "/api/omnilife/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
