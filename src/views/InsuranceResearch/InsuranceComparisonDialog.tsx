@@ -278,7 +278,7 @@ export function InsuranceComparisonDialog({
 
   const [preCompareScreen, setPreCompareScreen] = useState<Screen>(1);
   const [preOptionsScreen, setPreOptionsScreen] = useState<Screen>(1);
-  const [optionsTab, setOptionsTab] = useState<OptionsTab>('riskLogicDefaults');
+  const [optionsTab, setOptionsTab] = useState<OptionsTab>('defaults');
 
   function handleToggleQuoteSelect(id: string) {
     setQuoteResults((prev) => ({
@@ -347,8 +347,8 @@ export function InsuranceComparisonDialog({
                   </button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-52">
-                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('riskLogicDefaults'); setScreen('options'); }}>
-                    RiskLogic Defaults
+                  <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('defaults'); setScreen('options'); }}>
+                    Defaults
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => { setPreOptionsScreen(screen); setOptionsTab('includedInsurers'); setScreen('options'); }}>
                     Included Insurers & Products

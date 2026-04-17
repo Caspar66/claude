@@ -77,14 +77,44 @@ const DEFAULT_POLICY: PolicyDefaults = {
   minCommissionPref: 'No',
 };
 
-function RiskLogicDefaults({ onClose }: { onClose: () => void }) {
+type DefaultsMode = 'adviser' | 'my';
+
+function DefaultsPanel({ onClose }: { onClose: () => void }) {
   const [tab, setTab] = useState<RiskTab>('POLICY DEFAULTS');
   const [form, setForm] = useState<PolicyDefaults>({ ...DEFAULT_POLICY });
+  const [defaultsMode, setDefaultsMode] = useState<DefaultsMode>('adviser');
 
   const up = (patch: Partial<PolicyDefaults>) => setForm((f) => ({ ...f, ...patch }));
+  const isMyDefaults = defaultsMode === 'my';
 
   return (
     <div className="flex flex-col h-full">
+      {/* Defaults mode selector */}
+      <div className="px-4 py-3 border-b border-gray-200 bg-slate-50">
+        <div className="flex items-center justify-between gap-3">
+          <label className="text-xs font-semibold text-slate-700">Defaults</label>
+          <div className="flex rounded border border-gray-300 overflow-hidden">
+            <button
+              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'adviser' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
+              onClick={() => setDefaultsMode('adviser')}
+            >
+              Use Adviser defaults
+            </button>
+            <button
+              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'my' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
+              onClick={() => setDefaultsMode('my')}
+            >
+              Use my defaults
+            </button>
+          </div>
+        </div>
+        <p className="text-[10px] text-slate-400 mt-1.5">
+          {defaultsMode === 'adviser'
+            ? 'Adviser defaults from your adviser profile will be applied to quotes.'
+            : 'Your custom defaults below (including selected Insurers & Products) will be applied to quotes.'}
+        </p>
+      </div>
+
       {/* Tabs */}
       <div className="flex flex-wrap gap-0 border-b border-gray-200 bg-gray-50 px-1 pt-1">
         {RISK_TABS.map((t) => (
@@ -99,7 +129,7 @@ function RiskLogicDefaults({ onClose }: { onClose: () => void }) {
       </div>
 
       {/* Body */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className={`flex-1 overflow-y-auto p-4 ${!isMyDefaults ? 'opacity-40 pointer-events-none' : ''}`}>
         {tab === 'POLICY DEFAULTS' && (
           <div className="space-y-0.5">
             <Sel label="Premium Projection Duration" value={form.premiumProjection} options={['10', '15', '20', '25', '30', '35', '40']} onChange={(v) => up({ premiumProjection: v })} />
@@ -497,10 +527,10 @@ function CommissionsPanel({ onClose }: { onClose: () => void }) {
 // OPTIONS MODAL — wraps the 4 panels
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export type OptionsTab = 'riskLogicDefaults' | 'includedInsurers' | 'insurerLogins' | 'commissions';
+export type OptionsTab = 'defaults' | 'includedInsurers' | 'insurerLogins' | 'commissions';
 
 const OPTIONS_LABELS: Record<OptionsTab, string> = {
-  riskLogicDefaults: 'RiskLogic Defaults',
+  defaults: 'Defaults',
   includedInsurers: 'Included Insurers & Products',
   insurerLogins: 'Insurer Logins',
   commissions: 'Commissions',
@@ -534,7 +564,7 @@ export function OptionsModalContent({ activeTab, onTabChange, onClose }: Options
 
       {/* Panel content */}
       <div className="flex-1 overflow-hidden">
-        {activeTab === 'riskLogicDefaults' && <RiskLogicDefaults onClose={onClose} />}
+        {activeTab === 'defaults' && <DefaultsPanel onClose={onClose} />}
         {activeTab === 'includedInsurers' && <IncludedInsurers onClose={onClose} />}
         {activeTab === 'insurerLogins' && <InsurerLogins onClose={onClose} />}
         {activeTab === 'commissions' && <CommissionsPanel onClose={onClose} />}
