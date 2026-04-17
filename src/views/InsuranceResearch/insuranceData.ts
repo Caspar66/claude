@@ -14,16 +14,24 @@ export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {
   S: 'Student',
 };
 
+export type HealthDiscount = 'I' | 'E';
+
+export const HEALTH_DISCOUNT_LABELS: Record<HealthDiscount, string> = {
+  I: 'Include',
+  E: 'Exclude',
+};
+
 export interface ClientFormData {
   firstName: string;
   lastName: string;
   gender: 'Male' | 'Female';
-  smoker: 'No' | 'Yes';
+  smoker: 'Yes' | 'No';
   dateOfBirth: string;
   age: number;
   occupation: string;
   occupationCode: string;
   employmentStatus: EmploymentStatus;
+  healthDiscount: HealthDiscount;
   annualIncome: string;
   state: string;
   loadings: string;
@@ -327,8 +335,9 @@ export function getDefaultClientData(
     occupation: 'Accountant (qualified)',
     occupationCode: '1P - Accounting Professionals',
     employmentStatus: 'E',
+    healthDiscount: 'E',
     annualIncome: '$100,000',
-    state: 'Queensland',
+    state: 'QLD',
     loadings: 'No Loadings',
     ...overrides,
   };

@@ -442,7 +442,7 @@ function LifeInsuredForm({ form, onChange }: { form: QuoteFormState; onChange: (
       <Sel label="Gender" value={d.gender} options={['Male', 'Female']} onChange={(v) => up({ gender: v as 'Male' | 'Female' })} />
       <NumInp label="Age Next Birthday" value={d.ageNextBirthday} onChange={(v) => up({ ageNextBirthday: v })} />
       <Sel label="Smoker" value={d.smoker} options={['No', 'Yes']} onChange={(v) => up({ smoker: v as 'Yes' | 'No' })} />
-      <Sel label="State" value={d.state} options={['Queensland', 'New South Wales', 'Victoria', 'Western Australia', 'South Australia', 'Tasmania', 'ACT', 'Northern Territory']} onChange={(v) => up({ state: v })} />
+      <Sel label="State" value={d.state} options={['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA']} onChange={(v) => up({ state: v })} />
       <Inp label="Annual Income" value={d.annualIncome} onChange={(v) => up({ annualIncome: v })} />
       <Inp label="Occupation" value={d.occupation} onChange={(v) => up({ occupation: v })} />
     </>

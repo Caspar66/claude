@@ -155,7 +155,7 @@ export function InsuranceComparisonDialog({
     getDefaultClientData(clientParts[0] || 'Example', clientParts.slice(1).join(' ') || 'Client', 61, {
       gender: 'Male',
       dateOfBirth: '15/06/1964',
-      state: 'Queensland',
+      state: 'QLD',
       occupationCode: '1P - Accounting Professionals',
     })
   );
@@ -163,7 +163,7 @@ export function InsuranceComparisonDialog({
     getDefaultClientData(partnerParts[0] || 'Example', partnerParts.slice(1).join(' ') || 'Partner', 59, {
       gender: 'Female',
       dateOfBirth: '2/07/1966',
-      state: 'Victoria',
+      state: 'VIC',
       occupationCode: '2B - Clerical & Administration',
     })
   );
@@ -176,10 +176,10 @@ export function InsuranceComparisonDialog({
   const [businessExpenses, setBusinessExpenses] = useState<BusinessExpensesOptions>({ enabled: false });
 
   const [clientQuoteForm, setClientQuoteForm] = useState<QuoteFormState>(
-    getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland')
+    getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'QLD')
   );
   const [partnerQuoteForm, setPartnerQuoteForm] = useState<QuoteFormState>(
-    getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'Victoria')
+    getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'VIC')
   );
   const [clientQuoteResults, setClientQuoteResults] = useState<QuoteResults>(getEmptyQuoteResults());
   const [partnerQuoteResults, setPartnerQuoteResults] = useState<QuoteResults>(getEmptyQuoteResults());
@@ -200,10 +200,10 @@ export function InsuranceComparisonDialog({
     setScenarioName('');
     setCaseType('Client & Partner');
     setClientData(getDefaultClientData(clientParts[0] || 'Example', clientParts.slice(1).join(' ') || 'Client', 61, {
-      gender: 'Male', dateOfBirth: '15/06/1964', state: 'Queensland', occupationCode: '1P - Accounting Professionals',
+      gender: 'Male', dateOfBirth: '15/06/1964', state: 'QLD', occupationCode: '1P - Accounting Professionals',
     }));
     setPartnerData(getDefaultClientData(partnerParts[0] || 'Example', partnerParts.slice(1).join(' ') || 'Partner', 59, {
-      gender: 'Female', dateOfBirth: '2/07/1966', state: 'Victoria', occupationCode: '2B - Clerical & Administration',
+      gender: 'Female', dateOfBirth: '2/07/1966', state: 'VIC', occupationCode: '2B - Clerical & Administration',
     }));
     setQuoteOptions(getDefaultQuoteOptions());
     setLifeCover(getDefaultLifeCover());
@@ -211,8 +211,8 @@ export function InsuranceComparisonDialog({
     setTrauma({ enabled: false });
     setIncomeProtection(getDefaultIncomeProtection());
     setBusinessExpenses({ enabled: false });
-    setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
-    setPartnerQuoteForm(getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'Victoria'));
+    setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'QLD'));
+    setPartnerQuoteForm(getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'VIC'));
     setClientQuoteResults(getEmptyQuoteResults());
     setPartnerQuoteResults(getEmptyQuoteResults());
     setActiveClient('client');
@@ -434,10 +434,10 @@ export function InsuranceComparisonDialog({
                   onChange={setQuoteForm}
                   onReset={() => {
                     if (activeClient === 'partner') {
-                      setPartnerQuoteForm(getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'Victoria'));
+                      setPartnerQuoteForm(getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'VIC'));
                       setPartnerQuoteResults(getEmptyQuoteResults());
                     } else {
-                      setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'Queensland'));
+                      setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'QLD'));
                       setClientQuoteResults(getEmptyQuoteResults());
                     }
                   }}

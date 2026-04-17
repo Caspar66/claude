@@ -40,7 +40,7 @@ export function pullFactFindData(clientId: string): FactFindData {
     smoker: false,
     occupation: 'Accountant (qualified)',
     annualIncome: '$120,000',
-    state: 'Queensland',
+    state: 'QLD',
     partnerFirstName: 'Example',
     partnerLastName: 'Partner',
     partnerGender: 'Female',

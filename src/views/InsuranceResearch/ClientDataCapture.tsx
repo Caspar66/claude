@@ -1,8 +1,9 @@
-import { Edit3, Info, Calendar, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Edit3, Info, Calendar, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOccupations } from '@/hooks/useOccupations';
-import type { ClientFormData, EmploymentStatus } from './insuranceData';
-import { EMPLOYMENT_STATUS_LABELS } from './insuranceData';
+import type { ClientFormData, EmploymentStatus, HealthDiscount } from './insuranceData';
+import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS } from './insuranceData';
 
 interface Props {
   clientData: ClientFormData;
@@ -36,7 +37,80 @@ function Sel({ value, onChange, options, className = '' }: { value: string; onCh
   );
 }
 
-const STATE_OPTIONS = ['Queensland', 'New South Wales', 'Victoria', 'Western Australia', 'South Australia', 'Tasmania', 'ACT', 'Northern Territory'];
+function OccupationSearch({
+  value,
+  options,
+  loading,
+  onChange,
+}: {
+  value: string;
+  options: string[];
+  loading: boolean;
+  onChange: (v: string) => void;
+}) {
+  const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const filtered = query
+    ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase())).slice(0, 50)
+    : options.slice(0, 50);
+
+  const displayValue = value || 'Select occupation…';
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        type="button"
+        className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white text-left w-60 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        onClick={() => setOpen(!open)}
+      >
+        <Search size={12} className="text-gray-400 shrink-0" />
+        <span className={`truncate ${value ? 'text-slate-800' : 'text-gray-400'}`}>{displayValue}</span>
+        {loading && <Loader2 size={12} className="text-blue-500 animate-spin ml-auto shrink-0" />}
+      </button>
+      {open && (
+        <div className="absolute z-50 mt-1 w-72 bg-white border border-gray-300 rounded shadow-lg">
+          <div className="p-1.5 border-b border-gray-200">
+            <input
+              type="text"
+              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              placeholder="Search occupations…"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              autoFocus
+            />
+          </div>
+          <div className="max-h-48 overflow-y-auto">
+            {filtered.length === 0 && (
+              <div className="px-3 py-2 text-xs text-gray-400">No matches</div>
+            )}
+            {filtered.map((o) => (
+              <button
+                key={o}
+                type="button"
+                className={`w-full text-left px-3 py-1.5 text-sm hover:bg-blue-50 ${o === value ? 'bg-blue-50 text-blue-700 font-medium' : 'text-slate-700'}`}
+                onClick={() => { onChange(o); setOpen(false); setQuery(''); }}
+              >
+                {o}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+const STATE_OPTIONS = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
 function PersonFields({
   data,
@@ -53,27 +127,15 @@ function PersonFields({
     onChange({ ...data, [field]: value });
   }
 
-  // Ensure the current value is included in the options so it always renders
-  const opts = occupationOptions.includes(data.occupationCode)
-    ? occupationOptions
-    : [data.occupationCode, ...occupationOptions].filter(Boolean);
-
   return {
-    name: (
-      <div className="flex items-center gap-2">
-        <Inp value="" onChange={() => {}} className="w-36" />
-        <span className="text-xs text-orange-500 cursor-pointer hover:underline">(Keyword Search)</span>
-      </div>
-    ),
     occupation: (
       <div className="flex items-center gap-1.5">
-        <Sel
+        <OccupationSearch
           value={data.occupationCode}
+          options={occupationOptions}
+          loading={occupationsLoading}
           onChange={(v) => update('occupationCode', v)}
-          options={opts}
-          className="w-60"
         />
-        {occupationsLoading && <Loader2 size={14} className="text-blue-500 animate-spin" />}
         <button className="text-blue-500 hover:text-blue-700" title="Occupation info"><Info size={14} /></button>
       </div>
     ),
@@ -98,15 +160,21 @@ function PersonFields({
       <Sel value={data.gender} onChange={(v) => update('gender', v)} options={['Male', 'Female']} className="w-20" />
     ),
     smoker: (
-      <Sel
-        value={data.smoker === 'No' ? 'Non-Smoker' : 'Smoker'}
-        onChange={(v) => update('smoker', v === 'Non-Smoker' ? 'No' : 'Yes')}
-        options={['Non-Smoker', 'Smoker']}
-        className="w-32"
-      />
+      <Sel value={data.smoker} onChange={(v) => update('smoker', v)} options={['Yes', 'No']} className="w-16" />
     ),
+    healthDiscount: data.smoker === 'No' ? (
+      <select
+        className="border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-28"
+        value={data.healthDiscount}
+        onChange={(e) => update('healthDiscount', e.target.value as HealthDiscount)}
+      >
+        {(Object.entries(HEALTH_DISCOUNT_LABELS) as [HealthDiscount, string][]).map(([code, label]) => (
+          <option key={code} value={code}>{label}</option>
+        ))}
+      </select>
+    ) : null,
     state: (
-      <Sel value={data.state} onChange={(v) => update('state', v)} options={STATE_OPTIONS} className="w-40" />
+      <Sel value={data.state} onChange={(v) => update('state', v)} options={STATE_OPTIONS} className="w-24" />
     ),
     income: (
       <Inp value={data.annualIncome} onChange={(v) => update('annualIncome', v)} className="w-28" />
@@ -125,9 +193,11 @@ interface RowProps {
   labelColor?: string;
   clientField: React.ReactNode;
   partnerField?: React.ReactNode;
+  show?: boolean;
 }
 
-function FormRow({ label, labelColor = 'text-slate-700', clientField, partnerField }: RowProps) {
+function FormRow({ label, labelColor = 'text-slate-700', clientField, partnerField, show = true }: RowProps) {
+  if (!show) return null;
   return (
     <tr>
       <td className={`py-2 pr-6 text-sm font-semibold ${labelColor} align-top whitespace-nowrap`}>
@@ -166,6 +236,8 @@ export function ClientDataCapture({
       })
     : null;
 
+  const showHealthDiscount = clientData.smoker === 'No' || (partnerData && partnerData.smoker === 'No');
+
   return (
     <div className="flex-1 overflow-auto flex flex-col">
       {/* Section header */}
@@ -200,12 +272,12 @@ export function ClientDataCapture({
             </tr>
           </thead>
           <tbody>
-            <FormRow label="Name" labelColor="text-blue-800" clientField={c.name} partnerField={p?.name} />
             <FormRow label="Occupation" clientField={c.occupation} partnerField={p?.occupation} />
             <FormRow label="Employment Status" clientField={c.employmentStatus} partnerField={p?.employmentStatus} />
             <FormRow label="Date of Birth" clientField={c.dob} partnerField={p?.dob} />
             <FormRow label="Gender" clientField={c.gender} partnerField={p?.gender} />
-            <FormRow label="Smoker Status" clientField={c.smoker} partnerField={p?.smoker} />
+            <FormRow label="Smoker" clientField={c.smoker} partnerField={p?.smoker} />
+            <FormRow label="Health Discount" clientField={c.healthDiscount} partnerField={p?.healthDiscount} show={!!showHealthDiscount} />
             <FormRow label="State" clientField={c.state} partnerField={p?.state} />
             <FormRow label="Annual Income&#10;(ex super)" clientField={c.income} partnerField={p?.income} />
             <FormRow label="Loadings" labelColor="text-blue-800" clientField={c.loadings} partnerField={p?.loadings} />
