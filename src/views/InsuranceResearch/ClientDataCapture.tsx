@@ -62,7 +62,7 @@ function OccupationSearch({
 
   const filtered = query
     ? options.filter((o) => o.toLowerCase().includes(query.toLowerCase())).slice(0, 50)
-    : options.slice(0, 50);
+    : options;
 
   const displayValue = value || 'Select occupation…';
 
