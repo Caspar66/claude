@@ -543,7 +543,7 @@ export function OptionsModalContent({ activeTab, onTabChange, onClose }: Options
   const [defaultsMode, setDefaultsMode] = useState<DefaultsMode>('adviser');
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col flex-1 min-h-0">
       {/* Defaults mode selector — applies to the Defaults tab (and, when set
           to "my", Insurer Options below also become the active defaults). */}
       <div className="px-4 py-3 border-b border-gray-200 bg-slate-50">
