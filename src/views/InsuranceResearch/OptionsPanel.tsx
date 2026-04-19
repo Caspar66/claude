@@ -450,7 +450,7 @@ function InsurerOptions({ onClose, defaultsMode }: { onClose: () => void; defaul
 // 3. INSURER LOGINS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-const LOGIN_INSURERS = ['AIA', 'TAL', 'ZURICH ACTIVE', 'ZURICH SUMO', 'ZURICH', 'BT', 'MLC', 'MetLife', 'OnePath', 'NEOS'];
+const LOGIN_INSURERS = ['AIA', 'TAL', 'Zurich Active', 'Zurich'];
 
 function InsurerLogins({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState(LOGIN_INSURERS[0]);
@@ -465,6 +465,12 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
   function updateCred(field: 'username' | 'password', value: string) {
     setCreds((prev) => ({ ...prev, [selected]: { ...prev[selected], [field]: value } }));
   }
+
+  function deleteCreds() {
+    setCreds((prev) => ({ ...prev, [selected]: { username: '', password: '' } }));
+  }
+
+  const hasCredentials = cur.username !== '' || cur.password !== '';
 
   return (
     <div className="flex flex-col h-full">
@@ -488,28 +494,36 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
           <h4 className="text-sm font-bold text-slate-800 mb-4">{selected} Login</h4>
           <div className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Username</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Username</label>
               <input
                 type="text"
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
                 value={cur.username}
                 onChange={(e) => updateCred('username', e.target.value)}
-                placeholder={`Enter ${selected} username`}
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Password</label>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Password</label>
               <input
                 type="password"
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
                 value={cur.password}
                 onChange={(e) => updateCred('password', e.target.value)}
-                placeholder="Enter password"
               />
             </div>
           </div>
+          <div className="mt-4">
+            <Button
+              size="sm"
+              className="bg-slate-700 hover:bg-slate-800 text-white text-xs h-7"
+              onClick={deleteCreds}
+              disabled={!hasCredentials}
+            >
+              Delete {selected} Credentials
+            </Button>
+          </div>
           <p className="text-[10px] text-slate-400 mt-4">
-            Credentials are stored locally and used for live quoting integrations.
+            * The recommended password policy is to use a different password per insurer.
           </p>
         </div>
       </div>
