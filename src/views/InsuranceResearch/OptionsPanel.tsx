@@ -452,25 +452,39 @@ function InsurerOptions({ onClose, defaultsMode }: { onClose: () => void; defaul
 
 const LOGIN_INSURERS = ['AIA', 'TAL', 'Zurich Active', 'Zurich'];
 
+type InsurerCreds =
+  | { kind: 'adviserCode'; adviserCode: string }
+  | { kind: 'userPass'; username: string; password: string };
+
+function emptyCredsFor(insurer: string): InsurerCreds {
+  if (insurer === 'AIA') return { kind: 'adviserCode', adviserCode: '' };
+  return { kind: 'userPass', username: '', password: '' };
+}
+
+function hasAny(creds: InsurerCreds): boolean {
+  return creds.kind === 'adviserCode' ? creds.adviserCode !== '' : creds.username !== '' || creds.password !== '';
+}
+
 function InsurerLogins({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState(LOGIN_INSURERS[0]);
-  const [creds, setCreds] = useState<Record<string, { username: string; password: string }>>(() => {
-    const init: Record<string, { username: string; password: string }> = {};
-    LOGIN_INSURERS.forEach((i) => { init[i] = { username: '', password: '' }; });
+  const [creds, setCreds] = useState<Record<string, InsurerCreds>>(() => {
+    const init: Record<string, InsurerCreds> = {};
+    LOGIN_INSURERS.forEach((i) => { init[i] = emptyCredsFor(i); });
     return init;
   });
 
-  const cur = creds[selected] || { username: '', password: '' };
+  const cur = creds[selected] ?? emptyCredsFor(selected);
 
-  function updateCred(field: 'username' | 'password', value: string) {
-    setCreds((prev) => ({ ...prev, [selected]: { ...prev[selected], [field]: value } }));
+  function updateField(field: 'adviserCode' | 'username' | 'password', value: string) {
+    setCreds((prev) => {
+      const existing = prev[selected] ?? emptyCredsFor(selected);
+      return { ...prev, [selected]: { ...existing, [field]: value } as InsurerCreds };
+    });
   }
 
   function deleteCreds() {
-    setCreds((prev) => ({ ...prev, [selected]: { username: '', password: '' } }));
+    setCreds((prev) => ({ ...prev, [selected]: emptyCredsFor(selected) }));
   }
-
-  const hasCredentials = cur.username !== '' || cur.password !== '';
 
   return (
     <div className="flex flex-col h-full">
@@ -493,31 +507,45 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
         <div className="flex-1 p-5">
           <h4 className="text-sm font-bold text-slate-800 mb-4">{selected} Login</h4>
           <div className="space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Username</label>
-              <input
-                type="text"
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
-                value={cur.username}
-                onChange={(e) => updateCred('username', e.target.value)}
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Password</label>
-              <input
-                type="password"
-                className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
-                value={cur.password}
-                onChange={(e) => updateCred('password', e.target.value)}
-              />
-            </div>
+            {cur.kind === 'adviserCode' ? (
+              <div>
+                <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Adviser Code</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
+                  value={cur.adviserCode}
+                  onChange={(e) => updateField('adviserCode', e.target.value)}
+                />
+              </div>
+            ) : (
+              <>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Username</label>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
+                    value={cur.username}
+                    onChange={(e) => updateField('username', e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Password</label>
+                  <input
+                    type="password"
+                    className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
+                    value={cur.password}
+                    onChange={(e) => updateField('password', e.target.value)}
+                  />
+                </div>
+              </>
+            )}
           </div>
           <div className="mt-4">
             <Button
               size="sm"
               className="bg-slate-700 hover:bg-slate-800 text-white text-xs h-7"
               onClick={deleteCreds}
-              disabled={!hasCredentials}
+              disabled={!hasAny(cur)}
             >
               Delete {selected} Credentials
             </Button>
