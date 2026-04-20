@@ -86,6 +86,7 @@ export function OccupationRatingsModal({ open, onClose, occupationLabel, occupat
                 <thead>
                   <tr className="bg-slate-100 border-b border-gray-300">
                     <th className="text-left px-3 py-2 font-bold text-slate-700 sticky left-0 bg-slate-100">Insurer</th>
+                    <th className="text-left px-3 py-2 font-bold text-slate-700">Description</th>
                     {COLUMNS.map((col) => (
                       <th key={col.key} className="text-left px-3 py-2 font-bold text-slate-700">{col.label}</th>
                     ))}
@@ -97,6 +98,7 @@ export function OccupationRatingsModal({ open, onClose, occupationLabel, occupat
                       <td className="px-3 py-1.5 font-medium text-slate-800 sticky left-0 bg-inherit">
                         {supplierNames.get(m.supplierCode) ?? m.supplierCode}
                       </td>
+                      <td className="px-3 py-1.5 text-slate-600">{m.description || '—'}</td>
                       {COLUMNS.map((col) => (
                         <td key={col.key} className="px-3 py-1.5 text-slate-600">
                           {m[col.key] || '—'}
