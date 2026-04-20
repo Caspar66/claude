@@ -21,6 +21,31 @@ export const HEALTH_DISCOUNT_LABELS: Record<HealthDiscount, string> = {
   E: 'Exclude',
 };
 
+export interface LoadingEntry {
+  percentage: number;
+  dollarPer1000: number;
+}
+
+export interface Loadings {
+  life: LoadingEntry;
+  tpd: LoadingEntry;
+  trauma: LoadingEntry;
+  incomeProtection: LoadingEntry;
+  businessExpenses: LoadingEntry;
+}
+
+export const EMPTY_LOADINGS: Loadings = {
+  life: { percentage: 0, dollarPer1000: 0 },
+  tpd: { percentage: 0, dollarPer1000: 0 },
+  trauma: { percentage: 0, dollarPer1000: 0 },
+  incomeProtection: { percentage: 0, dollarPer1000: 0 },
+  businessExpenses: { percentage: 0, dollarPer1000: 0 },
+};
+
+export function hasLoadings(l: Loadings): boolean {
+  return Object.values(l).some((e) => e.percentage !== 0 || e.dollarPer1000 !== 0);
+}
+
 export interface ClientFormData {
   firstName: string;
   lastName: string;
@@ -34,7 +59,7 @@ export interface ClientFormData {
   healthDiscount: HealthDiscount;
   annualIncome: string;
   state: string;
-  loadings: string;
+  loadings: Loadings;
 }
 
 export interface QuoteOptions {
@@ -332,13 +357,13 @@ export function getDefaultClientData(
     smoker: 'No',
     dateOfBirth: `15/06/${birthYear}`,
     age,
-    occupation: 'Accountant (qualified)',
-    occupationCode: '1P - Accounting Professionals',
+    occupation: '',
+    occupationCode: '',
     employmentStatus: 'E',
     healthDiscount: 'E',
     annualIncome: '$100,000',
     state: 'QLD',
-    loadings: 'No Loadings',
+    loadings: { ...EMPTY_LOADINGS },
     ...overrides,
   };
 }

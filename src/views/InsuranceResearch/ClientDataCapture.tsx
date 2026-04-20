@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from 'react';
-import { Edit3, Info, Calendar, Loader2, Search } from 'lucide-react';
+import { Edit3, Info, Calendar, Loader2, Search, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useOccupations } from '@/hooks/useOccupations';
 import type { OccupationOption } from '@/services/omnilifeApi';
-import type { ClientFormData, EmploymentStatus, HealthDiscount } from './insuranceData';
-import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS } from './insuranceData';
+import type { ClientFormData, EmploymentStatus, HealthDiscount, Loadings } from './insuranceData';
+import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS, EMPTY_LOADINGS, hasLoadings } from './insuranceData';
 import { OccupationRatingsModal } from './OccupationRatingsModal';
 
 interface Props {
@@ -112,6 +113,113 @@ function OccupationSearch({
   );
 }
 
+// ── Loadings Modal ──────────────────────────────────────────────────────────
+
+const LOADING_COVER_TYPES: { key: keyof Loadings; label: string }[] = [
+  { key: 'life', label: 'Life' },
+  { key: 'tpd', label: 'TPD' },
+  { key: 'trauma', label: 'Trauma' },
+  { key: 'incomeProtection', label: 'Income Protection' },
+  { key: 'businessExpenses', label: 'Business Expenses' },
+];
+
+function LoadingsModal({
+  open,
+  onClose,
+  loadings,
+  onSave,
+}: {
+  open: boolean;
+  onClose: () => void;
+  loadings: Loadings;
+  onSave: (l: Loadings) => void;
+}) {
+  const [draft, setDraft] = useState<Loadings>(loadings);
+
+  useEffect(() => {
+    if (open) setDraft(loadings);
+  }, [open, loadings]);
+
+  function updateEntry(key: keyof Loadings, field: 'percentage' | 'dollarPer1000', raw: string) {
+    const num = raw === '' ? 0 : parseFloat(raw);
+    if (isNaN(num)) return;
+    setDraft((prev) => ({ ...prev, [key]: { ...prev[key], [field]: num } }));
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-w-[600px] w-[600px] p-0 overflow-hidden">
+        <div className="flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between px-5 py-3 bg-slate-700 text-white">
+            <h3 className="text-sm font-bold">Loadings</h3>
+            <button onClick={onClose} className="text-white/70 hover:text-white"><X size={16} /></button>
+          </div>
+
+          {/* Insurer selector */}
+          <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
+            <label className="text-xs font-medium text-blue-700">Insurer</label>
+            <select className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+              <option>Generic</option>
+            </select>
+          </div>
+
+          {/* Table */}
+          <div className="px-5 py-4">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-300">
+                  <th className="text-left py-2 pr-4 font-semibold text-slate-700">Cover type</th>
+                  <th className="text-center py-2 px-4 font-semibold text-slate-700">Percentage</th>
+                  <th className="text-center py-2 pl-4 font-semibold text-slate-700">Dollar per $1,000</th>
+                </tr>
+              </thead>
+              <tbody>
+                {LOADING_COVER_TYPES.map(({ key, label }) => (
+                  <tr key={key} className="border-b border-gray-100">
+                    <td className="py-2 pr-4 text-slate-700">{label}</td>
+                    <td className="py-2 px-4">
+                      <div className="flex items-center justify-center gap-1">
+                        <input
+                          type="number"
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          value={draft[key].percentage || ''}
+                          onChange={(e) => updateEntry(key, 'percentage', e.target.value)}
+                          placeholder="0"
+                        />
+                        <span className="text-xs text-slate-500 font-medium">%</span>
+                      </div>
+                    </td>
+                    <td className="py-2 pl-4">
+                      <div className="flex items-center justify-center gap-1">
+                        <span className="text-xs text-slate-500 font-medium bg-gray-100 px-1.5 py-1 rounded">$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          value={draft[key].dollarPer1000 || ''}
+                          onChange={(e) => updateEntry(key, 'dollarPer1000', e.target.value)}
+                          placeholder="0.0"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50">
+            <Button variant="outline" size="sm" className="text-xs h-7" onClick={onClose}>Close</Button>
+            <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={() => { onSave(draft); onClose(); }}>Save</Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 const STATE_OPTIONS = ['ACT', 'NSW', 'NT', 'QLD', 'SA', 'TAS', 'VIC', 'WA'];
 
 function PersonFields({
@@ -121,6 +229,7 @@ function PersonFields({
   occupationsLoading,
   allOccupations,
   onOccupationInfo,
+  onEditLoadings,
 }: {
   data: ClientFormData;
   onChange: (d: ClientFormData) => void;
@@ -128,6 +237,7 @@ function PersonFields({
   occupationsLoading: boolean;
   allOccupations: OccupationOption[];
   onOccupationInfo: (label: string, code: string) => void;
+  onEditLoadings: (current: Loadings) => void;
 }) {
   function update(field: keyof ClientFormData, value: string | number) {
     onChange({ ...data, [field]: value });
@@ -199,8 +309,8 @@ function PersonFields({
     ),
     loadings: (
       <div className="flex items-center gap-2">
-        <span className="text-sm text-slate-600">{data.loadings}</span>
-        <button className="text-blue-500 hover:text-blue-700" title="Edit loadings"><Edit3 size={12} /></button>
+        <span className="text-sm text-slate-600">{hasLoadings(data.loadings) ? 'Loadings Applied' : 'No Loadings'}</span>
+        <button className="text-blue-500 hover:text-blue-700" title="Edit loadings" onClick={() => onEditLoadings(data.loadings)}><Edit3 size={12} /></button>
       </div>
     ),
   };
@@ -240,9 +350,18 @@ export function ClientDataCapture({
   const occupationLabels = occupations.map((o) => o.label);
 
   const [ratingsModal, setRatingsModal] = useState<{ label: string; code: string } | null>(null);
+  const [loadingsTarget, setLoadingsTarget] = useState<'client' | 'partner' | null>(null);
 
   function openRatings(label: string, code: string) {
     setRatingsModal({ label, code });
+  }
+
+  function handleSaveLoadings(l: Loadings) {
+    if (loadingsTarget === 'partner' && partnerData) {
+      onPartnerChange({ ...partnerData, loadings: l });
+    } else {
+      onClientChange({ ...clientData, loadings: l });
+    }
   }
 
   const c = PersonFields({
@@ -252,6 +371,7 @@ export function ClientDataCapture({
     occupationsLoading,
     allOccupations: occupations,
     onOccupationInfo: openRatings,
+    onEditLoadings: () => setLoadingsTarget('client'),
   });
   const p = showPartner && partnerData
     ? PersonFields({
@@ -261,6 +381,7 @@ export function ClientDataCapture({
         occupationsLoading,
         allOccupations: occupations,
         onOccupationInfo: openRatings,
+        onEditLoadings: () => setLoadingsTarget('partner'),
       })
     : null;
 
@@ -329,6 +450,14 @@ export function ClientDataCapture({
         onClose={() => setRatingsModal(null)}
         occupationLabel={ratingsModal?.label ?? ''}
         occupationId={ratingsModal?.code ?? ''}
+      />
+
+      {/* Loadings Modal */}
+      <LoadingsModal
+        open={loadingsTarget !== null}
+        onClose={() => setLoadingsTarget(null)}
+        loadings={loadingsTarget === 'partner' && partnerData ? partnerData.loadings : clientData.loadings}
+        onSave={handleSaveLoadings}
       />
     </div>
   );
