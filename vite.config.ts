@@ -29,6 +29,15 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/occupation-mappings/': {
+          target,
+          changeOrigin: true,
+          rewrite: (path: string) => '/occupations/' + path.replace('/api/occupation-mappings/', '') + '/mappings',
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         '/api/suppliers': {
           target: target + '/suppliers',
           changeOrigin: true,

@@ -2,8 +2,10 @@ import { useState, useRef, useEffect } from 'react';
 import { Edit3, Info, Calendar, Loader2, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useOccupations } from '@/hooks/useOccupations';
+import type { OccupationOption } from '@/services/omnilifeApi';
 import type { ClientFormData, EmploymentStatus, HealthDiscount } from './insuranceData';
 import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS } from './insuranceData';
+import { OccupationRatingsModal } from './OccupationRatingsModal';
 
 interface Props {
   clientData: ClientFormData;
@@ -117,14 +119,23 @@ function PersonFields({
   onChange,
   occupationOptions,
   occupationsLoading,
+  allOccupations,
+  onOccupationInfo,
 }: {
   data: ClientFormData;
   onChange: (d: ClientFormData) => void;
   occupationOptions: string[];
   occupationsLoading: boolean;
+  allOccupations: OccupationOption[];
+  onOccupationInfo: (label: string, code: string) => void;
 }) {
   function update(field: keyof ClientFormData, value: string | number) {
     onChange({ ...data, [field]: value });
+  }
+
+  function handleOccupationInfo() {
+    const match = allOccupations.find((o) => o.label === data.occupationCode);
+    if (match) onOccupationInfo(match.label, match.code);
   }
 
   return {
@@ -136,7 +147,14 @@ function PersonFields({
           loading={occupationsLoading}
           onChange={(v) => update('occupationCode', v)}
         />
-        <button className="text-blue-500 hover:text-blue-700" title="Occupation info"><Info size={14} /></button>
+        <button
+          className={`${data.occupationCode ? 'text-blue-500 hover:text-blue-700' : 'text-gray-300 cursor-default'}`}
+          title="Occupation ratings"
+          onClick={handleOccupationInfo}
+          disabled={!data.occupationCode}
+        >
+          <Info size={14} />
+        </button>
       </div>
     ),
     employmentStatus: (
@@ -221,11 +239,19 @@ export function ClientDataCapture({
   const { options: occupations, loading: occupationsLoading, error: occupationsError } = useOccupations();
   const occupationLabels = occupations.map((o) => o.label);
 
+  const [ratingsModal, setRatingsModal] = useState<{ label: string; code: string } | null>(null);
+
+  function openRatings(label: string, code: string) {
+    setRatingsModal({ label, code });
+  }
+
   const c = PersonFields({
     data: clientData,
     onChange: onClientChange,
     occupationOptions: occupationLabels,
     occupationsLoading,
+    allOccupations: occupations,
+    onOccupationInfo: openRatings,
   });
   const p = showPartner && partnerData
     ? PersonFields({
@@ -233,6 +259,8 @@ export function ClientDataCapture({
         onChange: onPartnerChange,
         occupationOptions: occupationLabels,
         occupationsLoading,
+        allOccupations: occupations,
+        onOccupationInfo: openRatings,
       })
     : null;
 
@@ -294,6 +322,14 @@ export function ClientDataCapture({
           Get Quotes
         </Button>
       </div>
+
+      {/* Occupation Ratings Modal */}
+      <OccupationRatingsModal
+        open={ratingsModal !== null}
+        onClose={() => setRatingsModal(null)}
+        occupationLabel={ratingsModal?.label ?? ''}
+        occupationId={ratingsModal?.code ?? ''}
+      />
     </div>
   );
 }

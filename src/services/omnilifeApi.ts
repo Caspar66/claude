@@ -42,6 +42,44 @@ export async function fetchOccupations(): Promise<OccupationOption[]> {
   return list.map(normalise).filter((o): o is OccupationOption => o !== null);
 }
 
+// ── Occupation Mappings ─────────────────────────────────────────────────────
+
+export interface OccupationMapping {
+  supplierCode: string;
+  description: string;
+  classTRM: string;
+  classTRA: string;
+  classTPDADL: string;
+  classTPDAny: string;
+  classTPDOwn: string;
+  classINC: string;
+  classBUS: string;
+}
+
+export async function fetchOccupationMappings(occupationId: string): Promise<OccupationMapping[]> {
+  const res = await fetch(`/api/occupation-mappings/${encodeURIComponent(occupationId)}`, {
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`OmniLife /occupations/${occupationId}/mappings returned ${res.status} ${res.statusText}`);
+  }
+
+  const payload: unknown = await res.json();
+  if (!Array.isArray(payload)) return [];
+  return payload.map((raw: Record<string, unknown>) => ({
+    supplierCode: typeof raw.supplierCode === 'string' ? raw.supplierCode : '',
+    description: typeof raw.description === 'string' ? raw.description : '',
+    classTRM: typeof raw.classTRM === 'string' ? raw.classTRM : '',
+    classTRA: typeof raw.classTRA === 'string' ? raw.classTRA : '',
+    classTPDADL: typeof raw.classTPDADL === 'string' ? raw.classTPDADL : '',
+    classTPDAny: typeof raw.classTPDAny === 'string' ? raw.classTPDAny : '',
+    classTPDOwn: typeof raw.classTPDOwn === 'string' ? raw.classTPDOwn : '',
+    classINC: typeof raw.classINC === 'string' ? raw.classINC : '',
+    classBUS: typeof raw.classBUS === 'string' ? raw.classBUS : '',
+  })).filter((m) => m.supplierCode);
+}
+
 // ── Suppliers ────────────────────────────────────────────────────────────────
 
 export interface SupplierProduct {
