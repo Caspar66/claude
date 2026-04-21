@@ -62,6 +62,73 @@ export interface ClientFormData {
   loadings: Loadings;
 }
 
+// ── Existing Covers ──────────────────────────────────────────────────────────
+
+export type ExistingCoverType = 'Life' | 'TPD' | 'Trauma' | 'IP' | 'BE' | 'SBI' | 'ChildCover' | 'Needlestick';
+
+export interface OwnershipOption {
+  code: string;
+  label: string;
+}
+
+export const OWNERSHIP_OPTIONS_BY_TYPE: Record<ExistingCoverType, OwnershipOption[]> = {
+  Life:         [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }],
+  TPD:          [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }, { code: 'J', label: 'SuperLink' }, { code: 'K', label: 'SMSF SuperLink' }],
+  Trauma:       [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }, { code: 'J', label: 'SuperLink' }, { code: 'K', label: 'SMSF SuperLink' }],
+  IP:           [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }, { code: 'J', label: 'SuperLink' }, { code: 'K', label: 'SMSF SuperLink' }],
+  BE:           [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }],
+  SBI:          [{ code: 'O', label: 'Non-Super' }, { code: 'S', label: 'Super' }],
+  ChildCover:   [{ code: 'O', label: 'Non-Super' }, { code: 'S', label: 'Super' }],
+  Needlestick:  [{ code: 'O', label: 'Non-Super' }, { code: 'S', label: 'Super' }],
+};
+
+export const COVER_TYPE_LABELS: Record<ExistingCoverType, string> = {
+  Life: 'Life',
+  TPD: 'TPD',
+  Trauma: 'Trauma',
+  IP: 'Income Protection /month',
+  BE: 'Business Expenses /month',
+  SBI: 'Severity Based Insurance',
+  ChildCover: 'Child Cover',
+  Needlestick: 'Needlestick',
+};
+
+export interface ExistingCover {
+  id: string;
+  coverType: ExistingCoverType;
+  sumInsured: string;
+  premiumStyle: string;
+  super?: string;
+  definition?: string;
+  standAlone?: string;
+  flexiLinked?: string;
+  superLinked?: string;
+  waitingPeriod?: string;
+  benefitPeriod?: string;
+  addDeathCover?: string;
+  ownership?: string;
+}
+
+export type PremiumFrequency = 'Monthly' | 'Yearly';
+
+export interface ExistingPolicy {
+  id: string;
+  provider: string;
+  policyDescription: string;
+  lifeInsured: 'client' | 'partner';
+  premiumSuper: number;
+  premiumSuperFrequency: PremiumFrequency;
+  premiumNonSuper: number;
+  premiumNonSuperFrequency: PremiumFrequency;
+  covers: ExistingCover[];
+  action: 'Not Considered' | 'Review' | 'Replace' | 'Retain';
+}
+
+export function totalPolicyPremiumPerAnnum(p: ExistingPolicy): number {
+  const multi = (freq: PremiumFrequency) => (freq === 'Monthly' ? 12 : 1);
+  return p.premiumSuper * multi(p.premiumSuperFrequency) + p.premiumNonSuper * multi(p.premiumNonSuperFrequency);
+}
+
 export interface QuoteOptions {
   state: string;
   optionsMode: 'Flexible' | 'Fixed';

@@ -80,6 +80,34 @@ export async function fetchOccupationMappings(occupationId: string): Promise<Occ
   })).filter((m) => m.supplierCode);
 }
 
+// ── Legacy Suppliers ─────────────────────────────────────────────────────────
+
+export interface LegacySupplier {
+  code: string;
+  name: string;
+}
+
+export async function fetchLegacySuppliers(): Promise<LegacySupplier[]> {
+  const res = await fetch('/api/legacy-suppliers', {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`OmniLife /legacy/suppliers returned ${res.status} ${res.statusText}`);
+  }
+
+  const payload: unknown = await res.json();
+  const list: Record<string, unknown>[] = Array.isArray(payload) ? payload : [];
+  return list
+    .map((raw) => ({
+      code: typeof raw.code === 'string' ? raw.code : (typeof raw.id === 'string' ? raw.id : ''),
+      name: typeof raw.name === 'string' ? raw.name : (typeof raw.description === 'string' ? raw.description : ''),
+    }))
+    .filter((s): s is LegacySupplier => Boolean(s.code || s.name))
+    .map((s) => ({ code: s.code || s.name, name: s.name || s.code }));
+}
+
 // ── Suppliers ────────────────────────────────────────────────────────────────
 
 export interface SupplierProduct {

@@ -38,6 +38,20 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/legacy-suppliers': {
+          target: target + '/legacy/suppliers',
+          changeOrigin: true,
+          rewrite: () => '',
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.method = 'POST';
+            });
+          },
+        },
         '/api/suppliers': {
           target: target + '/suppliers',
           changeOrigin: true,

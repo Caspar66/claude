@@ -4,9 +4,11 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useOccupations } from '@/hooks/useOccupations';
 import type { OccupationOption } from '@/services/omnilifeApi';
-import type { ClientFormData, EmploymentStatus, HealthDiscount, Loadings } from './insuranceData';
+import type { ClientFormData, EmploymentStatus, ExistingPolicy, HealthDiscount, Loadings } from './insuranceData';
 import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS, EMPTY_LOADINGS, hasLoadings } from './insuranceData';
 import { OccupationRatingsModal } from './OccupationRatingsModal';
+import { CurrentSituationSection } from './CurrentSituationSection';
+import { AddCoverPage } from './AddCoverPage';
 
 interface Props {
   clientData: ClientFormData;
@@ -351,6 +353,16 @@ export function ClientDataCapture({
 
   const [ratingsModal, setRatingsModal] = useState<{ label: string; code: string } | null>(null);
   const [loadingsTarget, setLoadingsTarget] = useState<'client' | 'partner' | null>(null);
+  const [policies, setPolicies] = useState<ExistingPolicy[]>([]);
+  const [addCoverOpen, setAddCoverOpen] = useState(false);
+
+  const clientDisplayName = `${clientData.lastName || 'Client'}, ${clientData.firstName || ''}`.trim().replace(/,$/, '');
+  const partnerDisplayName = partnerData ? `${partnerData.lastName || 'Partner'}, ${partnerData.firstName || ''}`.trim().replace(/,$/, '') : null;
+
+  function handleSaveNewCover(policy: ExistingPolicy) {
+    setPolicies((prev) => [...prev, policy]);
+    setAddCoverOpen(false);
+  }
 
   function openRatings(label: string, code: string) {
     setRatingsModal({ label, code });
@@ -386,6 +398,18 @@ export function ClientDataCapture({
     : null;
 
   const showHealthDiscount = clientData.smoker === 'No' || (partnerData && partnerData.smoker === 'No');
+
+  if (addCoverOpen) {
+    return (
+      <AddCoverPage
+        scenarioTitle={`${clientDisplayName}${partnerDisplayName ? ' & ' + partnerDisplayName : ''}`}
+        clientName={clientDisplayName}
+        partnerName={partnerDisplayName}
+        onSave={handleSaveNewCover}
+        onCancel={() => setAddCoverOpen(false)}
+      />
+    );
+  }
 
   return (
     <div className="flex-1 overflow-auto flex flex-col">
@@ -433,6 +457,15 @@ export function ClientDataCapture({
           </tbody>
         </table>
       </div>
+
+      {/* Current Situation section */}
+      <CurrentSituationSection
+        policies={policies}
+        clientName={clientDisplayName}
+        partnerName={partnerDisplayName}
+        onAddCover={() => setAddCoverOpen(true)}
+        onChangePolicies={setPolicies}
+      />
 
       {/* Action buttons */}
       <div className="flex justify-center gap-3 py-4 border-t border-gray-200 bg-gray-50">
