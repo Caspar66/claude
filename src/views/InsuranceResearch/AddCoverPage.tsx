@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Loader2, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLegacySuppliers } from '@/hooks/useLegacySuppliers';
@@ -43,9 +43,37 @@ const OWNERSHIP_VISIBLE: Record<ExistingCoverType, boolean> = {
   Life: true, TPD: true, Trauma: false, IP: true, BE: false, SBI: false, ChildCover: false, Needlestick: false,
 };
 
-const WAITING_PERIODS = ['14 days', '30 days', '60 days', '90 days', '180 days'];
-const BENEFIT_PERIODS = ['2 years', '5 years', 'to Age 65', 'to Age 70'];
-const IP_DEFINITIONS = ['Indemnity', 'Agreed Value', 'Extended Indemnity'];
+interface CodedOption { code: string; label: string }
+
+const IP_WAITING_PERIODS: CodedOption[] = [
+  { code: '14', label: '14 days' },
+  { code: '30', label: '30 days' },
+  { code: '60', label: '60 days' },
+  { code: '90', label: '90 days' },
+  { code: '180', label: '180 days' },
+  { code: '365', label: '1 year' },
+  { code: '730', label: '2 years' },
+];
+
+const BE_WAITING_PERIODS: CodedOption[] = [
+  { code: '14', label: '14 days' },
+  { code: '30', label: '30 days' },
+  { code: '60', label: '60 days' },
+  { code: '90', label: '90 days' },
+];
+
+const IP_BENEFIT_PERIODS: CodedOption[] = [
+  { code: '1', label: '1 year' },
+  { code: '2', label: '2 years' },
+  { code: '5', label: '5 years' },
+  { code: '55', label: 'To age 55' },
+  { code: '60', label: 'To age 60' },
+  { code: '65', label: 'To age 65' },
+  { code: '67', label: 'To age 67' },
+  { code: '70', label: 'To age 70' },
+];
+
+const IP_DEFINITIONS = ['Indemnity', 'Agreed Value'];
 const TPD_DEFINITIONS = ['Any', 'Own', 'Super-linked', 'ADL'];
 
 interface Props {
@@ -56,22 +84,27 @@ interface Props {
   onCancel: () => void;
 }
 
+function superFromOwnership(ownership: string | undefined): 'Yes' | 'No' {
+  return ownership && ownership !== 'O' ? 'Yes' : 'No';
+}
+
 function emptyCover(type: ExistingCoverType): ExistingCover {
   const styleOpts = PREMIUM_STYLE_BY_TYPE[type];
+  const ownership = OWNERSHIP_VISIBLE[type] ? 'O' : undefined;
   return {
     id: `${type}-${Math.random().toString(36).slice(2, 9)}`,
     coverType: type,
     sumInsured: '',
     premiumStyle: styleOpts ? styleOpts[0].code : '',
-    super: type === 'Life' ? 'No' : type === 'TPD' ? 'No' : type === 'IP' ? 'No' : undefined,
+    super: OWNERSHIP_VISIBLE[type] ? superFromOwnership(ownership) : undefined,
     definition: type === 'TPD' ? 'Any' : type === 'IP' ? 'Agreed Value' : undefined,
     standAlone: type === 'TPD' || type === 'Trauma' ? 'No' : undefined,
     flexiLinked: type === 'TPD' || type === 'Trauma' ? 'No' : undefined,
     superLinked: type === 'IP' || type === 'SBI' ? 'No' : undefined,
-    waitingPeriod: type === 'IP' || type === 'BE' ? '14 days' : undefined,
-    benefitPeriod: type === 'IP' ? 'to Age 65' : undefined,
+    waitingPeriod: type === 'IP' || type === 'BE' ? '30' : undefined,
+    benefitPeriod: type === 'IP' ? '65' : undefined,
     addDeathCover: type === 'SBI' ? '' : undefined,
-    ownership: OWNERSHIP_VISIBLE[type] ? 'O' : undefined,
+    ownership,
   };
 }
 
@@ -130,14 +163,43 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
     : legacySuppliers.slice(0, 20);
 
   function updateCover(type: ExistingCoverType, patch: Partial<ExistingCover>) {
-    setCovers((prev) => ({ ...prev, [type]: { ...prev[type], ...patch } }));
+    setCovers((prev) => {
+      const next: ExistingCover = { ...prev[type], ...patch };
+      if (patch.ownership !== undefined && OWNERSHIP_VISIBLE[type]) {
+        next.super = superFromOwnership(patch.ownership);
+      }
+      if (type === 'TPD' || type === 'Trauma') {
+        if (patch.standAlone === 'Yes') next.flexiLinked = 'No';
+        if (patch.flexiLinked === 'Yes') next.standAlone = 'No';
+      }
+      return { ...prev, [type]: next };
+    });
   }
+
+  // SMSF SuperLink (K) for TPD only allowed when Trauma has a value AND Trauma Stand Alone is 'Yes'.
+  // If condition becomes false while TPD ownership is 'K', reset TPD ownership to 'O'.
+  const traumaSumInsured = parseMoney(covers.Trauma.sumInsured);
+  const traumaStandAlone = covers.Trauma.standAlone;
+  const smsfSuperLinkAllowed = traumaSumInsured > 0 && traumaStandAlone === 'Yes';
+
+  useEffect(() => {
+    if (!smsfSuperLinkAllowed && covers.TPD.ownership === 'K') {
+      setCovers((prev) => ({ ...prev, TPD: { ...prev.TPD, ownership: 'O', super: 'No' } }));
+    }
+  }, [smsfSuperLinkAllowed, covers.TPD.ownership]);
 
   function handleSave() {
     const hasPremium = parseMoney(premiumSuper) > 0 || parseMoney(premiumNonSuper) > 0;
     if (!hasPremium) {
       setError('Please ensure a premium has been entered.');
       return;
+    }
+    for (const t of COVER_TYPE_ORDER) {
+      const c = covers[t];
+      if (parseMoney(c.sumInsured) > 0 && OWNERSHIP_VISIBLE[t] && !c.ownership) {
+        setError(`Ownership is required for ${COVER_TYPE_LABELS[t]}.`);
+        return;
+      }
     }
     const coversWithSumInsured = COVER_TYPE_ORDER
       .map((t) => covers[t])
@@ -318,9 +380,14 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                 {COVER_TYPE_ORDER.map((type) => {
                   const c = covers[type];
                   const vis = COL_VISIBILITY[type];
-                  const ownershipOpts = OWNERSHIP_OPTIONS_BY_TYPE[type];
+                  const allOwnershipOpts = OWNERSHIP_OPTIONS_BY_TYPE[type];
+                  const ownershipOpts = type === 'TPD' && !smsfSuperLinkAllowed
+                    ? allOwnershipOpts.filter((o) => o.code !== 'K')
+                    : allOwnershipOpts;
                   const styleOpts = PREMIUM_STYLE_BY_TYPE[type];
                   const showOwnership = OWNERSHIP_VISIBLE[type];
+                  const waitingOpts = type === 'IP' ? IP_WAITING_PERIODS : type === 'BE' ? BE_WAITING_PERIODS : [];
+                  const benefitOpts = type === 'IP' ? IP_BENEFIT_PERIODS : [];
                   return (
                     <tr key={type} className="border-b border-gray-100 even:bg-gray-50/50">
                       <td className="px-2 py-1.5 text-slate-700 font-medium">{COVER_TYPE_LABELS[type]}</td>
@@ -347,24 +414,16 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                         {showOwnership ? (
                           <select
                             className="w-32 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            value={c.ownership ?? ''}
-                            onChange={(e) => updateCover(type, { ownership: e.target.value || undefined })}
+                            value={c.ownership ?? 'O'}
+                            onChange={(e) => updateCover(type, { ownership: e.target.value })}
                           >
-                            <option value="">—</option>
                             {ownershipOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
                           </select>
                         ) : null}
                       </td>
                       <td className="px-2 py-1.5">
                         {vis.super ? (
-                          <select
-                            className="w-16 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                            value={c.super ?? 'No'}
-                            onChange={(e) => updateCover(type, { super: e.target.value })}
-                          >
-                            <option value="Yes">Yes</option>
-                            <option value="No">No</option>
-                          </select>
+                          <span className="text-slate-600">{superFromOwnership(c.ownership)}</span>
                         ) : null}
                       </td>
                       <td className="px-2 py-1.5">
@@ -421,7 +480,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                             value={c.waitingPeriod ?? ''}
                             onChange={(e) => updateCover(type, { waitingPeriod: e.target.value })}
                           >
-                            {WAITING_PERIODS.map((o) => <option key={o} value={o}>{o}</option>)}
+                            {waitingOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
                           </select>
                         ) : null}
                       </td>
@@ -432,7 +491,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                             value={c.benefitPeriod ?? ''}
                             onChange={(e) => updateCover(type, { benefitPeriod: e.target.value })}
                           >
-                            {BENEFIT_PERIODS.map((o) => <option key={o} value={o}>{o}</option>)}
+                            {benefitOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
                           </select>
                         ) : null}
                       </td>
