@@ -128,21 +128,35 @@ export async function fetchLegacyPortfolios(): Promise<LegacyPortfolio[]> {
 
   const payload: unknown = await res.json();
   const list: Record<string, unknown>[] = Array.isArray(payload) ? payload : [];
-  return list
-    .map((raw) => {
+  const raw = list
+    .map((entry) => {
       const supplierCode =
-        typeof raw.supplierCode === 'string' ? raw.supplierCode :
-        typeof raw.code === 'string' ? raw.code : '';
+        typeof entry.supplierCode === 'string' ? entry.supplierCode :
+        typeof entry.code === 'string' ? entry.code : '';
       const supplierName =
-        typeof raw.supplierName === 'string' ? raw.supplierName :
-        typeof raw.name === 'string' ? raw.name : supplierCode;
-      const rd = raw.revisionDates ?? raw.dates;
+        typeof entry.supplierName === 'string' ? entry.supplierName :
+        typeof entry.name === 'string' ? entry.name : supplierCode;
+      const rd = entry.revisionDates ?? entry.dates;
       const revisionDates = Array.isArray(rd)
         ? rd.filter((d): d is string => typeof d === 'string')
         : [];
       return { supplierCode, supplierName, revisionDates };
     })
     .filter((p) => p.supplierCode);
+
+  // Dedupe: merge entries with the same (supplierCode + supplierName), unioning revision dates.
+  const byKey = new Map<string, LegacyPortfolio>();
+  for (const p of raw) {
+    const key = `${p.supplierCode}${p.supplierName}`;
+    const existing = byKey.get(key);
+    if (existing) {
+      const merged = new Set([...existing.revisionDates, ...p.revisionDates]);
+      existing.revisionDates = Array.from(merged).sort().reverse();
+    } else {
+      byKey.set(key, { ...p, revisionDates: [...p.revisionDates].sort().reverse() });
+    }
+  }
+  return Array.from(byKey.values());
 }
 
 // ── Legacy Products ──────────────────────────────────────────────────────────
@@ -160,6 +174,8 @@ export interface FetchLegacyProductsArgs {
   supplierCode: string;
   date: string;
   coverNeedType: string;
+  ownership?: string;
+  mandatory?: boolean;
 }
 
 export async function fetchLegacyProducts(args: FetchLegacyProductsArgs): Promise<LegacyProduct[]> {
@@ -168,6 +184,8 @@ export async function fetchLegacyProducts(args: FetchLegacyProductsArgs): Promis
     date: args.date,
     coverNeedType: args.coverNeedType,
   });
+  if (args.ownership) params.set('ownership', args.ownership);
+  if (args.mandatory !== undefined) params.set('mandatory', String(args.mandatory));
   const res = await fetch(`/api/legacy-products?${params.toString()}`, {
     method: 'POST',
     headers: { Accept: 'application/json' },

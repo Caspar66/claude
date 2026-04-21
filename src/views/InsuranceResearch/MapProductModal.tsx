@@ -107,20 +107,12 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     return buildCoverGroups(policy.covers);
   }, [policy]);
 
-  const neededCodes = useMemo(
-    () => coverGroups.flatMap((g) => g.entries.map((e) => e.code)),
+  // The "primary" code of each group is what the user selects a product for.
+  // Linked entries (TPE/TRE on a Life group) are bundled into the primary's product, not picked separately.
+  const primaryCodes = useMemo(
+    () => coverGroups.map((g) => g.entries[0].code),
     [coverGroups],
   );
-
-  const ownershipByCode = useMemo(() => {
-    const map: Partial<Record<CoverNeedCode, string>> = {};
-    for (const g of coverGroups) {
-      for (const e of g.entries) {
-        if (e.ownership) map[e.code] = e.ownership;
-      }
-    }
-    return map;
-  }, [coverGroups]);
 
   const selectedPortfolio = useMemo(
     () => portfolios.find((p) => p.supplierCode === supplierCode) ?? null,
@@ -158,20 +150,29 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     setProductsError(null);
   }, [supplierCode]);
 
+  // Fetch products for each group's primary code, passing ownership and (for linked groups) mandatory=true
   useEffect(() => {
-    if (!supplierCode || !revisionDate || neededCodes.length === 0) return;
+    if (!supplierCode || !revisionDate || coverGroups.length === 0) return;
     let cancelled = false;
     setProductsLoading(true);
     setProductsError(null);
 
     Promise.all(
-      neededCodes.map((code) =>
-        fetchLegacyProducts({ supplierCode, date: revisionDate, coverNeedType: code })
-          .then((list) => [code, list] as const)
+      coverGroups.map((group) => {
+        const primary = group.entries[0];
+        const mandatory = group.isLinkedGroup && primary.code === 'TRM' ? true : undefined;
+        return fetchLegacyProducts({
+          supplierCode,
+          date: revisionDate,
+          coverNeedType: primary.code,
+          ownership: primary.ownership,
+          mandatory,
+        })
+          .then((list) => [primary.code, list] as const)
           .catch((err: Error) => {
-            throw new Error(`${code}: ${err.message}`);
-          }),
-      ),
+            throw new Error(`${primary.code}: ${err.message}`);
+          });
+      }),
     )
       .then((results) => {
         if (cancelled) return;
@@ -189,14 +190,20 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       });
 
     return () => { cancelled = true; };
-  }, [supplierCode, revisionDate, neededCodes]);
+  }, [supplierCode, revisionDate, coverGroups]);
 
   function handleAdd() {
     if (!policy || !supplierCode || !revisionDate) return;
     const products: Partial<Record<CoverNeedCode, { productCode: string }>> = {};
-    for (const code of neededCodes) {
-      const productCode = productSelections[code];
-      if (productCode) products[code] = { productCode };
+    // For each group, save the selected product under every entry code so the
+    // research portfolio reflects all covered need types (Life + linked TPD/Trauma).
+    for (const group of coverGroups) {
+      const primary = group.entries[0];
+      const productCode = productSelections[primary.code];
+      if (!productCode) continue;
+      for (const entry of group.entries) {
+        products[entry.code] = { productCode };
+      }
     }
     const portfolio: ResearchPortfolio = {
       supplierCode,
@@ -212,63 +219,9 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     onClose();
   }
 
-  const canAdd = supplierCode && revisionDate && neededCodes.every((c) => productSelections[c]);
-
-  function renderCoverGroup(group: CoverGroup, groupIdx: number) {
-    if (group.entries.length === 1) {
-      const entry = group.entries[0];
-      const allProducts = productsByNeed[entry.code] ?? [];
-      const filtered = filterProducts(allProducts, entry.ownership);
-      return (
-        <div key={groupIdx} className="grid grid-cols-[180px_1fr] gap-3 items-center">
-          <label className="text-xs text-slate-700">{COVER_NEED_CODE_LABELS[entry.code]}:</label>
-          <select
-            className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={productSelections[entry.code] ?? ''}
-            onChange={(e) => setProductSelections((prev) => ({ ...prev, [entry.code]: e.target.value }))}
-          >
-            <option value="">Select a product</option>
-            {filtered.map((p) => (
-              <option key={p.productCode} value={p.productCode}>
-                {p.productName || p.productCode}
-              </option>
-            ))}
-          </select>
-        </div>
-      );
-    }
-
-    return (
-      <div key={groupIdx} className="border border-blue-100 bg-blue-50/30 rounded p-2.5 space-y-2">
-        {group.entries.map((entry, i) => {
-          const allProducts = productsByNeed[entry.code] ?? [];
-          const isTrmInLinkedGroup = entry.code === 'TRM' && group.isLinkedGroup;
-          const filtered = filterProducts(allProducts, entry.ownership, isTrmInLinkedGroup);
-          return (
-            <div key={entry.code} className="grid grid-cols-[180px_1fr] gap-3 items-center">
-              <label className="text-xs text-slate-700">
-                {i === 0 ? COVER_NEED_CODE_LABELS[entry.code] : (
-                  <span className="pl-2 text-slate-500">+ {COVER_NEED_CODE_LABELS[entry.code]}</span>
-                )}:
-              </label>
-              <select
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                value={productSelections[entry.code] ?? ''}
-                onChange={(e) => setProductSelections((prev) => ({ ...prev, [entry.code]: e.target.value }))}
-              >
-                <option value="">Select a product</option>
-                {filtered.map((p) => (
-                  <option key={p.productCode} value={p.productCode}>
-                    {p.productName || p.productCode}
-                  </option>
-                ))}
-              </select>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
+  const canAdd = Boolean(
+    supplierCode && revisionDate && primaryCodes.every((c) => productSelections[c]),
+  );
 
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
@@ -348,7 +301,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
               <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-bold text-slate-700">
                 Products
               </div>
-              <div className="p-3 space-y-2">
+              <div className="p-3 space-y-3">
                 {productsLoading && (
                   <div className="flex items-center gap-2 text-xs text-slate-500">
                     <Loader2 size={12} className="animate-spin" /> Loading products…
@@ -359,7 +312,35 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                     <AlertTriangle size={14} /> {productsError}
                   </div>
                 )}
-                {!productsLoading && !productsError && coverGroups.map((group, i) => renderCoverGroup(group, i))}
+                {!productsLoading && !productsError && coverGroups.map((group, groupIdx) => {
+                  const primary = group.entries[0];
+                  const allProducts = productsByNeed[primary.code] ?? [];
+                  const requireMandatory = group.isLinkedGroup && primary.code === 'TRM';
+                  const filtered = filterProducts(allProducts, primary.ownership, requireMandatory);
+                  return (
+                    <div key={groupIdx} className="grid grid-cols-[200px_1fr] gap-3 items-start">
+                      <div className="text-xs text-slate-700 pt-1.5">
+                        {group.entries.map((entry, i) => (
+                          <div key={entry.code} className={i === 0 ? 'font-medium' : 'text-slate-500'}>
+                            {COVER_NEED_CODE_LABELS[entry.code]}:
+                          </div>
+                        ))}
+                      </div>
+                      <select
+                        className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        value={productSelections[primary.code] ?? ''}
+                        onChange={(e) => setProductSelections((prev) => ({ ...prev, [primary.code]: e.target.value }))}
+                      >
+                        <option value="">Select a product</option>
+                        {filtered.map((p) => (
+                          <option key={p.productCode} value={p.productCode}>
+                            {p.productName || p.productCode}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
