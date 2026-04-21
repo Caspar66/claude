@@ -10,8 +10,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (typeof q.supplierCode === 'string') params.set('supplierCode', q.supplierCode);
   if (typeof q.date === 'string') params.set('date', q.date);
   if (typeof q.coverNeedType === 'string') params.set('coverNeedType', q.coverNeedType);
-  if (typeof q.ownership === 'string') params.set('ownership', q.ownership);
-  if (typeof q.mandatory === 'string') params.set('mandatory', q.mandatory);
 
   const url = `${BASE_URL}/legacy/products?${params.toString()}`;
   const auth = `Basic ${Buffer.from(`${USERNAME}:${PASSWORD}`).toString('base64')}`;

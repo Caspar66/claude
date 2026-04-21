@@ -19,6 +19,8 @@ interface Props {
   onSave: (portfolio: ResearchPortfolio) => void;
 }
 
+// ── Cover grouping ──────────────────────────────────────────────────────────
+
 interface CoverGroupEntry {
   code: CoverNeedCode;
   ownership?: string;
@@ -65,17 +67,31 @@ function buildCoverGroups(covers: ExistingCover[]): CoverGroup[] {
   return groups;
 }
 
-function filterProducts(
+/**
+ * Filter products that match ALL entries in a cover group by checking each
+ * product's `supportedCoverTypes` for the required codes, ownership, and
+ * mandatory flag.
+ */
+function filterProductsForGroup(
   products: LegacyProduct[],
-  ownership?: string,
-  requireMandatory?: boolean,
+  group: CoverGroup,
 ): LegacyProduct[] {
-  return products.filter((p) => {
-    if (ownership && p.ownership && p.ownership !== ownership) return false;
-    if (requireMandatory && !p.mandatory) return false;
+  return products.filter((product) => {
+    for (const entry of group.entries) {
+      const sct = product.supportedCoverTypes[entry.code];
+      if (!sct) return false;
+
+      // For TRM in a linked group, require mandatory=true
+      if (entry.code === 'TRM' && group.isLinkedGroup && !sct.mandatory) return false;
+
+      // Match ownership when the existing cover has one
+      if (entry.ownership && sct.ownership && sct.ownership !== entry.ownership) return false;
+    }
     return true;
   });
 }
+
+// ── Helpers ──────────────────────────────────────────────────────────────────
 
 function annualise(amount: number, freq: keyof typeof PREMIUM_FREQUENCY_MULTIPLIER): number {
   return amount * PREMIUM_FREQUENCY_MULTIPLIER[freq];
@@ -87,6 +103,8 @@ function formatDateLabel(iso: string): string {
   return d.toLocaleDateString('en-AU', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// ── Component ───────────────────────────────────────────────────────────────
+
 export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   const { portfolios, loading: portfoliosLoading, error: portfoliosError } = useLegacyPortfolios();
 
@@ -97,8 +115,12 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   const [premiumOutside, setPremiumOutside] = useState('0');
   const [stampDutyInside, setStampDutyInside] = useState('0');
   const [stampDutyOutside, setStampDutyOutside] = useState('0');
+
+  // One selection per cover group, keyed by the group's primary code
   const [productSelections, setProductSelections] = useState<Partial<Record<CoverNeedCode, string>>>({});
-  const [productsByNeed, setProductsByNeed] = useState<Partial<Record<CoverNeedCode, LegacyProduct[]>>>({});
+
+  // All products returned from the single API call
+  const [allProducts, setAllProducts] = useState<LegacyProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
 
@@ -107,8 +129,6 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     return buildCoverGroups(policy.covers);
   }, [policy]);
 
-  // The "primary" code of each group is what the user selects a product for.
-  // Linked entries (TPE/TRE on a Life group) are bundled into the primary's product, not picked separately.
   const primaryCodes = useMemo(
     () => coverGroups.map((g) => g.entries[0].code),
     [coverGroups],
@@ -127,6 +147,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     );
   }, [portfolios, supplierFilter]);
 
+  // Reset when opening for a new policy
   useEffect(() => {
     if (!open || !policy) return;
     const inside = annualise(policy.premiumSuper, policy.premiumSuperFrequency);
@@ -139,48 +160,29 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     setStampDutyInside('0');
     setStampDutyOutside('0');
     setProductSelections({});
-    setProductsByNeed({});
+    setAllProducts([]);
     setProductsError(null);
   }, [open, policy]);
 
+  // Clear revision/products when supplier changes
   useEffect(() => {
     setRevisionDate('');
-    setProductsByNeed({});
+    setAllProducts([]);
     setProductSelections({});
     setProductsError(null);
   }, [supplierCode]);
 
-  // Fetch products for each group's primary code, passing ownership and (for linked groups) mandatory=true
+  // Single API call: fetch all products for the supplier + date with coverNeedType=1
   useEffect(() => {
-    if (!supplierCode || !revisionDate || coverGroups.length === 0) return;
+    if (!supplierCode || !revisionDate) return;
     let cancelled = false;
     setProductsLoading(true);
     setProductsError(null);
 
-    Promise.all(
-      coverGroups.map((group) => {
-        const primary = group.entries[0];
-        const mandatory = group.isLinkedGroup && primary.code === 'TRM' ? true : undefined;
-        return fetchLegacyProducts({
-          supplierCode,
-          date: revisionDate,
-          coverNeedType: primary.code,
-          ownership: primary.ownership,
-          mandatory,
-        })
-          .then((list) => [primary.code, list] as const)
-          .catch((err: Error) => {
-            throw new Error(`${primary.code}: ${err.message}`);
-          });
-      }),
-    )
-      .then((results) => {
+    fetchLegacyProducts({ supplierCode, date: revisionDate })
+      .then((list) => {
         if (cancelled) return;
-        const next: Partial<Record<CoverNeedCode, LegacyProduct[]>> = {};
-        for (const [code, list] of results) {
-          next[code] = list;
-        }
-        setProductsByNeed(next);
+        setAllProducts(list);
         setProductsLoading(false);
       })
       .catch((err: Error) => {
@@ -190,17 +192,16 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       });
 
     return () => { cancelled = true; };
-  }, [supplierCode, revisionDate, coverGroups]);
+  }, [supplierCode, revisionDate]);
 
   function handleAdd() {
     if (!policy || !supplierCode || !revisionDate) return;
     const products: Partial<Record<CoverNeedCode, { productCode: string }>> = {};
-    // For each group, save the selected product under every entry code so the
-    // research portfolio reflects all covered need types (Life + linked TPD/Trauma).
     for (const group of coverGroups) {
       const primary = group.entries[0];
       const productCode = productSelections[primary.code];
       if (!productCode) continue;
+      // Save the selected product under every entry code in the group
       for (const entry of group.entries) {
         products[entry.code] = { productCode };
       }
@@ -314,9 +315,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                 )}
                 {!productsLoading && !productsError && coverGroups.map((group, groupIdx) => {
                   const primary = group.entries[0];
-                  const allProducts = productsByNeed[primary.code] ?? [];
-                  const requireMandatory = group.isLinkedGroup && primary.code === 'TRM';
-                  const filtered = filterProducts(allProducts, primary.ownership, requireMandatory);
+                  const filtered = filterProductsForGroup(allProducts, group);
                   return (
                     <div key={groupIdx} className="grid grid-cols-[200px_1fr] gap-3 items-start">
                       <div className="text-xs text-slate-700 pt-1.5">
@@ -333,7 +332,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                       >
                         <option value="">Select a product</option>
                         {filtered.map((p) => (
-                          <option key={p.productCode} value={p.productCode}>
+                          <option key={p.productCode + p.productName} value={p.productCode}>
                             {p.productName || p.productCode}
                           </option>
                         ))}

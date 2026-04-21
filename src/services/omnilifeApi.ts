@@ -161,31 +161,33 @@ export async function fetchLegacyPortfolios(): Promise<LegacyPortfolio[]> {
 
 // ── Legacy Products ──────────────────────────────────────────────────────────
 
+export interface SupportedCoverType {
+  mandatory: boolean;
+  optional: boolean;
+  ownership: string;
+  researchProductCode: string;
+}
+
 export interface LegacyProduct {
+  supplierCode: string;
   productCode: string;
   productName: string;
-  coverNeedType: string;
-  ownership?: string;
-  mandatory?: boolean;
+  revisionDate: string;
+  supportedCoverTypes: Partial<Record<string, SupportedCoverType>>;
   raw: Record<string, unknown>;
 }
 
 export interface FetchLegacyProductsArgs {
   supplierCode: string;
   date: string;
-  coverNeedType: string;
-  ownership?: string;
-  mandatory?: boolean;
 }
 
 export async function fetchLegacyProducts(args: FetchLegacyProductsArgs): Promise<LegacyProduct[]> {
   const params = new URLSearchParams({
     supplierCode: args.supplierCode,
     date: args.date,
-    coverNeedType: args.coverNeedType,
+    coverNeedType: '1',
   });
-  if (args.ownership) params.set('ownership', args.ownership);
-  if (args.mandatory !== undefined) params.set('mandatory', String(args.mandatory));
   const res = await fetch(`/api/legacy-products?${params.toString()}`, {
     method: 'POST',
     headers: { Accept: 'application/json' },
@@ -198,20 +200,36 @@ export async function fetchLegacyProducts(args: FetchLegacyProductsArgs): Promis
   const payload: unknown = await res.json();
   const list: Record<string, unknown>[] = Array.isArray(payload) ? payload : [];
   return list
-    .map((raw) => ({
-      productCode:
-        typeof raw.productCode === 'string' ? raw.productCode :
-        typeof raw.code === 'string' ? raw.code : '',
-      productName:
-        typeof raw.productName === 'string' ? raw.productName :
+    .map((raw) => {
+      const productCode =
+        typeof raw.code === 'string' ? raw.code :
+        typeof raw.productCode === 'string' ? raw.productCode : '';
+      const productName =
         typeof raw.name === 'string' ? raw.name :
-        typeof raw.description === 'string' ? raw.description : '',
-      coverNeedType:
-        typeof raw.coverNeedType === 'string' ? raw.coverNeedType : args.coverNeedType,
-      ownership: typeof raw.ownership === 'string' ? raw.ownership : undefined,
-      mandatory: raw.mandatory === true || raw.mandatory === 'true',
-      raw,
-    }))
+        typeof raw.productName === 'string' ? raw.productName :
+        typeof raw.description === 'string' ? raw.description : '';
+      const supplierCode =
+        typeof raw.supplierCode === 'string' ? raw.supplierCode : args.supplierCode;
+      const revisionDate =
+        typeof raw.revisionDate === 'string' ? raw.revisionDate : args.date;
+
+      const sct: Partial<Record<string, SupportedCoverType>> = {};
+      if (raw.supportedCoverTypes && typeof raw.supportedCoverTypes === 'object') {
+        for (const [key, val] of Object.entries(raw.supportedCoverTypes as Record<string, unknown>)) {
+          if (val && typeof val === 'object') {
+            const v = val as Record<string, unknown>;
+            sct[key] = {
+              mandatory: v.mandatory === true,
+              optional: v.optional === true,
+              ownership: typeof v.ownership === 'string' ? v.ownership : '',
+              researchProductCode: typeof v.researchProductCode === 'string' ? v.researchProductCode : '',
+            };
+          }
+        }
+      }
+
+      return { supplierCode, productCode, productName, revisionDate, supportedCoverTypes: sct, raw };
+    })
     .filter((p) => p.productCode);
 }
 
