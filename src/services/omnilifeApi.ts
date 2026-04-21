@@ -152,6 +152,7 @@ export interface LegacyProduct {
   productName: string;
   coverNeedType: string;
   ownership?: string;
+  mandatory?: boolean;
   raw: Record<string, unknown>;
 }
 
@@ -190,6 +191,7 @@ export async function fetchLegacyProducts(args: FetchLegacyProductsArgs): Promis
       coverNeedType:
         typeof raw.coverNeedType === 'string' ? raw.coverNeedType : args.coverNeedType,
       ownership: typeof raw.ownership === 'string' ? raw.ownership : undefined,
+      mandatory: raw.mandatory === true || raw.mandatory === 'true',
       raw,
     }))
     .filter((p) => p.productCode);

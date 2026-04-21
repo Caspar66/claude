@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useLegacyPortfolios } from '@/hooks/useLegacyPortfolios';
 import { fetchLegacyProducts } from '@/services/omnilifeApi';
 import type { LegacyProduct } from '@/services/omnilifeApi';
-import type { ExistingPolicy, CoverNeedCode, ResearchPortfolio } from './insuranceData';
+import type { ExistingPolicy, ExistingCover, CoverNeedCode, ResearchPortfolio } from './insuranceData';
 import {
   COVER_NEED_CODE_LABELS,
   PREMIUM_FREQUENCY_MULTIPLIER,
@@ -17,6 +17,64 @@ interface Props {
   onClose: () => void;
   policy: ExistingPolicy | null;
   onSave: (portfolio: ResearchPortfolio) => void;
+}
+
+interface CoverGroupEntry {
+  code: CoverNeedCode;
+  ownership?: string;
+}
+
+interface CoverGroup {
+  entries: CoverGroupEntry[];
+  isLinkedGroup: boolean;
+}
+
+function buildCoverGroups(covers: ExistingCover[]): CoverGroup[] {
+  const groups: CoverGroup[] = [];
+  const handled = new Set<string>();
+
+  const lifeCover = covers.find((c) => c.coverType === 'Life');
+  const linkedTpd = covers.find((c) => c.coverType === 'TPD' && c.standAlone !== 'Yes');
+  const linkedTrauma = covers.find((c) => c.coverType === 'Trauma' && c.standAlone !== 'Yes');
+
+  if (lifeCover) {
+    const entries: CoverGroupEntry[] = [{ code: 'TRM', ownership: lifeCover.ownership }];
+    handled.add(lifeCover.id);
+
+    if (linkedTpd) {
+      entries.push({ code: 'TPE', ownership: linkedTpd.ownership });
+      handled.add(linkedTpd.id);
+    }
+    if (linkedTrauma) {
+      entries.push({ code: 'TRE', ownership: linkedTrauma.ownership });
+      handled.add(linkedTrauma.id);
+    }
+
+    groups.push({ entries, isLinkedGroup: entries.length > 1 });
+  }
+
+  for (const cov of covers) {
+    if (handled.has(cov.id)) continue;
+    const code = coverToNeedCode(cov);
+    groups.push({
+      entries: [{ code, ownership: cov.ownership }],
+      isLinkedGroup: false,
+    });
+  }
+
+  return groups;
+}
+
+function filterProducts(
+  products: LegacyProduct[],
+  ownership?: string,
+  requireMandatory?: boolean,
+): LegacyProduct[] {
+  return products.filter((p) => {
+    if (ownership && p.ownership && p.ownership !== ownership) return false;
+    if (requireMandatory && !p.mandatory) return false;
+    return true;
+  });
 }
 
 function annualise(amount: number, freq: keyof typeof PREMIUM_FREQUENCY_MULTIPLIER): number {
@@ -44,16 +102,25 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
 
-  // Cover need codes present in this policy
-  const neededCodes: CoverNeedCode[] = useMemo(() => {
+  const coverGroups = useMemo(() => {
     if (!policy) return [];
-    const set = new Set<CoverNeedCode>();
-    for (const cov of policy.covers) {
-      const code = coverToNeedCode(cov);
-      set.add(code);
-    }
-    return Array.from(set);
+    return buildCoverGroups(policy.covers);
   }, [policy]);
+
+  const neededCodes = useMemo(
+    () => coverGroups.flatMap((g) => g.entries.map((e) => e.code)),
+    [coverGroups],
+  );
+
+  const ownershipByCode = useMemo(() => {
+    const map: Partial<Record<CoverNeedCode, string>> = {};
+    for (const g of coverGroups) {
+      for (const e of g.entries) {
+        if (e.ownership) map[e.code] = e.ownership;
+      }
+    }
+    return map;
+  }, [coverGroups]);
 
   const selectedPortfolio = useMemo(
     () => portfolios.find((p) => p.supplierCode === supplierCode) ?? null,
@@ -68,7 +135,6 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     );
   }, [portfolios, supplierFilter]);
 
-  // Reset when opening for a new policy, and prefill premiums
   useEffect(() => {
     if (!open || !policy) return;
     const inside = annualise(policy.premiumSuper, policy.premiumSuperFrequency);
@@ -85,7 +151,6 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     setProductsError(null);
   }, [open, policy]);
 
-  // Clear revision/products when supplier changes
   useEffect(() => {
     setRevisionDate('');
     setProductsByNeed({});
@@ -93,7 +158,6 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     setProductsError(null);
   }, [supplierCode]);
 
-  // Fetch products for each needed cover code when supplier + date are set
   useEffect(() => {
     if (!supplierCode || !revisionDate || neededCodes.length === 0) return;
     let cancelled = false;
@@ -150,18 +214,74 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
 
   const canAdd = supplierCode && revisionDate && neededCodes.every((c) => productSelections[c]);
 
+  function renderCoverGroup(group: CoverGroup, groupIdx: number) {
+    if (group.entries.length === 1) {
+      const entry = group.entries[0];
+      const allProducts = productsByNeed[entry.code] ?? [];
+      const filtered = filterProducts(allProducts, entry.ownership);
+      return (
+        <div key={groupIdx} className="grid grid-cols-[180px_1fr] gap-3 items-center">
+          <label className="text-xs text-slate-700">{COVER_NEED_CODE_LABELS[entry.code]}:</label>
+          <select
+            className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            value={productSelections[entry.code] ?? ''}
+            onChange={(e) => setProductSelections((prev) => ({ ...prev, [entry.code]: e.target.value }))}
+          >
+            <option value="">Select a product</option>
+            {filtered.map((p) => (
+              <option key={p.productCode} value={p.productCode}>
+                {p.productName || p.productCode}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+    }
+
+    return (
+      <div key={groupIdx} className="border border-blue-100 bg-blue-50/30 rounded p-2.5 space-y-2">
+        {group.entries.map((entry, i) => {
+          const allProducts = productsByNeed[entry.code] ?? [];
+          const isTrmInLinkedGroup = entry.code === 'TRM' && group.isLinkedGroup;
+          const filtered = filterProducts(allProducts, entry.ownership, isTrmInLinkedGroup);
+          return (
+            <div key={entry.code} className="grid grid-cols-[180px_1fr] gap-3 items-center">
+              <label className="text-xs text-slate-700">
+                {i === 0 ? COVER_NEED_CODE_LABELS[entry.code] : (
+                  <span className="pl-2 text-slate-500">+ {COVER_NEED_CODE_LABELS[entry.code]}</span>
+                )}:
+              </label>
+              <select
+                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                value={productSelections[entry.code] ?? ''}
+                onChange={(e) => setProductSelections((prev) => ({ ...prev, [entry.code]: e.target.value }))}
+              >
+                <option value="">Select a product</option>
+                {filtered.map((p) => (
+                  <option key={p.productCode} value={p.productCode}>
+                    {p.productName || p.productCode}
+                  </option>
+                ))}
+              </select>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
     <Dialog open={open} onOpenChange={(v) => { if (!v) onClose(); }}>
-      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-2xl p-0 gap-0 overflow-hidden flex flex-col max-h-[90vh]">
         {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-slate-800 text-white">
+        <div className="flex items-center justify-between px-5 py-3 bg-slate-800 text-white shrink-0">
           <h3 className="text-sm font-semibold">Select supplier and products</h3>
           <button onClick={onClose} className="text-white/80 hover:text-white">
             <X size={16} />
           </button>
         </div>
 
-        <div className="p-5 space-y-4 max-h-[70vh] overflow-auto">
+        <div className="p-5 space-y-4 overflow-y-auto">
           {/* Filter suppliers */}
           <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
             <label className="text-sm text-blue-700">Filter suppliers:</label>
@@ -239,26 +359,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                     <AlertTriangle size={14} /> {productsError}
                   </div>
                 )}
-                {!productsLoading && !productsError && neededCodes.map((code) => {
-                  const opts = productsByNeed[code] ?? [];
-                  return (
-                    <div key={code} className="grid grid-cols-[160px_1fr] gap-3 items-center">
-                      <label className="text-xs text-slate-700">{COVER_NEED_CODE_LABELS[code]}:</label>
-                      <select
-                        className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        value={productSelections[code] ?? ''}
-                        onChange={(e) => setProductSelections((prev) => ({ ...prev, [code]: e.target.value }))}
-                      >
-                        <option value="">Select a product</option>
-                        {opts.map((p) => (
-                          <option key={p.productCode} value={p.productCode}>
-                            {p.productName || p.productCode}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  );
-                })}
+                {!productsLoading && !productsError && coverGroups.map((group, i) => renderCoverGroup(group, i))}
               </div>
             </div>
           )}
@@ -312,7 +413,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
         </div>
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50">
+        <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-gray-200 bg-gray-50 shrink-0">
           <Button
             size="sm"
             className="bg-indigo-900 hover:bg-indigo-950 text-white text-xs h-8 px-4 disabled:opacity-50"
