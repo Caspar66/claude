@@ -7,8 +7,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import type { ExistingPolicy, ExistingCoverType } from './insuranceData';
-import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, totalPolicyPremiumPerAnnum } from './insuranceData';
+import type { ExistingPolicy, ExistingCoverType, PremiumFrequency } from './insuranceData';
+import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, totalPolicyPremiumPerAnnum } from './insuranceData';
 
 type Tab = 'existing' | 'needsAnalysis';
 type ActionStatus = 'Not Considered' | 'Review' | 'Replace' | 'Retain';
@@ -142,7 +142,7 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                       const totalPa = totalPolicyPremiumPerAnnum(p);
                       const superPremium = p.premiumSuper > 0 ? formatMoney(p.premiumSuper) : 'N/A';
                       const nonSuperPremium = p.premiumNonSuper > 0 ? formatMoney(p.premiumNonSuper) : 'N/A';
-                      const freqLabel = (freq: string) => freq === 'Monthly' ? '/month' : '/year';
+                      const freqLabel = (freq: PremiumFrequency) => `/${PREMIUM_FREQUENCY_LABELS[freq].toLowerCase()}`;
                       return (
                         <div key={p.id}>
                           {/* Policy header row */}

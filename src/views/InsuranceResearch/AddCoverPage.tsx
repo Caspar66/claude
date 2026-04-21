@@ -3,7 +3,7 @@ import { Loader2, AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useLegacySuppliers } from '@/hooks/useLegacySuppliers';
 import type { ExistingCover, ExistingCoverType, ExistingPolicy, PremiumFrequency } from './insuranceData';
-import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE } from './insuranceData';
+import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER } from './insuranceData';
 
 const COVER_TYPE_ORDER: ExistingCoverType[] = ['Life', 'TPD', 'Trauma', 'IP', 'BE', 'SBI', 'ChildCover', 'Needlestick'];
 
@@ -28,7 +28,21 @@ const COL_VISIBILITY: Record<ExistingCoverType, {
   Needlestick:  { super: false, definition: false, standAlone: false, flexiLinked: false, superLinked: false, waitingPeriod: false, benefitPeriod: false, addDeathCover: false },
 };
 
-const PREMIUM_STYLE_OPTS = ['Variable age-stepped', 'Variable age-level', 'Fixed', 'Stepped', 'Level'];
+interface PremiumStyleOption { code: string; label: string }
+
+const PREMIUM_STYLE_BY_TYPE: Partial<Record<ExistingCoverType, PremiumStyleOption[]>> = {
+  Life:   [{ code: 'S', label: 'Variable age-stepped' }, { code: 'B', label: 'Blended' }, { code: 'L', label: 'Variable to age 65' }, { code: '70', label: 'Variable to age 65' }],
+  TPD:    [{ code: 'S', label: 'Variable age-stepped' }, { code: 'B', label: 'Blended' }, { code: 'L', label: 'Variable to age 65' }, { code: '70', label: 'Variable to age 65' }],
+  Trauma: [{ code: 'S', label: 'Variable age-stepped' }, { code: 'B', label: 'Blended' }, { code: 'L', label: 'Variable to age 65' }, { code: '70', label: 'Variable to age 65' }],
+  IP:     [{ code: 'S', label: 'Variable age-stepped' }, { code: 'B', label: 'Blended' }, { code: 'L', label: 'Variable to age' }],
+  BE:     [{ code: 'S', label: 'Variable age-stepped' }, { code: 'B', label: 'Blended' }, { code: 'L', label: 'Variable to age' }],
+  SBI:    [{ code: 'S', label: 'Variable age-stepped' }, { code: 'B', label: 'Blended' }, { code: 'L', label: 'Variable to age' }],
+};
+
+const OWNERSHIP_VISIBLE: Record<ExistingCoverType, boolean> = {
+  Life: true, TPD: true, Trauma: false, IP: true, BE: false, SBI: false, ChildCover: false, Needlestick: false,
+};
+
 const WAITING_PERIODS = ['14 days', '30 days', '60 days', '90 days', '180 days'];
 const BENEFIT_PERIODS = ['2 years', '5 years', 'to Age 65', 'to Age 70'];
 const IP_DEFINITIONS = ['Indemnity', 'Agreed Value', 'Extended Indemnity'];
@@ -43,11 +57,12 @@ interface Props {
 }
 
 function emptyCover(type: ExistingCoverType): ExistingCover {
+  const styleOpts = PREMIUM_STYLE_BY_TYPE[type];
   return {
     id: `${type}-${Math.random().toString(36).slice(2, 9)}`,
     coverType: type,
     sumInsured: '',
-    premiumStyle: 'Variable age-stepped',
+    premiumStyle: styleOpts ? styleOpts[0].code : '',
     super: type === 'Life' ? 'No' : type === 'TPD' ? 'No' : type === 'IP' ? 'No' : undefined,
     definition: type === 'TPD' ? 'Any' : type === 'IP' ? 'Agreed Value' : undefined,
     standAlone: type === 'TPD' || type === 'Trauma' ? 'No' : undefined,
@@ -56,7 +71,7 @@ function emptyCover(type: ExistingCoverType): ExistingCover {
     waitingPeriod: type === 'IP' || type === 'BE' ? '14 days' : undefined,
     benefitPeriod: type === 'IP' ? 'to Age 65' : undefined,
     addDeathCover: type === 'SBI' ? '' : undefined,
-    ownership: undefined,
+    ownership: OWNERSHIP_VISIBLE[type] ? 'O' : undefined,
   };
 }
 
@@ -75,9 +90,9 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
   const [policyDescription, setPolicyDescription] = useState('');
   const [lifeInsured, setLifeInsured] = useState<'client' | 'partner'>('client');
   const [premiumSuper, setPremiumSuper] = useState('0');
-  const [premiumSuperFreq, setPremiumSuperFreq] = useState<PremiumFrequency>('Monthly');
+  const [premiumSuperFreq, setPremiumSuperFreq] = useState<PremiumFrequency>('M');
   const [premiumNonSuper, setPremiumNonSuper] = useState('0');
-  const [premiumNonSuperFreq, setPremiumNonSuperFreq] = useState<PremiumFrequency>('Monthly');
+  const [premiumNonSuperFreq, setPremiumNonSuperFreq] = useState<PremiumFrequency>('M');
 
   const [covers, setCovers] = useState<Record<ExistingCoverType, ExistingCover>>(() => {
     const init = {} as Record<ExistingCoverType, ExistingCover>;
@@ -87,10 +102,27 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
 
   const [error, setError] = useState<string | null>(null);
 
-  const totalPremium = useMemo(() => {
-    const superPerYear = parseMoney(premiumSuper) * (premiumSuperFreq === 'Monthly' ? 12 : 1);
-    const nonSuperPerYear = parseMoney(premiumNonSuper) * (premiumNonSuperFreq === 'Monthly' ? 12 : 1);
-    return superPerYear + nonSuperPerYear;
+  const { totalPremium, totalFrequencyLabel } = useMemo(() => {
+    const superVal = parseMoney(premiumSuper);
+    const nonSuperVal = parseMoney(premiumNonSuper);
+    const superPerYear = superVal * PREMIUM_FREQUENCY_MULTIPLIER[premiumSuperFreq];
+    const nonSuperPerYear = nonSuperVal * PREMIUM_FREQUENCY_MULTIPLIER[premiumNonSuperFreq];
+    const total = superPerYear + nonSuperPerYear;
+
+    let freq: PremiumFrequency;
+    if (superVal > 0 && nonSuperVal > 0) {
+      freq = premiumSuperFreq === premiumNonSuperFreq ? premiumSuperFreq : 'Y';
+    } else if (superVal > 0) {
+      freq = premiumSuperFreq;
+    } else if (nonSuperVal > 0) {
+      freq = premiumNonSuperFreq;
+    } else {
+      freq = 'Y';
+    }
+
+    const displayTotal = freq === 'Y' ? total : total / PREMIUM_FREQUENCY_MULTIPLIER[freq];
+    const suffix = freq === 'Y' ? 'pa' : PREMIUM_FREQUENCY_LABELS[freq].toLowerCase();
+    return { totalPremium: displayTotal, totalFrequencyLabel: suffix };
   }, [premiumSuper, premiumSuperFreq, premiumNonSuper, premiumNonSuperFreq]);
 
   const filteredSuppliers = providerQuery
@@ -229,8 +261,9 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
               value={premiumSuperFreq}
               onChange={(e) => setPremiumSuperFreq(e.target.value as PremiumFrequency)}
             >
-              <option value="Monthly">Monthly</option>
-              <option value="Yearly">Yearly</option>
+              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
             </select>
           </div>
           <div className="grid grid-cols-[160px_140px_120px_auto] gap-2 items-center mb-2">
@@ -246,15 +279,16 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
               value={premiumNonSuperFreq}
               onChange={(e) => setPremiumNonSuperFreq(e.target.value as PremiumFrequency)}
             >
-              <option value="Monthly">Monthly</option>
-              <option value="Yearly">Yearly</option>
+              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
             </select>
           </div>
           <div className="grid grid-cols-[160px_auto] gap-2 items-center">
             <label className="text-sm italic text-slate-600">Total Premium:</label>
             <span className="text-sm text-slate-700">
               <strong>${totalPremium.toFixed(2)}</strong>
-              <span className="text-teal-600 ml-1"> / pa</span>
+              <span className="text-teal-600 ml-1"> / {totalFrequencyLabel}</span>
             </span>
           </div>
         </div>
@@ -269,6 +303,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Cover Type</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Sum Insured</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Premium Style</th>
+                  <th className="text-left px-2 py-2 font-bold text-slate-700">Ownership</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Super</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Definition</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Stand Alone</th>
@@ -276,7 +311,6 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Super-Linked</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Waiting Period</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Benefit Period</th>
-                  <th className="text-left px-2 py-2 font-bold text-slate-700">Ownership</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Add. Death Cover</th>
                 </tr>
               </thead>
@@ -285,6 +319,8 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                   const c = covers[type];
                   const vis = COL_VISIBILITY[type];
                   const ownershipOpts = OWNERSHIP_OPTIONS_BY_TYPE[type];
+                  const styleOpts = PREMIUM_STYLE_BY_TYPE[type];
+                  const showOwnership = OWNERSHIP_VISIBLE[type];
                   return (
                     <tr key={type} className="border-b border-gray-100 even:bg-gray-50/50">
                       <td className="px-2 py-1.5 text-slate-700 font-medium">{COVER_TYPE_LABELS[type]}</td>
@@ -297,13 +333,27 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                         />
                       </td>
                       <td className="px-2 py-1.5">
-                        <select
-                          className="w-36 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          value={c.premiumStyle}
-                          onChange={(e) => updateCover(type, { premiumStyle: e.target.value })}
-                        >
-                          {PREMIUM_STYLE_OPTS.map((o) => <option key={o} value={o}>{o}</option>)}
-                        </select>
+                        {styleOpts ? (
+                          <select
+                            className="w-36 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            value={c.premiumStyle}
+                            onChange={(e) => updateCover(type, { premiumStyle: e.target.value })}
+                          >
+                            {styleOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {showOwnership ? (
+                          <select
+                            className="w-32 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            value={c.ownership ?? ''}
+                            onChange={(e) => updateCover(type, { ownership: e.target.value || undefined })}
+                          >
+                            <option value="">—</option>
+                            {ownershipOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
+                          </select>
+                        ) : null}
                       </td>
                       <td className="px-2 py-1.5">
                         {vis.super ? (
@@ -385,16 +435,6 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                             {BENEFIT_PERIODS.map((o) => <option key={o} value={o}>{o}</option>)}
                           </select>
                         ) : null}
-                      </td>
-                      <td className="px-2 py-1.5">
-                        <select
-                          className="w-32 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          value={c.ownership ?? ''}
-                          onChange={(e) => updateCover(type, { ownership: e.target.value || undefined })}
-                        >
-                          <option value="">—</option>
-                          {ownershipOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
-                        </select>
                       </td>
                       <td className="px-2 py-1.5">
                         {vis.addDeathCover ? (

@@ -109,7 +109,25 @@ export interface ExistingCover {
   ownership?: string;
 }
 
-export type PremiumFrequency = 'Monthly' | 'Yearly';
+export type PremiumFrequency = 'Y' | 'H' | 'Q' | 'M' | 'F' | 'W';
+
+export const PREMIUM_FREQUENCY_LABELS: Record<PremiumFrequency, string> = {
+  Y: 'Yearly',
+  H: 'Half Yearly',
+  Q: 'Quarterly',
+  M: 'Monthly',
+  F: 'Fortnightly',
+  W: 'Weekly',
+};
+
+export const PREMIUM_FREQUENCY_MULTIPLIER: Record<PremiumFrequency, number> = {
+  Y: 1,
+  H: 2,
+  Q: 4,
+  M: 12,
+  F: 26,
+  W: 52,
+};
 
 export interface ExistingPolicy {
   id: string;
@@ -125,8 +143,8 @@ export interface ExistingPolicy {
 }
 
 export function totalPolicyPremiumPerAnnum(p: ExistingPolicy): number {
-  const multi = (freq: PremiumFrequency) => (freq === 'Monthly' ? 12 : 1);
-  return p.premiumSuper * multi(p.premiumSuperFrequency) + p.premiumNonSuper * multi(p.premiumNonSuperFrequency);
+  return p.premiumSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.premiumSuperFrequency]
+       + p.premiumNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.premiumNonSuperFrequency];
 }
 
 export interface QuoteOptions {
