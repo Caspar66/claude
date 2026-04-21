@@ -52,6 +52,34 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
+        '/api/legacy-portfolios': {
+          target: target + '/legacy/portfolios',
+          changeOrigin: true,
+          rewrite: () => '',
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.method = 'POST';
+            });
+          },
+        },
+        '/api/legacy-products': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => p.replace('/api/legacy-products', '/legacy/products'),
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
+              proxyReq.method = 'POST';
+            });
+          },
+        },
         '/api/suppliers': {
           target: target + '/suppliers',
           changeOrigin: true,

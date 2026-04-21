@@ -108,6 +108,93 @@ export async function fetchLegacySuppliers(): Promise<LegacySupplier[]> {
     .map((s) => ({ code: s.code || s.name, name: s.name || s.code }));
 }
 
+// ── Legacy Portfolios ────────────────────────────────────────────────────────
+
+export interface LegacyPortfolio {
+  supplierCode: string;
+  supplierName: string;
+  revisionDates: string[];
+}
+
+export async function fetchLegacyPortfolios(): Promise<LegacyPortfolio[]> {
+  const res = await fetch('/api/legacy-portfolios', {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`OmniLife /legacy/portfolios returned ${res.status} ${res.statusText}`);
+  }
+
+  const payload: unknown = await res.json();
+  const list: Record<string, unknown>[] = Array.isArray(payload) ? payload : [];
+  return list
+    .map((raw) => {
+      const supplierCode =
+        typeof raw.supplierCode === 'string' ? raw.supplierCode :
+        typeof raw.code === 'string' ? raw.code : '';
+      const supplierName =
+        typeof raw.supplierName === 'string' ? raw.supplierName :
+        typeof raw.name === 'string' ? raw.name : supplierCode;
+      const rd = raw.revisionDates ?? raw.dates;
+      const revisionDates = Array.isArray(rd)
+        ? rd.filter((d): d is string => typeof d === 'string')
+        : [];
+      return { supplierCode, supplierName, revisionDates };
+    })
+    .filter((p) => p.supplierCode);
+}
+
+// ── Legacy Products ──────────────────────────────────────────────────────────
+
+export interface LegacyProduct {
+  productCode: string;
+  productName: string;
+  coverNeedType: string;
+  ownership?: string;
+  raw: Record<string, unknown>;
+}
+
+export interface FetchLegacyProductsArgs {
+  supplierCode: string;
+  date: string;
+  coverNeedType: string;
+}
+
+export async function fetchLegacyProducts(args: FetchLegacyProductsArgs): Promise<LegacyProduct[]> {
+  const params = new URLSearchParams({
+    supplierCode: args.supplierCode,
+    date: args.date,
+    coverNeedType: args.coverNeedType,
+  });
+  const res = await fetch(`/api/legacy-products?${params.toString()}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`OmniLife /legacy/products returned ${res.status} ${res.statusText}`);
+  }
+
+  const payload: unknown = await res.json();
+  const list: Record<string, unknown>[] = Array.isArray(payload) ? payload : [];
+  return list
+    .map((raw) => ({
+      productCode:
+        typeof raw.productCode === 'string' ? raw.productCode :
+        typeof raw.code === 'string' ? raw.code : '',
+      productName:
+        typeof raw.productName === 'string' ? raw.productName :
+        typeof raw.name === 'string' ? raw.name :
+        typeof raw.description === 'string' ? raw.description : '',
+      coverNeedType:
+        typeof raw.coverNeedType === 'string' ? raw.coverNeedType : args.coverNeedType,
+      ownership: typeof raw.ownership === 'string' ? raw.ownership : undefined,
+      raw,
+    }))
+    .filter((p) => p.productCode);
+}
+
 // ── Suppliers ────────────────────────────────────────────────────────────────
 
 export interface SupplierProduct {

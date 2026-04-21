@@ -129,6 +129,45 @@ export const PREMIUM_FREQUENCY_MULTIPLIER: Record<PremiumFrequency, number> = {
   W: 52,
 };
 
+export type CoverNeedCode = 'TRM' | 'TPE' | 'TRE' | 'TPS' | 'TRS' | 'TPR' | 'INC' | 'BUS' | 'NES' | 'CHT';
+
+export const COVER_NEED_CODE_LABELS: Record<CoverNeedCode, string> = {
+  TRM: 'Life',
+  TPE: 'TPD extension/linked cover on Life',
+  TRE: 'Trauma extension/linked cover on Life',
+  TPS: 'TPD Standalone',
+  TRS: 'Trauma Standalone',
+  TPR: 'TPD extension/linked cover on Trauma',
+  INC: 'Income Protection',
+  BUS: 'Business Expenses',
+  NES: 'Needle Stick',
+  CHT: 'Child Trauma',
+};
+
+export function coverToNeedCode(cover: ExistingCover): CoverNeedCode {
+  switch (cover.coverType) {
+    case 'Life': return 'TRM';
+    case 'TPD': return cover.standAlone === 'Yes' ? 'TPS' : 'TPE';
+    case 'Trauma': return cover.standAlone === 'Yes' ? 'TRS' : 'TRE';
+    case 'SBI': return 'TRS';
+    case 'IP': return 'INC';
+    case 'BE': return 'BUS';
+    case 'Needlestick': return 'NES';
+    case 'ChildCover': return 'CHT';
+  }
+}
+
+export interface ResearchPortfolio {
+  supplierCode: string;
+  revisionDate: string;
+  existingCover: boolean;
+  premiumInsideSuperAnnualised: number;
+  premiumOutsideSuperAnnualised: number;
+  stampDutyInsideSuperAnnualised: number;
+  stampDutyOutsideSuperAnnualised: number;
+  products: Partial<Record<CoverNeedCode, { productCode: string }>>;
+}
+
 export interface ExistingPolicy {
   id: string;
   provider: string;
@@ -140,6 +179,7 @@ export interface ExistingPolicy {
   premiumNonSuperFrequency: PremiumFrequency;
   covers: ExistingCover[];
   action: 'Not Considered' | 'Review' | 'Replace' | 'Retain';
+  researchPortfolio?: ResearchPortfolio;
 }
 
 export function totalPolicyPremiumPerAnnum(p: ExistingPolicy): number {

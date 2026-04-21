@@ -7,8 +7,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import type { ExistingPolicy, ExistingCoverType, PremiumFrequency } from './insuranceData';
+import type { ExistingPolicy, ExistingCoverType, PremiumFrequency, ResearchPortfolio } from './insuranceData';
 import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, totalPolicyPremiumPerAnnum } from './insuranceData';
+import { MapProductModal } from './MapProductModal';
 
 type Tab = 'existing' | 'needsAnalysis';
 type ActionStatus = 'Not Considered' | 'Review' | 'Replace' | 'Retain';
@@ -40,17 +41,26 @@ function formatSum(s: string): string {
 export function CurrentSituationSection({ policies, clientName, partnerName, onAddCover, onChangePolicies }: Props) {
   const [tab, setTab] = useState<Tab>('existing');
   const [collapsed, setCollapsed] = useState(false);
+  const [reviewPolicyId, setReviewPolicyId] = useState<string | null>(null);
 
   const groupedByInsured: Record<'client' | 'partner', ExistingPolicy[]> = { client: [], partner: [] };
   for (const p of policies) groupedByInsured[p.lifeInsured].push(p);
 
   function updateAction(policyId: string, action: ActionStatus) {
     onChangePolicies(policies.map((p) => p.id === policyId ? { ...p, action } : p));
+    if (action === 'Review') setReviewPolicyId(policyId);
   }
 
   function removePolicy(policyId: string) {
     onChangePolicies(policies.filter((p) => p.id !== policyId));
   }
+
+  function saveResearchPortfolio(portfolio: ResearchPortfolio) {
+    if (!reviewPolicyId) return;
+    onChangePolicies(policies.map((p) => p.id === reviewPolicyId ? { ...p, researchPortfolio: portfolio } : p));
+  }
+
+  const reviewPolicy = reviewPolicyId ? policies.find((p) => p.id === reviewPolicyId) ?? null : null;
 
   return (
     <div className="mx-5 my-4 border border-gray-200 rounded overflow-hidden">
@@ -210,6 +220,13 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
           )}
         </div>
       )}
+
+      <MapProductModal
+        open={reviewPolicy !== null}
+        onClose={() => setReviewPolicyId(null)}
+        policy={reviewPolicy}
+        onSave={saveResearchPortfolio}
+      />
     </div>
   );
 }
