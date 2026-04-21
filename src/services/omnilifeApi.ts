@@ -144,19 +144,21 @@ export async function fetchLegacyPortfolios(): Promise<LegacyPortfolio[]> {
     })
     .filter((p) => p.supplierCode);
 
-  // Dedupe: merge entries with the same (supplierCode + supplierName), unioning revision dates.
-  const byKey = new Map<string, LegacyPortfolio>();
+  // Dedupe by supplierName. supplierCode can be shared across multiple
+  // portfolios (e.g. "MLC" -> "MLC Personal Protection Portfolio" and
+  // "MLC Insurance"), so we key by name and only merge revision dates when the
+  // exact same name repeats.
+  const byName = new Map<string, LegacyPortfolio>();
   for (const p of raw) {
-    const key = `${p.supplierCode}${p.supplierName}`;
-    const existing = byKey.get(key);
+    const existing = byName.get(p.supplierName);
     if (existing) {
       const merged = new Set([...existing.revisionDates, ...p.revisionDates]);
       existing.revisionDates = Array.from(merged).sort().reverse();
     } else {
-      byKey.set(key, { ...p, revisionDates: [...p.revisionDates].sort().reverse() });
+      byName.set(p.supplierName, { ...p, revisionDates: [...p.revisionDates].sort().reverse() });
     }
   }
-  return Array.from(byKey.values());
+  return Array.from(byName.values());
 }
 
 // ── Legacy Products ──────────────────────────────────────────────────────────

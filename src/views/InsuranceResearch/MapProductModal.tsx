@@ -109,7 +109,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   const { portfolios, loading: portfoliosLoading, error: portfoliosError } = useLegacyPortfolios();
 
   const [supplierFilter, setSupplierFilter] = useState('');
-  const [supplierCode, setSupplierCode] = useState('');
+  const [supplierName, setSupplierName] = useState('');
   const [revisionDate, setRevisionDate] = useState('');
   const [premiumInside, setPremiumInside] = useState('0');
   const [premiumOutside, setPremiumOutside] = useState('0');
@@ -135,8 +135,8 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   );
 
   const selectedPortfolio = useMemo(
-    () => portfolios.find((p) => p.supplierCode === supplierCode) ?? null,
-    [portfolios, supplierCode],
+    () => portfolios.find((p) => p.supplierName === supplierName) ?? null,
+    [portfolios, supplierName],
   );
 
   const filteredPortfolios = useMemo(() => {
@@ -153,7 +153,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     const inside = annualise(policy.premiumSuper, policy.premiumSuperFrequency);
     const outside = annualise(policy.premiumNonSuper, policy.premiumNonSuperFrequency);
     setSupplierFilter('');
-    setSupplierCode('');
+    setSupplierName('');
     setRevisionDate('');
     setPremiumInside(inside.toFixed(2));
     setPremiumOutside(outside.toFixed(2));
@@ -170,11 +170,12 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     setAllProducts([]);
     setProductSelections({});
     setProductsError(null);
-  }, [supplierCode]);
+  }, [supplierName]);
 
   // Single API call: fetch all products for the supplier + date with coverNeedType=1
   useEffect(() => {
-    if (!supplierCode || !revisionDate) return;
+    if (!selectedPortfolio || !revisionDate) return;
+    const supplierCode = selectedPortfolio.supplierCode;
     let cancelled = false;
     setProductsLoading(true);
     setProductsError(null);
@@ -192,10 +193,10 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       });
 
     return () => { cancelled = true; };
-  }, [supplierCode, revisionDate]);
+  }, [selectedPortfolio, revisionDate]);
 
   function handleAdd() {
-    if (!policy || !supplierCode || !revisionDate) return;
+    if (!policy || !selectedPortfolio || !revisionDate) return;
     const products: Partial<Record<CoverNeedCode, { productCode: string }>> = {};
     for (const group of coverGroups) {
       const primary = group.entries[0];
@@ -207,7 +208,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       }
     }
     const portfolio: ResearchPortfolio = {
-      supplierCode,
+      supplierCode: selectedPortfolio.supplierCode,
       revisionDate,
       existingCover: true,
       premiumInsideSuperAnnualised: parseFloat(premiumInside) || 0,
@@ -221,7 +222,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   }
 
   const canAdd = Boolean(
-    supplierCode && revisionDate && primaryCodes.every((c) => productSelections[c]),
+    selectedPortfolio && revisionDate && primaryCodes.every((c) => productSelections[c]),
   );
 
   return (
@@ -256,13 +257,13 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
             <div className="relative">
               <select
                 className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
-                value={supplierCode}
-                onChange={(e) => setSupplierCode(e.target.value)}
+                value={supplierName}
+                onChange={(e) => setSupplierName(e.target.value)}
                 disabled={portfoliosLoading}
               >
                 <option value="">Select a supplier</option>
                 {filteredPortfolios.map((p) => (
-                  <option key={p.supplierCode} value={p.supplierCode}>
+                  <option key={p.supplierName} value={p.supplierName}>
                     {p.supplierName}
                   </option>
                 ))}
@@ -297,7 +298,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
           )}
 
           {/* Products */}
-          {supplierCode && revisionDate && (
+          {selectedPortfolio && revisionDate && (
             <div className="border border-gray-200 rounded">
               <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-bold text-slate-700">
                 Products
@@ -345,7 +346,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
           )}
 
           {/* Total Annual Premium details */}
-          {supplierCode && revisionDate && (
+          {selectedPortfolio && revisionDate && (
             <div className="border border-gray-200 rounded">
               <div className="px-3 py-2 bg-gray-50 border-b border-gray-200 text-xs font-bold text-slate-700">
                 Total Annual Premium
