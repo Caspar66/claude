@@ -31,13 +31,18 @@ interface CoverGroup {
   isLinkedGroup: boolean;
 }
 
+function hasSumInsured(c: ExistingCover): boolean {
+  return parseFloat(c.sumInsured.replace(/[^0-9.]/g, '')) > 0;
+}
+
 function buildCoverGroups(covers: ExistingCover[]): CoverGroup[] {
   const groups: CoverGroup[] = [];
   const handled = new Set<string>();
 
-  const lifeCover = covers.find((c) => c.coverType === 'Life');
-  const linkedTpd = covers.find((c) => c.coverType === 'TPD' && c.standAlone !== 'Yes');
-  const linkedTrauma = covers.find((c) => c.coverType === 'Trauma' && c.standAlone !== 'Yes');
+  const lifeCover = covers.find((c) => c.coverType === 'Life' && hasSumInsured(c));
+  const linkedTpd = covers.find((c) => c.coverType === 'TPD' && c.standAlone !== 'Yes' && hasSumInsured(c));
+  const linkedTrauma = covers.find((c) => c.coverType === 'Trauma' && c.standAlone !== 'Yes' && hasSumInsured(c));
+  const standaloneTrauma = covers.find((c) => c.coverType === 'Trauma' && c.standAlone === 'Yes' && hasSumInsured(c));
 
   if (lifeCover) {
     const entries: CoverGroupEntry[] = [{ code: 'TRM', ownership: lifeCover.ownership }];
@@ -47,9 +52,18 @@ function buildCoverGroups(covers: ExistingCover[]): CoverGroup[] {
     groups.push({ entries, isLinkedGroup: entries.length > 1 });
   }
 
+  if (!lifeCover && standaloneTrauma && linkedTpd && !handled.has(linkedTpd.id)) {
+    const entries: CoverGroupEntry[] = [{ code: 'TRS', ownership: standaloneTrauma.ownership }];
+    handled.add(standaloneTrauma.id);
+    entries.push({ code: 'TPR', ownership: linkedTpd.ownership });
+    handled.add(linkedTpd.id);
+    groups.push({ entries, isLinkedGroup: true });
+  }
+
   for (const cov of covers) {
     if (handled.has(cov.id)) continue;
-    const code = coverToNeedCode(cov);
+    if (!hasSumInsured(cov)) continue;
+    const code = coverToNeedCode(cov, covers);
     groups.push({ entries: [{ code, ownership: cov.ownership }], isLinkedGroup: false });
   }
 

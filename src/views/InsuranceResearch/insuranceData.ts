@@ -144,10 +144,18 @@ export const COVER_NEED_CODE_LABELS: Record<CoverNeedCode, string> = {
   CHT: 'Child Trauma',
 };
 
-export function coverToNeedCode(cover: ExistingCover): CoverNeedCode {
+export function coverToNeedCode(cover: ExistingCover, allCovers?: ExistingCover[]): CoverNeedCode {
   switch (cover.coverType) {
     case 'Life': return 'TRM';
-    case 'TPD': return cover.standAlone === 'Yes' ? 'TPS' : 'TPE';
+    case 'TPD': {
+      if (cover.standAlone === 'Yes') return 'TPS';
+      if (allCovers) {
+        const hasLife = allCovers.some((c) => c.coverType === 'Life' && parseFloat(c.sumInsured.replace(/[^0-9.]/g, '')) > 0);
+        const hasStandaloneTrauma = allCovers.some((c) => c.coverType === 'Trauma' && c.standAlone === 'Yes' && parseFloat(c.sumInsured.replace(/[^0-9.]/g, '')) > 0);
+        if (!hasLife && hasStandaloneTrauma) return 'TPR';
+      }
+      return 'TPE';
+    }
     case 'Trauma': return cover.standAlone === 'Yes' ? 'TRS' : 'TRE';
     case 'SBI': return 'TRS';
     case 'IP': return 'INC';
