@@ -476,6 +476,32 @@ export function buildPoliciesFromSelection(
   });
 }
 
+// ── Cover Quote (Cover Selection) ────────────────────────────────────────────
+
+export interface CoverQuote {
+  id: string;
+  name: string;
+  lifeInsured: 'client' | 'partner';
+  lifeCover: LifeCoverOptions;
+  tpd: TpdOptions;
+  trauma: TraumaOptions;
+  incomeProtection: IncomeProtectionOptions;
+  businessExpenses: BusinessExpensesOptions;
+}
+
+export function getDefaultCoverQuote(name: string, lifeInsured: 'client' | 'partner' = 'client'): CoverQuote {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    lifeInsured,
+    lifeCover: getDefaultLifeCover(),
+    tpd: getDefaultTpd(),
+    trauma: { enabled: false },
+    incomeProtection: { ...getDefaultIncomeProtection(), enabled: false },
+    businessExpenses: { enabled: false },
+  };
+}
+
 // ── Default helpers ───────────────────────────────────────────────────────────
 
 export function getDefaultClientData(

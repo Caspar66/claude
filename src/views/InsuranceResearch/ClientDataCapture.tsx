@@ -4,10 +4,12 @@ import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useOccupations } from '@/hooks/useOccupations';
 import type { OccupationOption } from '@/services/omnilifeApi';
-import type { ClientFormData, EmploymentStatus, ExistingPolicy, HealthDiscount, Loadings } from './insuranceData';
-import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS, EMPTY_LOADINGS, hasLoadings } from './insuranceData';
+import type { ClientFormData, EmploymentStatus, ExistingPolicy, HealthDiscount, Loadings, CoverQuote } from './insuranceData';
+import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS, EMPTY_LOADINGS, hasLoadings, getDefaultCoverQuote } from './insuranceData';
 import { OccupationRatingsModal } from './OccupationRatingsModal';
 import { CurrentSituationSection } from './CurrentSituationSection';
+import { CoverSelectionSection } from './CoverSelectionSection';
+import { QuoteOptionsPage } from './QuoteOptionsPage';
 import { AddCoverPage } from './AddCoverPage';
 
 interface Props {
@@ -355,6 +357,8 @@ export function ClientDataCapture({
   const [loadingsTarget, setLoadingsTarget] = useState<'client' | 'partner' | null>(null);
   const [policies, setPolicies] = useState<ExistingPolicy[]>([]);
   const [addCoverOpen, setAddCoverOpen] = useState(false);
+  const [coverQuotes, setCoverQuotes] = useState<CoverQuote[]>([]);
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
   const clientDisplayName = `${clientData.lastName || 'Client'}, ${clientData.firstName || ''}`.trim().replace(/,$/, '');
   const partnerDisplayName = partnerData ? `${partnerData.lastName || 'Partner'}, ${partnerData.firstName || ''}`.trim().replace(/,$/, '') : null;
@@ -362,6 +366,17 @@ export function ClientDataCapture({
   function handleSaveNewCover(policy: ExistingPolicy) {
     setPolicies((prev) => [...prev, policy]);
     setAddCoverOpen(false);
+  }
+
+  function handleAddQuote() {
+    const newQuote = getDefaultCoverQuote(`Quote ${coverQuotes.length + 1}`);
+    setCoverQuotes((prev) => [...prev, newQuote]);
+    setEditingQuoteId(newQuote.id);
+  }
+
+  function handleSaveQuote(updated: CoverQuote) {
+    setCoverQuotes((prev) => prev.map((q) => q.id === updated.id ? updated : q));
+    setEditingQuoteId(null);
   }
 
   function openRatings(label: string, code: string) {
@@ -398,6 +413,20 @@ export function ClientDataCapture({
     : null;
 
   const showHealthDiscount = clientData.smoker === 'No' || (partnerData && partnerData.smoker === 'No');
+
+  const editingQuote = editingQuoteId ? coverQuotes.find((q) => q.id === editingQuoteId) ?? null : null;
+
+  if (editingQuote) {
+    return (
+      <QuoteOptionsPage
+        quote={editingQuote}
+        clientName={clientDisplayName}
+        partnerName={partnerDisplayName}
+        onSave={handleSaveQuote}
+        onCancel={() => setEditingQuoteId(null)}
+      />
+    );
+  }
 
   if (addCoverOpen) {
     return (
@@ -465,6 +494,16 @@ export function ClientDataCapture({
         partnerName={partnerDisplayName}
         onAddCover={() => setAddCoverOpen(true)}
         onChangePolicies={setPolicies}
+      />
+
+      {/* Cover Selection section */}
+      <CoverSelectionSection
+        quotes={coverQuotes}
+        clientName={clientDisplayName}
+        partnerName={partnerDisplayName}
+        onAddQuote={handleAddQuote}
+        onEditQuote={(id) => setEditingQuoteId(id)}
+        onChangeQuotes={setCoverQuotes}
       />
 
       {/* Action buttons */}
