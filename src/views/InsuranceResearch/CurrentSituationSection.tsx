@@ -7,7 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu';
-import type { ExistingPolicy, ExistingCoverType, PremiumFrequency, ResearchPortfolio } from './insuranceData';
+import type { ExistingPolicy, ExistingCoverType, ResearchPortfolio } from './insuranceData';
 import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, totalPolicyPremiumPerAnnum } from './insuranceData';
 import { MapProductModal } from './MapProductModal';
 
@@ -152,7 +152,7 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                       const totalPa = totalPolicyPremiumPerAnnum(p);
                       const superPremium = p.premiumSuper > 0 ? formatMoney(p.premiumSuper) : 'N/A';
                       const nonSuperPremium = p.premiumNonSuper > 0 ? formatMoney(p.premiumNonSuper) : 'N/A';
-                      const freqLabel = (freq: PremiumFrequency) => `/${PREMIUM_FREQUENCY_LABELS[freq].toLowerCase()}`;
+                      const freqSuffix = `/${PREMIUM_FREQUENCY_LABELS[p.premiumFrequency].toLowerCase()}`;
                       return (
                         <div key={p.id}>
                           {/* Policy header row */}
@@ -172,8 +172,8 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                               <div className="font-bold text-slate-800">{p.provider}</div>
                               <div className="text-slate-700">{p.policyDescription}</div>
                             </div>
-                            <div className="text-xs text-slate-700">{p.premiumSuper > 0 ? `${superPremium} ${freqLabel(p.premiumSuperFrequency)}` : 'N/A'}</div>
-                            <div className="text-xs text-slate-700">{p.premiumNonSuper > 0 ? `${nonSuperPremium} ${freqLabel(p.premiumNonSuperFrequency)}` : 'N/A'}</div>
+                            <div className="text-xs text-slate-700">{p.premiumSuper > 0 ? `${superPremium} ${freqSuffix}` : 'N/A'}</div>
+                            <div className="text-xs text-slate-700">{p.premiumNonSuper > 0 ? `${nonSuperPremium} ${freqSuffix}` : 'N/A'}</div>
                             <div className="text-xs text-slate-700 font-medium">{formatMoney(totalPa)}</div>
                             <div>
                               <select

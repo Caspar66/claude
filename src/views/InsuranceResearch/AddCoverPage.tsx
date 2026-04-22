@@ -123,13 +123,11 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
   const [policyDescription, setPolicyDescription] = useState('');
   const [lifeInsured, setLifeInsured] = useState<'client' | 'partner'>('client');
   const [premiumSuper, setPremiumSuper] = useState('0');
-  const [premiumSuperFreq, setPremiumSuperFreq] = useState<PremiumFrequency>('M');
   const [premiumNonSuper, setPremiumNonSuper] = useState('0');
-  const [premiumNonSuperFreq, setPremiumNonSuperFreq] = useState<PremiumFrequency>('M');
+  const [premiumFreq, setPremiumFreq] = useState<PremiumFrequency>('M');
   const [stampDutySuper, setStampDutySuper] = useState('0');
-  const [stampDutySuperFreq, setStampDutySuperFreq] = useState<PremiumFrequency>('M');
   const [stampDutyNonSuper, setStampDutyNonSuper] = useState('0');
-  const [stampDutyNonSuperFreq, setStampDutyNonSuperFreq] = useState<PremiumFrequency>('M');
+  const [stampDutyFreq, setStampDutyFreq] = useState<PremiumFrequency>('Y');
 
   const [covers, setCovers] = useState<Record<ExistingCoverType, ExistingCover>>(() => {
     const init = {} as Record<ExistingCoverType, ExistingCover>;
@@ -140,27 +138,10 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
   const [error, setError] = useState<string | null>(null);
 
   const { totalPremium, totalFrequencyLabel } = useMemo(() => {
-    const superVal = parseMoney(premiumSuper);
-    const nonSuperVal = parseMoney(premiumNonSuper);
-    const superPerYear = superVal * PREMIUM_FREQUENCY_MULTIPLIER[premiumSuperFreq];
-    const nonSuperPerYear = nonSuperVal * PREMIUM_FREQUENCY_MULTIPLIER[premiumNonSuperFreq];
-    const total = superPerYear + nonSuperPerYear;
-
-    let freq: PremiumFrequency;
-    if (superVal > 0 && nonSuperVal > 0) {
-      freq = premiumSuperFreq === premiumNonSuperFreq ? premiumSuperFreq : 'Y';
-    } else if (superVal > 0) {
-      freq = premiumSuperFreq;
-    } else if (nonSuperVal > 0) {
-      freq = premiumNonSuperFreq;
-    } else {
-      freq = 'Y';
-    }
-
-    const displayTotal = freq === 'Y' ? total : total / PREMIUM_FREQUENCY_MULTIPLIER[freq];
-    const suffix = freq === 'Y' ? 'pa' : PREMIUM_FREQUENCY_LABELS[freq].toLowerCase();
-    return { totalPremium: displayTotal, totalFrequencyLabel: suffix };
-  }, [premiumSuper, premiumSuperFreq, premiumNonSuper, premiumNonSuperFreq]);
+    const total = parseMoney(premiumSuper) + parseMoney(premiumNonSuper);
+    const suffix = PREMIUM_FREQUENCY_LABELS[premiumFreq].toLowerCase();
+    return { totalPremium: total, totalFrequencyLabel: suffix };
+  }, [premiumSuper, premiumNonSuper, premiumFreq]);
 
   const filteredSuppliers = providerQuery
     ? legacySuppliers.filter((s) => s.name.toLowerCase().includes(providerQuery.toLowerCase())).slice(0, 20)
@@ -215,13 +196,11 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
       policyDescription: policyDescription.trim(),
       lifeInsured,
       premiumSuper: parseMoney(premiumSuper),
-      premiumSuperFrequency: premiumSuperFreq,
       premiumNonSuper: parseMoney(premiumNonSuper),
-      premiumNonSuperFrequency: premiumNonSuperFreq,
+      premiumFrequency: premiumFreq,
       stampDutySuper: parseMoney(stampDutySuper),
-      stampDutySuperFrequency: stampDutySuperFreq,
       stampDutyNonSuper: parseMoney(stampDutyNonSuper),
-      stampDutyNonSuperFrequency: stampDutyNonSuperFreq,
+      stampDutyFrequency: stampDutyFreq,
       covers: coversWithSumInsured,
       action: 'Not Considered',
     };
@@ -318,26 +297,20 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
         {/* Premium Details */}
         <div>
           <h3 className="text-sm font-bold text-slate-800 mb-2">Premium Details</h3>
-          <div className="grid grid-cols-[160px_140px_120px_auto] gap-2 items-center mb-2">
-            <label className="text-sm italic text-slate-600">Premium (Super):</label>
+          <div className="grid grid-cols-[160px_140px_140px_120px] gap-2 items-center mb-1">
+            <div />
+            <div className="text-xs font-bold text-slate-600 text-center">Super</div>
+            <div className="text-xs font-bold text-slate-600 text-center">Non-Super</div>
+            <div className="text-xs font-bold text-slate-600 text-center">Frequency</div>
+          </div>
+          <div className="grid grid-cols-[160px_140px_140px_120px] gap-2 items-center mb-2">
+            <label className="text-sm italic text-slate-600">Premium:</label>
             <input
               type="text"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={premiumSuper}
               onChange={(e) => setPremiumSuper(e.target.value)}
             />
-            <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={premiumSuperFreq}
-              onChange={(e) => setPremiumSuperFreq(e.target.value as PremiumFrequency)}
-            >
-              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
-                <option key={code} value={code}>{label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-[160px_140px_120px_auto] gap-2 items-center mb-2">
-            <label className="text-sm italic text-slate-600">Premium (Non-super):</label>
             <input
               type="text"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -346,34 +319,22 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             />
             <select
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={premiumNonSuperFreq}
-              onChange={(e) => setPremiumNonSuperFreq(e.target.value as PremiumFrequency)}
+              value={premiumFreq}
+              onChange={(e) => setPremiumFreq(e.target.value as PremiumFrequency)}
             >
               {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
                 <option key={code} value={code}>{label}</option>
               ))}
             </select>
           </div>
-          <div className="grid grid-cols-[160px_140px_120px_auto] gap-2 items-center mb-2">
-            <label className="text-sm italic text-slate-600">Stamp Duty (Super):</label>
+          <div className="grid grid-cols-[160px_140px_140px_120px] gap-2 items-center mb-2">
+            <label className="text-sm italic text-slate-600">Stamp Duty:</label>
             <input
               type="text"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={stampDutySuper}
               onChange={(e) => setStampDutySuper(e.target.value)}
             />
-            <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={stampDutySuperFreq}
-              onChange={(e) => setStampDutySuperFreq(e.target.value as PremiumFrequency)}
-            >
-              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
-                <option key={code} value={code}>{label}</option>
-              ))}
-            </select>
-          </div>
-          <div className="grid grid-cols-[160px_140px_120px_auto] gap-2 items-center mb-2">
-            <label className="text-sm italic text-slate-600">Stamp Duty (Non-super):</label>
             <input
               type="text"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -382,8 +343,8 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             />
             <select
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={stampDutyNonSuperFreq}
-              onChange={(e) => setStampDutyNonSuperFreq(e.target.value as PremiumFrequency)}
+              value={stampDutyFreq}
+              onChange={(e) => setStampDutyFreq(e.target.value as PremiumFrequency)}
             >
               {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
                 <option key={code} value={code}>{label}</option>

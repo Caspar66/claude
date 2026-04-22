@@ -174,21 +174,18 @@ export interface ExistingPolicy {
   policyDescription: string;
   lifeInsured: 'client' | 'partner';
   premiumSuper: number;
-  premiumSuperFrequency: PremiumFrequency;
   premiumNonSuper: number;
-  premiumNonSuperFrequency: PremiumFrequency;
+  premiumFrequency: PremiumFrequency;
   stampDutySuper: number;
-  stampDutySuperFrequency: PremiumFrequency;
   stampDutyNonSuper: number;
-  stampDutyNonSuperFrequency: PremiumFrequency;
+  stampDutyFrequency: PremiumFrequency;
   covers: ExistingCover[];
   action: 'Not Considered' | 'Review' | 'Replace' | 'Retain';
   researchPortfolio?: ResearchPortfolio;
 }
 
 export function totalPolicyPremiumPerAnnum(p: ExistingPolicy): number {
-  return p.premiumSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.premiumSuperFrequency]
-       + p.premiumNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.premiumNonSuperFrequency];
+  return (p.premiumSuper + p.premiumNonSuper) * PREMIUM_FREQUENCY_MULTIPLIER[p.premiumFrequency];
 }
 
 export interface QuoteOptions {
