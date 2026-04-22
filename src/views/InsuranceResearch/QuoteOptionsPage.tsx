@@ -6,13 +6,10 @@ import type {
   LifeCoverOptions,
   TpdOptions,
   TraumaOptions,
+  TpdStandaloneOptions,
+  TraumaStandaloneOptions,
   IncomeProtectionOptions,
   BusinessExpensesOptions,
-} from './insuranceData';
-import {
-  getDefaultLifeCover,
-  getDefaultTpd,
-  getDefaultIncomeProtection,
 } from './insuranceData';
 
 interface Props {
@@ -23,12 +20,12 @@ interface Props {
   onCancel: () => void;
 }
 
-function Sel({ label, value, options, onChange }: { label: string; value: string; options: string[]; onChange: (v: string) => void }) {
+function Sel({ label, value, options, onChange }: { label: string; value: string; options: readonly string[]; onChange: (v: string) => void }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <select
-        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[180px]"
+        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -38,14 +35,15 @@ function Sel({ label, value, options, onChange }: { label: string; value: string
   );
 }
 
-function Inp({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function Inp({ label, value, onChange, placeholder }: { label: string; value: string; onChange: (v: string) => void; placeholder?: string }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <input
-        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[180px]"
+        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
       />
     </div>
   );
@@ -67,6 +65,44 @@ function SectionCheck({ label, code, checked, onChange }: { label: string; code:
   );
 }
 
+function Section({ code, label, checked, onToggle, children }: {
+  code: string;
+  label: string;
+  checked: boolean;
+  onToggle: (v: boolean) => void;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="border border-gray-200 rounded overflow-hidden">
+      <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
+        <SectionCheck label={label} code={code} checked={checked} onChange={onToggle} />
+      </div>
+      {checked && children && (
+        <div className="px-6 py-3 space-y-0.5">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
+const EXTENDED_STRUCTURE = ['Stepped', 'Blended', 'Level to Age 65', 'Level to Age 70'] as const;
+const THREE_WAY = ['Exclude if possible', 'Include', 'Exclude'] as const;
+const PREMIUM_WAIVER = ['Include if possible', 'Include', 'Exclude'] as const;
+const BABY_CARE = ['Exclude if possible', 'Include if possible', 'Include', 'Exclude'] as const;
+const TRAUMA_PRIORITY = ['Cheapest', 'Best', 'Intermediate'] as const;
+const TPS_OWNER = ['Non-Super', 'SMSF', 'Super', 'SuperLink'] as const;
+const TPR_OWNER = ['Non-Super', 'SMSF', 'Super', 'SuperLink', 'SMSF SuperLink'] as const;
+const ROLLOVER = ['Include if possible', 'Exclude'] as const;
+const OCCUPATION_TYPE = ['Any', 'Own', 'Homemaker', 'ADL', 'Best available'] as const;
+const LIFE_BUY_BACK = ['Exclude if possible', 'Best available', 'Exclude', '1 year', '3 years'] as const;
+const IP_STRUCTURE = ['Stepped', 'Blended', 'Level'] as const;
+const IP_WAITING = ['14 days', '30 days', '60 days', '90 days', '180 days', '1 year', '2 years'] as const;
+const IP_BENEFIT = ['1 year', '2 years', '5 years', 'To age 55', 'To age 60', 'To age 65', 'To age 67', 'To age 70'] as const;
+const IP_AGREED = ['Indemnity if possible', 'Indemnity'] as const;
+const IP_ACCIDENT = ['Exclude if possible', 'Include if possible', 'Include', 'Exclude'] as const;
+const IP_RATIO = ['Any', 'Greater than 75%', '70% to 75%', '60% to 69%', 'Less than 60%'] as const;
+
 export function QuoteOptionsPage({ quote, clientName, partnerName, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState<CoverQuote>(quote);
 
@@ -77,28 +113,27 @@ export function QuoteOptionsPage({ quote, clientName, partnerName, onSave, onCan
   function updateLife(patch: Partial<LifeCoverOptions>) {
     setDraft((d) => ({ ...d, lifeCover: { ...d.lifeCover, ...patch } }));
   }
-
   function updateTpd(patch: Partial<TpdOptions>) {
     setDraft((d) => ({ ...d, tpd: { ...d.tpd, ...patch } }));
   }
-
   function updateTrauma(patch: Partial<TraumaOptions>) {
     setDraft((d) => ({ ...d, trauma: { ...d.trauma, ...patch } }));
   }
-
+  function updateTpdStandalone(patch: Partial<TpdStandaloneOptions>) {
+    setDraft((d) => ({ ...d, tpdStandalone: { ...d.tpdStandalone, ...patch } }));
+  }
+  function updateTraumaStandalone(patch: Partial<TraumaStandaloneOptions>) {
+    setDraft((d) => ({ ...d, traumaStandalone: { ...d.traumaStandalone, ...patch } }));
+  }
   function updateIp(patch: Partial<IncomeProtectionOptions>) {
     setDraft((d) => ({ ...d, incomeProtection: { ...d.incomeProtection, ...patch } }));
   }
-
   function updateBe(patch: Partial<BusinessExpensesOptions>) {
     setDraft((d) => ({ ...d, businessExpenses: { ...d.businessExpenses, ...patch } }));
   }
 
-  const lifeInsuredLabel = draft.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
-
   return (
     <div className="flex-1 overflow-auto flex flex-col">
-      {/* Header */}
       <div className="flex items-center gap-3 px-5 py-2.5 bg-blue-700 text-white">
         <button onClick={onCancel} className="hover:text-white/80">
           <ChevronLeft size={18} />
@@ -107,7 +142,6 @@ export function QuoteOptionsPage({ quote, clientName, partnerName, onSave, onCan
         <span className="text-xs text-white/70">— {draft.name || 'Untitled'}</span>
       </div>
 
-      {/* Quote meta */}
       <div className="px-8 py-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
@@ -133,128 +167,80 @@ export function QuoteOptionsPage({ quote, clientName, partnerName, onSave, onCan
         </div>
       </div>
 
-      {/* Cover sections */}
       <div className="flex-1 px-8 py-5 space-y-1">
         {/* TRM – Life */}
-        <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-            <SectionCheck
-              label="Life"
-              code="TRM"
-              checked={draft.lifeCover.enabled}
-              onChange={(v) => updateLife({ enabled: v })}
-            />
-          </div>
-          {draft.lifeCover.enabled && (
-            <div className="px-6 py-3 space-y-0.5">
-              <Inp label="Sum Insured" value={draft.lifeCover.sumInsured} onChange={(v) => updateLife({ sumInsured: v })} />
-              <Sel label="Premium Structure" value={draft.lifeCover.structure} options={['Stepped', 'Level']} onChange={(v) => updateLife({ structure: v as 'Stepped' | 'Level' })} />
-              <Sel label="Premium Waiver" value={draft.lifeCover.premiumWaiver} options={['Exclude', 'Include if possible']} onChange={(v) => updateLife({ premiumWaiver: v as 'Exclude' | 'Include if possible' })} />
-              <Sel label="Ownership" value={draft.lifeCover.ownership} options={['Non-Super', 'Super Fund']} onChange={(v) => updateLife({ ownership: v as 'Non-Super' | 'Super Fund' })} />
-              <Sel label="Pay by Rollover" value={draft.lifeCover.payByRollover} options={['Exclude', 'Include']} onChange={(v) => updateLife({ payByRollover: v as 'Exclude' | 'Include' })} />
-            </div>
-          )}
-        </div>
+        <Section code="TRM" label="Life" checked={draft.lifeCover.enabled} onToggle={(v) => updateLife({ enabled: v })}>
+          <Inp label="Sum Insured" value={draft.lifeCover.sumInsured} onChange={(v) => updateLife({ sumInsured: v })} />
+          <Sel label="Premium Structure" value={draft.lifeCover.structure} options={['Stepped', 'Level']} onChange={(v) => updateLife({ structure: v as 'Stepped' | 'Level' })} />
+          <Sel label="Premium Waiver" value={draft.lifeCover.premiumWaiver} options={['Exclude', 'Include if possible']} onChange={(v) => updateLife({ premiumWaiver: v as 'Exclude' | 'Include if possible' })} />
+          <Sel label="Ownership" value={draft.lifeCover.ownership} options={['Non-Super', 'Super Fund']} onChange={(v) => updateLife({ ownership: v as 'Non-Super' | 'Super Fund' })} />
+          <Sel label="Pay by Rollover" value={draft.lifeCover.payByRollover} options={['Exclude', 'Include']} onChange={(v) => updateLife({ payByRollover: v as 'Exclude' | 'Include' })} />
+        </Section>
 
         {/* TPE – TPD Extension to Life */}
-        <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-            <SectionCheck
-              label="TPD Extension to Life"
-              code="TPE"
-              checked={draft.tpd.enabled}
-              onChange={(v) => updateTpd({ enabled: v })}
-            />
-          </div>
-          {draft.tpd.enabled && (
-            <div className="px-6 py-3 space-y-0.5">
-              <Inp label="Sum Insured" value={draft.tpd.sumInsured} onChange={(v) => updateTpd({ sumInsured: v })} />
-              <Sel label="Premium Structure" value={draft.tpd.structure} options={['Stepped', 'Level']} onChange={(v) => updateTpd({ structure: v as 'Stepped' | 'Level' })} />
-              <Sel label="Premium Waiver" value={draft.tpd.premiumWaiver} options={['Exclude', 'Include if possible']} onChange={(v) => updateTpd({ premiumWaiver: v as 'Exclude' | 'Include if possible' })} />
-              <Sel label="Ownership" value={draft.tpd.ownership} options={['Non-Super', 'Super Fund']} onChange={(v) => updateTpd({ ownership: v as 'Non-Super' | 'Super Fund' })} />
-              <Sel label="Life Buy Back" value={draft.tpd.lifeBuyBack} options={['Exclude if possible', 'Include if possible']} onChange={(v) => updateTpd({ lifeBuyBack: v as 'Exclude if possible' | 'Include if possible' })} />
-              <Sel label="Double TPD" value={draft.tpd.doubleTpd} options={['Exclude if possible', 'Include if possible']} onChange={(v) => updateTpd({ doubleTpd: v as 'Exclude if possible' | 'Include if possible' })} />
-              <Sel label="Occupation Type" value={draft.tpd.occupationType} options={['Best Available', 'Own Occupation', 'Any Occupation']} onChange={(v) => updateTpd({ occupationType: v as 'Best Available' | 'Own Occupation' | 'Any Occupation' })} />
-              <Sel label="Pay by Rollover" value={draft.tpd.payByRollover} options={['Exclude', 'Include']} onChange={(v) => updateTpd({ payByRollover: v as 'Exclude' | 'Include' })} />
-            </div>
-          )}
-        </div>
+        <Section code="TPE" label="TPD Extension to Life" checked={draft.tpd.enabled} onToggle={(v) => updateTpd({ enabled: v })}>
+          <Inp label="Sum Insured" value={draft.tpd.sumInsured} onChange={(v) => updateTpd({ sumInsured: v })} />
+          <Sel label="Premium Structure" value={draft.tpd.structure} options={['Stepped', 'Level']} onChange={(v) => updateTpd({ structure: v as 'Stepped' | 'Level' })} />
+          <Sel label="Premium Waiver" value={draft.tpd.premiumWaiver} options={['Exclude', 'Include if possible']} onChange={(v) => updateTpd({ premiumWaiver: v as 'Exclude' | 'Include if possible' })} />
+          <Sel label="Ownership" value={draft.tpd.ownership} options={['Non-Super', 'Super Fund']} onChange={(v) => updateTpd({ ownership: v as 'Non-Super' | 'Super Fund' })} />
+          <Sel label="Life Buy Back" value={draft.tpd.lifeBuyBack} options={['Exclude if possible', 'Include if possible']} onChange={(v) => updateTpd({ lifeBuyBack: v as 'Exclude if possible' | 'Include if possible' })} />
+          <Sel label="Double TPD" value={draft.tpd.doubleTpd} options={['Exclude if possible', 'Include if possible']} onChange={(v) => updateTpd({ doubleTpd: v as 'Exclude if possible' | 'Include if possible' })} />
+          <Sel label="Occupation Type" value={draft.tpd.occupationType} options={['Best Available', 'Own Occupation', 'Any Occupation']} onChange={(v) => updateTpd({ occupationType: v as 'Best Available' | 'Own Occupation' | 'Any Occupation' })} />
+          <Sel label="Pay by Rollover" value={draft.tpd.payByRollover} options={['Exclude', 'Include']} onChange={(v) => updateTpd({ payByRollover: v as 'Exclude' | 'Include' })} />
+        </Section>
 
         {/* TRE – Trauma Extension to Life */}
-        <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-            <SectionCheck
-              label="Trauma Extension to Life"
-              code="TRE"
-              checked={draft.trauma.enabled}
-              onChange={(v) => updateTrauma({ enabled: v })}
-            />
-          </div>
-        </div>
+        <Section code="TRE" label="Trauma Extension to Life" checked={draft.trauma.enabled} onToggle={(v) => updateTrauma({ enabled: v })}>
+          <Inp label="Sum Insured" value={draft.trauma.sumInsured} onChange={(v) => updateTrauma({ sumInsured: v })} />
+          <Sel label="Premium Structure" value={draft.trauma.structure} options={EXTENDED_STRUCTURE} onChange={(v) => updateTrauma({ structure: v as TraumaOptions['structure'] })} />
+          <Sel label="Life Buy Back" value={draft.trauma.lifeBuyBack} options={LIFE_BUY_BACK} onChange={(v) => updateTrauma({ lifeBuyBack: v as TraumaOptions['lifeBuyBack'] })} />
+          <Sel label="Double Trauma" value={draft.trauma.doubleTrauma} options={THREE_WAY} onChange={(v) => updateTrauma({ doubleTrauma: v as TraumaOptions['doubleTrauma'] })} />
+          <Sel label="Trauma Reinstatement" value={draft.trauma.traumaReinstatement} options={THREE_WAY} onChange={(v) => updateTrauma({ traumaReinstatement: v as TraumaOptions['traumaReinstatement'] })} />
+          <Sel label="Premium Waiver" value={draft.trauma.premiumWaiver} options={PREMIUM_WAIVER} onChange={(v) => updateTrauma({ premiumWaiver: v as TraumaOptions['premiumWaiver'] })} />
+          <Sel label="Baby Care" value={draft.trauma.babyCare} options={BABY_CARE} onChange={(v) => updateTrauma({ babyCare: v as TraumaOptions['babyCare'] })} />
+          <Sel label="Priority" value={draft.trauma.priority} options={TRAUMA_PRIORITY} onChange={(v) => updateTrauma({ priority: v as TraumaOptions['priority'] })} />
+        </Section>
 
-        {/* TPS – Total And Permanent Disability (Standalone) */}
-        <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-            <SectionCheck
-              label="Total and Permanent Disability"
-              code="TPS"
-              checked={false}
-              onChange={() => {}}
-            />
-          </div>
-        </div>
+        {/* TPS – Total and Permanent Disability (Standalone) */}
+        <Section code="TPS" label="Total and Permanent Disability" checked={draft.tpdStandalone.enabled} onToggle={(v) => updateTpdStandalone({ enabled: v })}>
+          <Inp label="Sum Insured" value={draft.tpdStandalone.sumInsured} onChange={(v) => updateTpdStandalone({ sumInsured: v })} />
+          <Sel label="Owner" value={draft.tpdStandalone.owner} options={TPS_OWNER} onChange={(v) => updateTpdStandalone({ owner: v as TpdStandaloneOptions['owner'] })} />
+          <Sel label="Rollover" value={draft.tpdStandalone.rollover} options={ROLLOVER} onChange={(v) => updateTpdStandalone({ rollover: v as TpdStandaloneOptions['rollover'] })} />
+          <Sel label="Premium Structure" value={draft.tpdStandalone.structure} options={EXTENDED_STRUCTURE} onChange={(v) => updateTpdStandalone({ structure: v as TpdStandaloneOptions['structure'] })} />
+          <Sel label="Occupation Type" value={draft.tpdStandalone.occupationType} options={OCCUPATION_TYPE} onChange={(v) => updateTpdStandalone({ occupationType: v as TpdStandaloneOptions['occupationType'] })} />
+          <Sel label="Premium Waiver" value={draft.tpdStandalone.premiumWaiver} options={PREMIUM_WAIVER} onChange={(v) => updateTpdStandalone({ premiumWaiver: v as TpdStandaloneOptions['premiumWaiver'] })} />
+        </Section>
 
         {/* TRS – Trauma (Standalone) */}
-        <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-            <SectionCheck
-              label="Trauma"
-              code="TRS"
-              checked={false}
-              onChange={() => {}}
-            />
-          </div>
-        </div>
+        <Section code="TRS" label="Trauma" checked={draft.traumaStandalone.enabled} onToggle={(v) => updateTraumaStandalone({ enabled: v })}>
+          <Inp label="Sum Insured" value={draft.traumaStandalone.sumInsured} onChange={(v) => updateTraumaStandalone({ sumInsured: v })} />
+          <Sel label="Premium Structure" value={draft.traumaStandalone.structure} options={EXTENDED_STRUCTURE} onChange={(v) => updateTraumaStandalone({ structure: v as TraumaStandaloneOptions['structure'] })} />
+          <Sel label="Trauma Reinstatement" value={draft.traumaStandalone.traumaReinstatement} options={THREE_WAY} onChange={(v) => updateTraumaStandalone({ traumaReinstatement: v as TraumaStandaloneOptions['traumaReinstatement'] })} />
+          <Sel label="Premium Waiver" value={draft.traumaStandalone.premiumWaiver} options={PREMIUM_WAIVER} onChange={(v) => updateTraumaStandalone({ premiumWaiver: v as TraumaStandaloneOptions['premiumWaiver'] })} />
+          <Sel label="Baby Care" value={draft.traumaStandalone.babyCare} options={BABY_CARE} onChange={(v) => updateTraumaStandalone({ babyCare: v as TraumaStandaloneOptions['babyCare'] })} />
+          <Sel label="Priority" value={draft.traumaStandalone.priority} options={TRAUMA_PRIORITY} onChange={(v) => updateTraumaStandalone({ priority: v as TraumaStandaloneOptions['priority'] })} />
+        </Section>
 
         {/* INC – Income Protection */}
-        <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-            <SectionCheck
-              label="Income Protection"
-              code="INC"
-              checked={draft.incomeProtection.enabled}
-              onChange={(v) => updateIp({ enabled: v })}
-            />
-          </div>
-          {draft.incomeProtection.enabled && (
-            <div className="px-6 py-3 space-y-0.5">
-              <Inp label="Monthly Benefit" value={draft.incomeProtection.monthlyBenefit} onChange={(v) => updateIp({ monthlyBenefit: v })} />
-              <Sel label="Premium Structure" value={draft.incomeProtection.structure} options={['Stepped', 'Level']} onChange={(v) => updateIp({ structure: v as 'Stepped' | 'Level' })} />
-              <Sel label="Ownership" value={draft.incomeProtection.ownership} options={['Non-Super', 'Super Fund']} onChange={(v) => updateIp({ ownership: v as 'Non-Super' | 'Super Fund' })} />
-              <Sel label="Waiting Period" value={draft.incomeProtection.waitingPeriod} options={['14 days', '30 days', '60 days', '90 days']} onChange={(v) => updateIp({ waitingPeriod: v as '14 days' | '30 days' | '60 days' | '90 days' })} />
-              <Sel label="Benefit Period" value={draft.incomeProtection.benefitPeriod} options={['2 years', '5 years', 'To age 65', 'To age 70']} onChange={(v) => updateIp({ benefitPeriod: v as '2 years' | '5 years' | 'To age 65' | 'To age 70' })} />
-              <Sel label="Increase Claim Benefit" value={draft.incomeProtection.increaseClaimBenefit} options={['Exclude if possible', 'Include if possible']} onChange={(v) => updateIp({ increaseClaimBenefit: v as 'Exclude if possible' | 'Include if possible' })} />
-              <Sel label="Accident Benefit" value={draft.incomeProtection.accidentBenefit} options={['Exclude if possible', 'Include if possible']} onChange={(v) => updateIp({ accidentBenefit: v as 'Exclude if possible' | 'Include if possible' })} />
-              <Sel label="Pay by Rollover" value={draft.incomeProtection.payByRollover} options={['Exclude', 'Include']} onChange={(v) => updateIp({ payByRollover: v as 'Exclude' | 'Include' })} />
-              <Sel label="IP Features" value={draft.incomeProtection.ipFeatures} options={['Standard', 'Enhanced']} onChange={(v) => updateIp({ ipFeatures: v as 'Standard' | 'Enhanced' })} />
-            </div>
-          )}
-        </div>
+        <Section code="INC" label="Income Protection" checked={draft.incomeProtection.enabled} onToggle={(v) => updateIp({ enabled: v })}>
+          <Inp label="Monthly Benefit" value={draft.incomeProtection.monthlyBenefit} onChange={(v) => updateIp({ monthlyBenefit: v })} />
+          <Inp label="Super Contribution Option" value={draft.incomeProtection.superContributionOption} onChange={(v) => updateIp({ superContributionOption: v })} placeholder="Monthly amount" />
+          <Sel label="Owner" value={draft.incomeProtection.owner} options={TPR_OWNER} onChange={(v) => updateIp({ owner: v as IncomeProtectionOptions['owner'] })} />
+          <Sel label="Rollover" value={draft.incomeProtection.rollover} options={ROLLOVER} onChange={(v) => updateIp({ rollover: v as IncomeProtectionOptions['rollover'] })} />
+          <Sel label="Premium Structure" value={draft.incomeProtection.structure} options={IP_STRUCTURE} onChange={(v) => updateIp({ structure: v as IncomeProtectionOptions['structure'] })} />
+          <Sel label="Agreed Value" value={draft.incomeProtection.agreedValue} options={IP_AGREED} onChange={(v) => updateIp({ agreedValue: v as IncomeProtectionOptions['agreedValue'] })} />
+          <Sel label="Accident Benefit" value={draft.incomeProtection.accidentBenefit} options={IP_ACCIDENT} onChange={(v) => updateIp({ accidentBenefit: v as IncomeProtectionOptions['accidentBenefit'] })} />
+          <Sel label="Increase Claim Benefit" value={draft.incomeProtection.increaseClaimBenefit} options={IP_ACCIDENT} onChange={(v) => updateIp({ increaseClaimBenefit: v as IncomeProtectionOptions['increaseClaimBenefit'] })} />
+          <Sel label="Waiting Period" value={draft.incomeProtection.waitingPeriod} options={IP_WAITING} onChange={(v) => updateIp({ waitingPeriod: v as IncomeProtectionOptions['waitingPeriod'] })} />
+          <Sel label="Benefit Period" value={draft.incomeProtection.benefitPeriod} options={IP_BENEFIT} onChange={(v) => updateIp({ benefitPeriod: v as IncomeProtectionOptions['benefitPeriod'] })} />
+          <Sel label="Initial Replacement Ratio" value={draft.incomeProtection.initialReplacementRatio} options={IP_RATIO} onChange={(v) => updateIp({ initialReplacementRatio: v as IncomeProtectionOptions['initialReplacementRatio'] })} />
+          <Sel label="Priority" value={draft.incomeProtection.priority} options={TRAUMA_PRIORITY} onChange={(v) => updateIp({ priority: v as IncomeProtectionOptions['priority'] })} />
+        </Section>
 
         {/* BUS – Business Expenses */}
-        <div className="border border-gray-200 rounded overflow-hidden">
-          <div className="px-4 py-1 bg-gray-50 border-b border-gray-200">
-            <SectionCheck
-              label="Business Expenses"
-              code="BUS"
-              checked={draft.businessExpenses.enabled}
-              onChange={(v) => updateBe({ enabled: v })}
-            />
-          </div>
-        </div>
+        <Section code="BUS" label="Business Expenses" checked={draft.businessExpenses.enabled} onToggle={(v) => updateBe({ enabled: v })} />
       </div>
 
-      {/* Footer */}
       <div className="flex items-center justify-end gap-3 px-8 py-4 border-t border-gray-200 bg-gray-50">
         <Button variant="outline" onClick={onCancel}>
           Cancel

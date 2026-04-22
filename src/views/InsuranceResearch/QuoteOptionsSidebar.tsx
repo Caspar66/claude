@@ -117,7 +117,7 @@ export function QuoteOptionsSidebar({
 
       {/* Trauma Extension */}
       <div className="border-t border-gray-200 px-3 py-1">
-        <SectionCheck label="Trauma Extension" checked={trauma.enabled} onChange={(v) => onTraumaChange({ enabled: v })} />
+        <SectionCheck label="Trauma Extension" checked={trauma.enabled} onChange={(v) => onTraumaChange({ ...trauma, enabled: v })} />
       </div>
 
       {/* Total And Permanent Disability (standalone, disabled label) */}
@@ -136,14 +136,14 @@ export function QuoteOptionsSidebar({
         {incomeProtection.enabled && (
           <div className="pl-6 pb-2 space-y-0.5">
             <Inp label="Monthly Benefit" value={incomeProtection.monthlyBenefit} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, monthlyBenefit: v })} />
-            <Sel label="Structure" value={incomeProtection.structure} options={['Stepped', 'Level']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, structure: v as 'Stepped' | 'Level' })} />
-            <Sel label="Ownership" value={incomeProtection.ownership} options={['Non-Super', 'Super Fund']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, ownership: v as 'Non-Super' | 'Super Fund' })} />
-            <Sel label="Waiting Period" value={incomeProtection.waitingPeriod} options={['14 days', '30 days', '60 days', '90 days']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, waitingPeriod: v as '14 days' | '30 days' | '60 days' | '90 days' })} />
-            <Sel label="Benefit Period" value={incomeProtection.benefitPeriod} options={['2 years', '5 years', 'To age 65', 'To age 70']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, benefitPeriod: v as '2 years' | '5 years' | 'To age 65' | 'To age 70' })} />
-            <Sel label="Increase Claim Benefit" value={incomeProtection.increaseClaimBenefit} options={['Exclude if possible', 'Include if possible']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, increaseClaimBenefit: v as 'Exclude if possible' | 'Include if possible' })} />
-            <Sel label="Accident Benefit" value={incomeProtection.accidentBenefit} options={['Exclude if possible', 'Include if possible']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, accidentBenefit: v as 'Exclude if possible' | 'Include if possible' })} />
-            <Sel label="Pay by Rollover" value={incomeProtection.payByRollover} options={['Exclude', 'Include']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, payByRollover: v as 'Exclude' | 'Include' })} />
-            <Sel label="IP Features" value={incomeProtection.ipFeatures} options={['Standard', 'Enhanced']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, ipFeatures: v as 'Standard' | 'Enhanced' })} />
+            <Sel label="Structure" value={incomeProtection.structure} options={['Stepped', 'Blended', 'Level']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, structure: v as 'Stepped' | 'Blended' | 'Level' })} />
+            <Sel label="Owner" value={incomeProtection.owner} options={['Non-Super', 'SMSF', 'Super', 'SuperLink', 'SMSF SuperLink']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, owner: v as IncomeProtectionOptions['owner'] })} />
+            <Sel label="Waiting Period" value={incomeProtection.waitingPeriod} options={['14 days', '30 days', '60 days', '90 days', '180 days', '1 year', '2 years']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, waitingPeriod: v as IncomeProtectionOptions['waitingPeriod'] })} />
+            <Sel label="Benefit Period" value={incomeProtection.benefitPeriod} options={['1 year', '2 years', '5 years', 'To age 55', 'To age 60', 'To age 65', 'To age 67', 'To age 70']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, benefitPeriod: v as IncomeProtectionOptions['benefitPeriod'] })} />
+            <Sel label="Increase Claim Benefit" value={incomeProtection.increaseClaimBenefit} options={['Exclude if possible', 'Include if possible', 'Include', 'Exclude']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, increaseClaimBenefit: v as IncomeProtectionOptions['increaseClaimBenefit'] })} />
+            <Sel label="Accident Benefit" value={incomeProtection.accidentBenefit} options={['Exclude if possible', 'Include if possible', 'Include', 'Exclude']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, accidentBenefit: v as IncomeProtectionOptions['accidentBenefit'] })} />
+            <Sel label="Rollover" value={incomeProtection.rollover} options={['Include if possible', 'Exclude']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, rollover: v as IncomeProtectionOptions['rollover'] })} />
+            <Sel label="Agreed Value" value={incomeProtection.agreedValue} options={['Indemnity if possible', 'Indemnity']} onChange={(v) => onIncomeProtectionChange({ ...incomeProtection, agreedValue: v as IncomeProtectionOptions['agreedValue'] })} />
           </div>
         )}
       </div>

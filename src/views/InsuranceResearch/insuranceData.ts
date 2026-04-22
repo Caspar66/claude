@@ -225,21 +225,62 @@ export interface TpdOptions {
   payByRollover: 'Exclude' | 'Include';
 }
 
+export type ExtendedPremiumStructure = 'Stepped' | 'Blended' | 'Level to Age 65' | 'Level to Age 70';
+export type ThreeWayOption = 'Exclude if possible' | 'Include' | 'Exclude';
+export type PremiumWaiverOption = 'Include if possible' | 'Include' | 'Exclude';
+export type BabyCareOption = 'Exclude if possible' | 'Include if possible' | 'Include' | 'Exclude';
+export type TraumaPriority = 'Cheapest' | 'Best' | 'Intermediate';
+export type OwnerOption = 'Non-Super' | 'SMSF' | 'Super' | 'SuperLink' | 'SMSF SuperLink';
+export type RolloverOption = 'Include if possible' | 'Exclude';
+export type TpdOccupationType = 'Any' | 'Own' | 'Homemaker' | 'ADL' | 'Best available';
+export type LifeBuyBackOption = 'Exclude if possible' | 'Best available' | 'Exclude' | '1 year' | '3 years';
+
 export interface TraumaOptions {
   enabled: boolean;
+  sumInsured: string;
+  structure: ExtendedPremiumStructure;
+  lifeBuyBack: LifeBuyBackOption;
+  doubleTrauma: ThreeWayOption;
+  traumaReinstatement: ThreeWayOption;
+  premiumWaiver: PremiumWaiverOption;
+  babyCare: BabyCareOption;
+  priority: TraumaPriority;
+}
+
+export interface TpdStandaloneOptions {
+  enabled: boolean;
+  sumInsured: string;
+  owner: OwnerOption;
+  rollover: RolloverOption;
+  structure: ExtendedPremiumStructure;
+  occupationType: TpdOccupationType;
+  premiumWaiver: PremiumWaiverOption;
+}
+
+export interface TraumaStandaloneOptions {
+  enabled: boolean;
+  sumInsured: string;
+  structure: ExtendedPremiumStructure;
+  traumaReinstatement: ThreeWayOption;
+  premiumWaiver: PremiumWaiverOption;
+  babyCare: BabyCareOption;
+  priority: TraumaPriority;
 }
 
 export interface IncomeProtectionOptions {
   enabled: boolean;
   monthlyBenefit: string;
-  structure: 'Stepped' | 'Level';
-  ownership: 'Non-Super' | 'Super Fund';
-  waitingPeriod: '14 days' | '30 days' | '60 days' | '90 days';
-  benefitPeriod: '2 years' | '5 years' | 'To age 65' | 'To age 70';
-  increaseClaimBenefit: 'Exclude if possible' | 'Include if possible';
-  accidentBenefit: 'Exclude if possible' | 'Include if possible';
-  payByRollover: 'Exclude' | 'Include';
-  ipFeatures: 'Standard' | 'Enhanced';
+  superContributionOption: string;
+  owner: OwnerOption;
+  rollover: RolloverOption;
+  structure: 'Stepped' | 'Blended' | 'Level';
+  agreedValue: 'Indemnity if possible' | 'Indemnity';
+  accidentBenefit: 'Exclude if possible' | 'Include if possible' | 'Include' | 'Exclude';
+  increaseClaimBenefit: 'Exclude if possible' | 'Include if possible' | 'Include' | 'Exclude';
+  waitingPeriod: '14 days' | '30 days' | '60 days' | '90 days' | '180 days' | '1 year' | '2 years';
+  benefitPeriod: '1 year' | '2 years' | '5 years' | 'To age 55' | 'To age 60' | 'To age 65' | 'To age 67' | 'To age 70';
+  initialReplacementRatio: 'Any' | 'Greater than 75%' | '70% to 75%' | '60% to 69%' | 'Less than 60%';
+  priority: TraumaPriority;
 }
 
 export interface BusinessExpensesOptions {
@@ -485,6 +526,8 @@ export interface CoverQuote {
   lifeCover: LifeCoverOptions;
   tpd: TpdOptions;
   trauma: TraumaOptions;
+  tpdStandalone: TpdStandaloneOptions;
+  traumaStandalone: TraumaStandaloneOptions;
   incomeProtection: IncomeProtectionOptions;
   businessExpenses: BusinessExpensesOptions;
 }
@@ -496,7 +539,9 @@ export function getDefaultCoverQuote(name: string, lifeInsured: 'client' | 'part
     lifeInsured,
     lifeCover: getDefaultLifeCover(),
     tpd: getDefaultTpd(),
-    trauma: { enabled: false },
+    trauma: getDefaultTraumaExtension(),
+    tpdStandalone: getDefaultTpdStandalone(),
+    traumaStandalone: getDefaultTraumaStandalone(),
     incomeProtection: { ...getDefaultIncomeProtection(), enabled: false },
     businessExpenses: { enabled: false },
   };
@@ -542,5 +587,57 @@ export function getDefaultTpd(): TpdOptions {
 }
 
 export function getDefaultIncomeProtection(): IncomeProtectionOptions {
-  return { enabled: true, monthlyBenefit: '$4,687', structure: 'Stepped', ownership: 'Non-Super', waitingPeriod: '30 days', benefitPeriod: 'To age 65', increaseClaimBenefit: 'Exclude if possible', accidentBenefit: 'Exclude if possible', payByRollover: 'Exclude', ipFeatures: 'Standard' };
+  return {
+    enabled: true,
+    monthlyBenefit: '$4,687',
+    superContributionOption: '',
+    owner: 'Non-Super',
+    rollover: 'Exclude',
+    structure: 'Stepped',
+    agreedValue: 'Indemnity',
+    accidentBenefit: 'Exclude if possible',
+    increaseClaimBenefit: 'Exclude if possible',
+    waitingPeriod: '30 days',
+    benefitPeriod: 'To age 65',
+    initialReplacementRatio: 'Any',
+    priority: 'Cheapest',
+  };
+}
+
+export function getDefaultTraumaExtension(): TraumaOptions {
+  return {
+    enabled: false,
+    sumInsured: '$200,000',
+    structure: 'Stepped',
+    lifeBuyBack: 'Exclude if possible',
+    doubleTrauma: 'Exclude if possible',
+    traumaReinstatement: 'Exclude if possible',
+    premiumWaiver: 'Exclude',
+    babyCare: 'Exclude if possible',
+    priority: 'Cheapest',
+  };
+}
+
+export function getDefaultTpdStandalone(): TpdStandaloneOptions {
+  return {
+    enabled: false,
+    sumInsured: '$350,000',
+    owner: 'Non-Super',
+    rollover: 'Exclude',
+    structure: 'Stepped',
+    occupationType: 'Best available',
+    premiumWaiver: 'Exclude',
+  };
+}
+
+export function getDefaultTraumaStandalone(): TraumaStandaloneOptions {
+  return {
+    enabled: false,
+    sumInsured: '$200,000',
+    structure: 'Stepped',
+    traumaReinstatement: 'Exclude if possible',
+    premiumWaiver: 'Exclude',
+    babyCare: 'Exclude if possible',
+    priority: 'Cheapest',
+  };
 }

@@ -23,6 +23,7 @@ import {
   getDefaultQuoteOptions,
   getDefaultLifeCover,
   getDefaultTpd,
+  getDefaultTraumaExtension,
   getDefaultIncomeProtection,
   buildPoliciesFromSelection,
   PROVIDER_LIST,
@@ -171,7 +172,7 @@ export function InsuranceComparisonDialog({
   const [quoteOptions, setQuoteOptions] = useState<QuoteOptions>(getDefaultQuoteOptions());
   const [lifeCover, setLifeCover] = useState<LifeCoverOptions>(getDefaultLifeCover());
   const [tpd, setTpd] = useState<TpdOptions>(getDefaultTpd());
-  const [trauma, setTrauma] = useState<TraumaOptions>({ enabled: false });
+  const [trauma, setTrauma] = useState<TraumaOptions>(getDefaultTraumaExtension());
   const [incomeProtection, setIncomeProtection] = useState<IncomeProtectionOptions>(getDefaultIncomeProtection());
   const [businessExpenses, setBusinessExpenses] = useState<BusinessExpensesOptions>({ enabled: false });
 
@@ -208,7 +209,7 @@ export function InsuranceComparisonDialog({
     setQuoteOptions(getDefaultQuoteOptions());
     setLifeCover(getDefaultLifeCover());
     setTpd(getDefaultTpd());
-    setTrauma({ enabled: false });
+    setTrauma(getDefaultTraumaExtension());
     setIncomeProtection(getDefaultIncomeProtection());
     setBusinessExpenses({ enabled: false });
     setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'QLD'));
