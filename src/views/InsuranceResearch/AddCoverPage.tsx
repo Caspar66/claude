@@ -114,6 +114,13 @@ function parseMoney(s: string): number {
   return isNaN(n) ? 0 : n;
 }
 
+function sanitizeMoneyInput(s: string): string {
+  const clean = s.replace(/[^0-9.]/g, '');
+  const firstDot = clean.indexOf('.');
+  if (firstDot === -1) return clean;
+  return clean.slice(0, firstDot + 1) + clean.slice(firstDot + 1).replace(/\./g, '');
+}
+
 export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, onCancel }: Props) {
   const { suppliers: legacySuppliers, loading: suppliersLoading } = useLegacySuppliers();
 
@@ -324,15 +331,17 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             <label className="text-sm italic text-slate-600">Super:</label>
             <input
               type="text"
+              inputMode="decimal"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={premiumSuper}
-              onChange={(e) => setPremiumSuper(e.target.value)}
+              onChange={(e) => setPremiumSuper(sanitizeMoneyInput(e.target.value))}
             />
             <input
               type="text"
+              inputMode="decimal"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={stampDutySuper}
-              onChange={(e) => setStampDutySuper(e.target.value)}
+              onChange={(e) => setStampDutySuper(sanitizeMoneyInput(e.target.value))}
             />
             <select
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -348,15 +357,17 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             <label className="text-sm italic text-slate-600">Non-Super:</label>
             <input
               type="text"
+              inputMode="decimal"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={premiumNonSuper}
-              onChange={(e) => setPremiumNonSuper(e.target.value)}
+              onChange={(e) => setPremiumNonSuper(sanitizeMoneyInput(e.target.value))}
             />
             <input
               type="text"
+              inputMode="decimal"
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={stampDutyNonSuper}
-              onChange={(e) => setStampDutyNonSuper(e.target.value)}
+              onChange={(e) => setStampDutyNonSuper(sanitizeMoneyInput(e.target.value))}
             />
             <select
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
