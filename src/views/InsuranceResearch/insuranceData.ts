@@ -177,6 +177,10 @@ export interface ExistingPolicy {
   premiumSuperFrequency: PremiumFrequency;
   premiumNonSuper: number;
   premiumNonSuperFrequency: PremiumFrequency;
+  stampDutySuper: number;
+  stampDutySuperFrequency: PremiumFrequency;
+  stampDutyNonSuper: number;
+  stampDutyNonSuperFrequency: PremiumFrequency;
   covers: ExistingCover[];
   action: 'Not Considered' | 'Review' | 'Replace' | 'Retain';
   researchPortfolio?: ResearchPortfolio;

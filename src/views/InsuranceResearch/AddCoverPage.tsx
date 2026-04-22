@@ -126,6 +126,10 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
   const [premiumSuperFreq, setPremiumSuperFreq] = useState<PremiumFrequency>('M');
   const [premiumNonSuper, setPremiumNonSuper] = useState('0');
   const [premiumNonSuperFreq, setPremiumNonSuperFreq] = useState<PremiumFrequency>('M');
+  const [stampDutySuper, setStampDutySuper] = useState('0');
+  const [stampDutySuperFreq, setStampDutySuperFreq] = useState<PremiumFrequency>('M');
+  const [stampDutyNonSuper, setStampDutyNonSuper] = useState('0');
+  const [stampDutyNonSuperFreq, setStampDutyNonSuperFreq] = useState<PremiumFrequency>('M');
 
   const [covers, setCovers] = useState<Record<ExistingCoverType, ExistingCover>>(() => {
     const init = {} as Record<ExistingCoverType, ExistingCover>;
@@ -214,6 +218,10 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
       premiumSuperFrequency: premiumSuperFreq,
       premiumNonSuper: parseMoney(premiumNonSuper),
       premiumNonSuperFrequency: premiumNonSuperFreq,
+      stampDutySuper: parseMoney(stampDutySuper),
+      stampDutySuperFrequency: stampDutySuperFreq,
+      stampDutyNonSuper: parseMoney(stampDutyNonSuper),
+      stampDutyNonSuperFrequency: stampDutyNonSuperFreq,
       covers: coversWithSumInsured,
       action: 'Not Considered',
     };
@@ -340,6 +348,42 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
               className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={premiumNonSuperFreq}
               onChange={(e) => setPremiumNonSuperFreq(e.target.value as PremiumFrequency)}
+            >
+              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-[160px_140px_120px_auto] gap-2 items-center mb-2">
+            <label className="text-sm italic text-slate-600">Stamp Duty (Super):</label>
+            <input
+              type="text"
+              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={stampDutySuper}
+              onChange={(e) => setStampDutySuper(e.target.value)}
+            />
+            <select
+              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={stampDutySuperFreq}
+              onChange={(e) => setStampDutySuperFreq(e.target.value as PremiumFrequency)}
+            >
+              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-[160px_140px_120px_auto] gap-2 items-center mb-2">
+            <label className="text-sm italic text-slate-600">Stamp Duty (Non-super):</label>
+            <input
+              type="text"
+              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={stampDutyNonSuper}
+              onChange={(e) => setStampDutyNonSuper(e.target.value)}
+            />
+            <select
+              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={stampDutyNonSuperFreq}
+              onChange={(e) => setStampDutyNonSuperFreq(e.target.value as PremiumFrequency)}
             >
               {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
                 <option key={code} value={code}>{label}</option>

@@ -190,14 +190,16 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     } else {
       const inside = annualise(policy.premiumSuper, policy.premiumSuperFrequency);
       const outside = annualise(policy.premiumNonSuper, policy.premiumNonSuperFrequency);
+      const stampIn = annualise(policy.stampDutySuper, policy.stampDutySuperFrequency);
+      const stampOut = annualise(policy.stampDutyNonSuper, policy.stampDutyNonSuperFrequency);
       setSupplierFilter('');
       setSupplierName('');
       setRevisionDate('');
       setManualLinkMode(false);
       setPremiumInside(inside.toFixed(2));
       setPremiumOutside(outside.toFixed(2));
-      setStampDutyInside('0');
-      setStampDutyOutside('0');
+      setStampDutyInside(stampIn.toFixed(2));
+      setStampDutyOutside(stampOut.toFixed(2));
       setProductSelections({});
       setExtensionFlags({});
       setAllProducts([]);
@@ -255,9 +257,9 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
 
     for (const [code, entry] of Object.entries(saved) as [CoverNeedCode, { productCode: string }][]) {
       if (!entry?.productCode) continue;
-      const product = allProducts.find(
-        (p) => p.supportedCoverTypes[code]?.researchProductCode === entry.productCode,
-      );
+      const product =
+        allProducts.find((p) => p.supportedCoverTypes[code]?.researchProductCode === entry.productCode)
+        ?? allProducts.find((p) => p.productCode === entry.productCode && p.supportedCoverTypes[code]);
       if (!product) continue;
 
       if (!pendingRestore.existingCover) {
