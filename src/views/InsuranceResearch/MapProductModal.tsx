@@ -7,7 +7,6 @@ import { fetchLegacyProducts } from '@/services/omnilifeApi';
 import type { LegacyProduct } from '@/services/omnilifeApi';
 import type { ExistingPolicy, ExistingCover, CoverNeedCode, ResearchPortfolio } from './insuranceData';
 import {
-  COVER_NEED_CODE_LABELS,
   PREMIUM_FREQUENCY_MULTIPLIER,
   coverToNeedCode,
 } from './insuranceData';
@@ -68,18 +67,6 @@ function buildCoverGroups(covers: ExistingCover[]): CoverGroup[] {
   }
 
   return groups;
-}
-
-function filterProductsForGroup(products: LegacyProduct[], group: CoverGroup): LegacyProduct[] {
-  return products.filter((product) => {
-    for (const entry of group.entries) {
-      const sct = product.supportedCoverTypes[entry.code];
-      if (!sct) return false;
-      if (entry.code === 'TRM' && group.isLinkedGroup && !sct.mandatory) return false;
-      if (entry.ownership && sct.ownership && sct.ownership !== entry.ownership) return false;
-    }
-    return true;
-  });
 }
 
 // ── Manual-mode section definitions ─────────────────────────────────────────
@@ -149,11 +136,6 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     return buildCoverGroups(policy.covers);
   }, [policy]);
 
-  const primaryCodes = useMemo(
-    () => coverGroups.map((g) => g.entries[0].code),
-    [coverGroups],
-  );
-
   // ── Shared derived data ─────────────────────────────────────────────────
 
   const selectedPortfolio = useMemo(
@@ -168,17 +150,6 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       p.supplierName.toLowerCase().includes(q) || p.supplierCode.toLowerCase().includes(q),
     );
   }, [portfolios, supplierFilter]);
-
-  // ── Manual-mode: products filtered per section ──────────────────────────
-
-  const productsBySection = useMemo(() => {
-    const map: Partial<Record<CoverNeedCode, LegacyProduct[]>> = {};
-    for (const section of MANUAL_SECTIONS) {
-      const filtered = allProducts.filter((p) => p.supportedCoverTypes[section.code]);
-      if (filtered.length > 0) map[section.code] = filtered;
-    }
-    return map;
-  }, [allProducts]);
 
   // ── Reset effects ───────────────────────────────────────────────────────
 
@@ -206,6 +177,15 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       const outside = annualise(policy.premiumNonSuper, policy.nonSuperFrequency);
       const stampIn = annualise(policy.stampDutySuper, policy.superFrequency);
       const stampOut = annualise(policy.stampDutyNonSuper, policy.nonSuperFrequency);
+      const initialExtFlags: Partial<Record<ExtensionCode, boolean>> = {};
+      for (const group of buildCoverGroups(policy.covers)) {
+        for (let i = 1; i < group.entries.length; i++) {
+          const code = group.entries[i].code;
+          if (code === 'TPE' || code === 'TRE' || code === 'TPR') {
+            initialExtFlags[code] = true;
+          }
+        }
+      }
       setSupplierFilter('');
       setSupplierName('');
       setRevisionDate('');
@@ -215,7 +195,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       setStampDutyInside(stampIn.toFixed(2));
       setStampDutyOutside(stampOut.toFixed(2));
       setProductSelections({});
-      setExtensionFlags({});
+      setExtensionFlags(initialExtFlags);
       setAllProducts([]);
       setProductsError(null);
       setPendingRestore(null);
@@ -227,14 +207,12 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     setRevisionDate('');
     setAllProducts([]);
     setProductSelections({});
-    setExtensionFlags({});
     setProductsError(null);
   }, [supplierName]);
 
   useEffect(() => {
     if (pendingRestore) return;
     setProductSelections({});
-    setExtensionFlags({});
   }, [manualLinkMode]);
 
   // ── Fetch products ──────────────────────────────────────────────────────
@@ -320,29 +298,33 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     return product?.supportedCoverTypes[coverCode]?.researchProductCode || topLevelProductCode;
   }
 
+  const activeSections = useMemo<ManualSection[]>(() => {
+    if (manualLinkMode) return MANUAL_SECTIONS;
+    const codes = new Set(coverGroups.map((g) => g.entries[0].code));
+    return MANUAL_SECTIONS.filter((s) => codes.has(s.code));
+  }, [manualLinkMode, coverGroups]);
+
+  const ownershipByPrimary = useMemo(() => {
+    const map: Partial<Record<CoverNeedCode, string>> = {};
+    for (const g of coverGroups) {
+      const primary = g.entries[0];
+      if (primary.ownership) map[primary.code] = primary.ownership;
+    }
+    return map;
+  }, [coverGroups]);
+
   function handleAdd() {
     if (!policy || !selectedPortfolio || !revisionDate) return;
     const products: Partial<Record<CoverNeedCode, { productCode: string }>> = {};
 
-    if (!manualLinkMode) {
-      for (const group of coverGroups) {
-        const primary = group.entries[0];
-        const selectedCode = productSelections[primary.code];
-        if (!selectedCode) continue;
-        for (const entry of group.entries) {
-          products[entry.code] = { productCode: resolveResearchCode(selectedCode, entry.code) };
-        }
-      }
-    } else {
-      for (const section of MANUAL_SECTIONS) {
-        const selectedCode = productSelections[section.code];
-        if (!selectedCode) continue;
-        products[section.code] = { productCode: resolveResearchCode(selectedCode, section.code) };
-        if (section.extensions) {
-          for (const ext of section.extensions) {
-            if (extensionFlags[ext.code] && selectedProductSupports(section.code, ext.code)) {
-              products[ext.code] = { productCode: resolveResearchCode(selectedCode, ext.code) };
-            }
+    for (const section of activeSections) {
+      const selectedCode = productSelections[section.code];
+      if (!selectedCode) continue;
+      products[section.code] = { productCode: resolveResearchCode(selectedCode, section.code) };
+      if (section.extensions) {
+        for (const ext of section.extensions) {
+          if (extensionFlags[ext.code] && selectedProductSupports(section.code, ext.code)) {
+            products[ext.code] = { productCode: resolveResearchCode(selectedCode, ext.code) };
           }
         }
       }
@@ -365,16 +347,29 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   const canAdd = useMemo(() => {
     if (!selectedPortfolio || !revisionDate) return false;
     if (!manualLinkMode) {
-      return primaryCodes.every((c) => productSelections[c]);
+      return activeSections.every((s) => productSelections[s.code]);
     }
     return Object.values(productSelections).some((v) => v);
-  }, [selectedPortfolio, revisionDate, manualLinkMode, primaryCodes, productSelections]);
+  }, [selectedPortfolio, revisionDate, manualLinkMode, activeSections, productSelections]);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
-  function renderManualSection(section: ManualSection) {
-    const sectionProducts = productsBySection[section.code];
-    if (!sectionProducts || sectionProducts.length === 0) return null;
+  function renderSection(section: ManualSection) {
+    const ownership = manualLinkMode ? undefined : ownershipByPrimary[section.code];
+    const activeExts = (section.extensions ?? []).filter((e) => extensionFlags[e.code]);
+    const isLinkedPrimary = activeExts.length > 0;
+
+    const sectionProducts = allProducts.filter((p) => {
+      const sct = p.supportedCoverTypes[section.code];
+      if (!sct) return false;
+      if (ownership && sct.ownership && sct.ownership !== ownership) return false;
+      if (section.code === 'TRM' && isLinkedPrimary && !sct.mandatory) return false;
+      for (const ext of activeExts) {
+        if (!p.supportedCoverTypes[ext.code]) return false;
+      }
+      return true;
+    });
+    if (sectionProducts.length === 0) return null;
 
     const selectedCode = productSelections[section.code];
 
@@ -399,16 +394,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
         <select
           className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={selectedCode ?? ''}
-          onChange={(e) => {
-            setProductSelections((prev) => ({ ...prev, [section.code]: e.target.value }));
-            if (section.extensions) {
-              setExtensionFlags((prev) => {
-                const next = { ...prev };
-                for (const ext of section.extensions!) delete next[ext.code];
-                return next;
-              });
-            }
-          }}
+          onChange={(e) => setProductSelections((prev) => ({ ...prev, [section.code]: e.target.value }))}
         >
           <option value="">{section.placeholder}</option>
           {sectionProducts.map((p) => (
@@ -506,51 +492,8 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
             </label>
           )}
 
-          {/* Products: filtered mode (auto-matched to existing covers) */}
-          {selectedPortfolio && revisionDate && !manualLinkMode && (
-            <div className="space-y-3">
-              {productsLoading && (
-                <div className="flex items-center gap-2 text-xs text-slate-500">
-                  <Loader2 size={12} className="animate-spin" /> Loading products…
-                </div>
-              )}
-              {productsError && (
-                <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-amber-800 text-xs">
-                  <AlertTriangle size={14} /> {productsError}
-                </div>
-              )}
-              {!productsLoading && !productsError && coverGroups.map((group, groupIdx) => {
-                const primary = group.entries[0];
-                const filtered = filterProductsForGroup(allProducts, group);
-                return (
-                  <div key={groupIdx} className="grid grid-cols-[200px_1fr] gap-3 items-start">
-                    <div className="text-xs text-slate-700 pt-1.5">
-                      {group.entries.map((entry, i) => (
-                        <div key={entry.code} className={i === 0 ? 'font-medium' : 'text-slate-500'}>
-                          {COVER_NEED_CODE_LABELS[entry.code]}:
-                        </div>
-                      ))}
-                    </div>
-                    <select
-                      className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      value={productSelections[primary.code] ?? ''}
-                      onChange={(e) => setProductSelections((prev) => ({ ...prev, [primary.code]: e.target.value }))}
-                    >
-                      <option value="">Select a product</option>
-                      {filtered.map((p) => (
-                        <option key={p.productCode + '::' + p.productName} value={p.productCode}>
-                          {p.productName || p.productCode}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Products: manual mode (all cover types) */}
-          {selectedPortfolio && revisionDate && manualLinkMode && (
+          {/* Products */}
+          {selectedPortfolio && revisionDate && (
             <div className="space-y-4">
               {productsLoading && (
                 <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -562,7 +505,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                   <AlertTriangle size={14} /> {productsError}
                 </div>
               )}
-              {!productsLoading && !productsError && MANUAL_SECTIONS.map((s) => renderManualSection(s))}
+              {!productsLoading && !productsError && activeSections.map((s) => renderSection(s))}
             </div>
           )}
 
