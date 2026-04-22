@@ -114,7 +114,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   const [supplierFilter, setSupplierFilter] = useState('');
   const [supplierName, setSupplierName] = useState('');
   const [revisionDate, setRevisionDate] = useState('');
-  const [existingCoverMode, setExistingCoverMode] = useState(true);
+  const [manualLinkMode, setManualLinkMode] = useState(false);
   const [premiumInside, setPremiumInside] = useState('0');
   const [premiumOutside, setPremiumOutside] = useState('0');
   const [stampDutyInside, setStampDutyInside] = useState('0');
@@ -174,7 +174,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     setSupplierFilter('');
     setSupplierName('');
     setRevisionDate('');
-    setExistingCoverMode(true);
+    setManualLinkMode(false);
     setPremiumInside(inside.toFixed(2));
     setPremiumOutside(outside.toFixed(2));
     setStampDutyInside('0');
@@ -196,7 +196,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   useEffect(() => {
     setProductSelections({});
     setExtensionFlags({});
-  }, [existingCoverMode]);
+  }, [manualLinkMode]);
 
   // ── Fetch products ──────────────────────────────────────────────────────
 
@@ -239,7 +239,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     if (!policy || !selectedPortfolio || !revisionDate) return;
     const products: Partial<Record<CoverNeedCode, { productCode: string }>> = {};
 
-    if (existingCoverMode) {
+    if (!manualLinkMode) {
       for (const group of coverGroups) {
         const primary = group.entries[0];
         const productCode = productSelections[primary.code];
@@ -266,7 +266,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     const portfolio: ResearchPortfolio = {
       supplierCode: selectedPortfolio.supplierCode,
       revisionDate,
-      existingCover: existingCoverMode,
+      existingCover: !manualLinkMode,
       premiumInsideSuperAnnualised: parseFloat(premiumInside) || 0,
       premiumOutsideSuperAnnualised: parseFloat(premiumOutside) || 0,
       stampDutyInsideSuperAnnualised: parseFloat(stampDutyInside) || 0,
@@ -279,11 +279,11 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
 
   const canAdd = useMemo(() => {
     if (!selectedPortfolio || !revisionDate) return false;
-    if (existingCoverMode) {
+    if (!manualLinkMode) {
       return primaryCodes.every((c) => productSelections[c]);
     }
     return Object.values(productSelections).some((v) => v);
-  }, [selectedPortfolio, revisionDate, existingCoverMode, primaryCodes, productSelections]);
+  }, [selectedPortfolio, revisionDate, manualLinkMode, primaryCodes, productSelections]);
 
   // ── Render ──────────────────────────────────────────────────────────────
 
@@ -408,21 +408,21 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
             </div>
           )}
 
-          {/* Existing cover toggle */}
+          {/* Manually link cover toggle */}
           {selectedPortfolio && revisionDate && (
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
-                checked={existingCoverMode}
-                onChange={(e) => setExistingCoverMode(e.target.checked)}
+                checked={manualLinkMode}
+                onChange={(e) => setManualLinkMode(e.target.checked)}
                 className="accent-blue-600"
               />
-              Existing cover
+              Manually link cover
             </label>
           )}
 
-          {/* Products: auto mode (existing cover) */}
-          {selectedPortfolio && revisionDate && existingCoverMode && (
+          {/* Products: filtered mode (auto-matched to existing covers) */}
+          {selectedPortfolio && revisionDate && !manualLinkMode && (
             <div className="space-y-3">
               {productsLoading && (
                 <div className="flex items-center gap-2 text-xs text-slate-500">
@@ -464,8 +464,8 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
             </div>
           )}
 
-          {/* Products: manual mode */}
-          {selectedPortfolio && revisionDate && !existingCoverMode && (
+          {/* Products: manual mode (all cover types) */}
+          {selectedPortfolio && revisionDate && manualLinkMode && (
             <div className="space-y-4">
               {productsLoading && (
                 <div className="flex items-center gap-2 text-xs text-slate-500">
