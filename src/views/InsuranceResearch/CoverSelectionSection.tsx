@@ -1,15 +1,16 @@
 import { useState } from 'react';
 import { ChevronUp, ChevronDown, Settings, Plus, Trash2, SquarePen } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { CoverQuote } from './insuranceData';
+import type { NeedsQuote, TrmFields, TrsFields } from './needsTypes';
+import { getNeedCode, NEED_CODE_LABELS, LINKED_NEED_LABELS } from './needsTypes';
 
 interface Props {
-  quotes: CoverQuote[];
+  quotes: NeedsQuote[];
   clientName: string;
   partnerName: string | null;
   onAddQuote: () => void;
   onEditQuote: (quoteId: string) => void;
-  onChangeQuotes: (quotes: CoverQuote[]) => void;
+  onChangeQuotes: (quotes: NeedsQuote[]) => void;
 }
 
 export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQuote, onEditQuote, onChangeQuotes }: Props) {
@@ -27,19 +28,26 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
     return who === 'client' ? clientName : (partnerName ?? 'Partner');
   }
 
-  function enabledCovers(q: CoverQuote): string[] {
-    const covers: string[] = [];
-    if (q.lifeCover.enabled) covers.push('Life');
-    if (q.tpd.enabled) covers.push('TPD Ext');
-    if (q.trauma.enabled) covers.push('Trauma Ext');
-    if (q.tpdStandalone.enabled) covers.push('TPD');
-    if (q.traumaStandalone.enabled) covers.push('Trauma');
-    if (q.tpdExtensionTrauma.enabled) covers.push('TPR');
-    if (q.incomeProtection.enabled) covers.push('IP');
-    if (q.businessExpenses.enabled) covers.push('BE');
-    if (q.needleStick.enabled) covers.push('NES');
-    if (q.childTrauma.enabled) covers.push('CHT');
-    return covers;
+  function enabledCovers(q: NeedsQuote): string[] {
+    const codes: string[] = [];
+    for (const need of q.needs) {
+      const code = getNeedCode(need);
+      codes.push(code);
+      if (code === 'TRM') {
+        const trm = (need as { TRM: TrmFields }).TRM;
+        for (const ln of trm.linkedNeeds) {
+          if ('TPE' in ln) codes.push('TPE');
+          if ('TRE' in ln) codes.push('TRE');
+        }
+      }
+      if (code === 'TRS') {
+        const trs = (need as { TRS: TrsFields }).TRS;
+        for (const ln of trs.linkedNeeds) {
+          if ('TPR' in ln) codes.push('TPR');
+        }
+      }
+    }
+    return codes;
   }
 
   return (
