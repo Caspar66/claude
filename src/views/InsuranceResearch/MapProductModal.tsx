@@ -126,6 +126,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   const [allProducts, setAllProducts] = useState<LegacyProduct[]>([]);
   const [productsLoading, setProductsLoading] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
+  const [pendingRestore, setPendingRestore] = useState<ResearchPortfolio | null>(null);
 
   // ── Auto-mode derived data ──────────────────────────────────────────────
 
@@ -169,23 +170,44 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
 
   useEffect(() => {
     if (!open || !policy) return;
-    const inside = annualise(policy.premiumSuper, policy.premiumSuperFrequency);
-    const outside = annualise(policy.premiumNonSuper, policy.premiumNonSuperFrequency);
-    setSupplierFilter('');
-    setSupplierName('');
-    setRevisionDate('');
-    setManualLinkMode(false);
-    setPremiumInside(inside.toFixed(2));
-    setPremiumOutside(outside.toFixed(2));
-    setStampDutyInside('0');
-    setStampDutyOutside('0');
-    setProductSelections({});
-    setExtensionFlags({});
-    setAllProducts([]);
-    setProductsError(null);
-  }, [open, policy]);
+    const rp = policy.researchPortfolio;
+
+    if (rp) {
+      const match = portfolios.find((p) => p.supplierCode === rp.supplierCode);
+      setSupplierFilter('');
+      setSupplierName(match?.supplierName ?? '');
+      setRevisionDate(rp.revisionDate);
+      setManualLinkMode(!rp.existingCover);
+      setPremiumInside(rp.premiumInsideSuperAnnualised.toFixed(2));
+      setPremiumOutside(rp.premiumOutsideSuperAnnualised.toFixed(2));
+      setStampDutyInside(rp.stampDutyInsideSuperAnnualised.toFixed(2));
+      setStampDutyOutside(rp.stampDutyOutsideSuperAnnualised.toFixed(2));
+      setProductSelections({});
+      setExtensionFlags({});
+      setAllProducts([]);
+      setProductsError(null);
+      setPendingRestore(rp);
+    } else {
+      const inside = annualise(policy.premiumSuper, policy.premiumSuperFrequency);
+      const outside = annualise(policy.premiumNonSuper, policy.premiumNonSuperFrequency);
+      setSupplierFilter('');
+      setSupplierName('');
+      setRevisionDate('');
+      setManualLinkMode(false);
+      setPremiumInside(inside.toFixed(2));
+      setPremiumOutside(outside.toFixed(2));
+      setStampDutyInside('0');
+      setStampDutyOutside('0');
+      setProductSelections({});
+      setExtensionFlags({});
+      setAllProducts([]);
+      setProductsError(null);
+      setPendingRestore(null);
+    }
+  }, [open, policy, portfolios]);
 
   useEffect(() => {
+    if (pendingRestore) return;
     setRevisionDate('');
     setAllProducts([]);
     setProductSelections({});
@@ -194,6 +216,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
   }, [supplierName]);
 
   useEffect(() => {
+    if (pendingRestore) return;
     setProductSelections({});
     setExtensionFlags({});
   }, [manualLinkMode]);
@@ -222,6 +245,47 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     return () => { cancelled = true; };
   }, [selectedPortfolio, revisionDate]);
 
+  // ── Restore product selections from saved portfolio after products load ──
+
+  useEffect(() => {
+    if (!pendingRestore || allProducts.length === 0) return;
+    const saved = pendingRestore.products;
+    const selections: Partial<Record<CoverNeedCode, string>> = {};
+    const extFlags: Partial<Record<ExtensionCode, boolean>> = {};
+
+    for (const [code, entry] of Object.entries(saved) as [CoverNeedCode, { productCode: string }][]) {
+      if (!entry?.productCode) continue;
+      const product = allProducts.find(
+        (p) => p.supportedCoverTypes[code]?.researchProductCode === entry.productCode,
+      );
+      if (!product) continue;
+
+      if (!pendingRestore.existingCover) {
+        const section = MANUAL_SECTIONS.find((s) => s.code === code);
+        if (section) {
+          selections[code] = product.productCode;
+        } else {
+          const parentSection = MANUAL_SECTIONS.find((s) =>
+            s.extensions?.some((e) => e.code === code),
+          );
+          if (parentSection) {
+            selections[parentSection.code] = product.productCode;
+            extFlags[code as ExtensionCode] = true;
+          }
+        }
+      } else {
+        const group = coverGroups.find((g) => g.entries.some((e) => e.code === code));
+        if (group) {
+          selections[group.entries[0].code] = product.productCode;
+        }
+      }
+    }
+
+    setProductSelections(selections);
+    setExtensionFlags(extFlags);
+    setPendingRestore(null);
+  }, [allProducts, pendingRestore, coverGroups]);
+
   // ── Manual-mode: check if selected product supports an extension ────────
 
   function selectedProductSupports(sectionCode: CoverNeedCode, extCode: string): boolean {
@@ -235,6 +299,11 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
 
   // ── Save ────────────────────────────────────────────────────────────────
 
+  function resolveResearchCode(topLevelProductCode: string, coverCode: string): string {
+    const product = allProducts.find((p) => p.productCode === topLevelProductCode);
+    return product?.supportedCoverTypes[coverCode]?.researchProductCode || topLevelProductCode;
+  }
+
   function handleAdd() {
     if (!policy || !selectedPortfolio || !revisionDate) return;
     const products: Partial<Record<CoverNeedCode, { productCode: string }>> = {};
@@ -242,21 +311,21 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     if (!manualLinkMode) {
       for (const group of coverGroups) {
         const primary = group.entries[0];
-        const productCode = productSelections[primary.code];
-        if (!productCode) continue;
+        const selectedCode = productSelections[primary.code];
+        if (!selectedCode) continue;
         for (const entry of group.entries) {
-          products[entry.code] = { productCode };
+          products[entry.code] = { productCode: resolveResearchCode(selectedCode, entry.code) };
         }
       }
     } else {
       for (const section of MANUAL_SECTIONS) {
-        const productCode = productSelections[section.code];
-        if (!productCode) continue;
-        products[section.code] = { productCode };
+        const selectedCode = productSelections[section.code];
+        if (!selectedCode) continue;
+        products[section.code] = { productCode: resolveResearchCode(selectedCode, section.code) };
         if (section.extensions) {
           for (const ext of section.extensions) {
             if (extensionFlags[ext.code] && selectedProductSupports(section.code, ext.code)) {
-              products[ext.code] = { productCode };
+              products[ext.code] = { productCode: resolveResearchCode(selectedCode, ext.code) };
             }
           }
         }
