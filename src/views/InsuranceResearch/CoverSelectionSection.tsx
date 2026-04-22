@@ -34,8 +34,11 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
     if (q.trauma.enabled) covers.push('Trauma Ext');
     if (q.tpdStandalone.enabled) covers.push('TPD');
     if (q.traumaStandalone.enabled) covers.push('Trauma');
+    if (q.tpdExtensionTrauma.enabled) covers.push('TPR');
     if (q.incomeProtection.enabled) covers.push('IP');
     if (q.businessExpenses.enabled) covers.push('BE');
+    if (q.needleStick.enabled) covers.push('NES');
+    if (q.childTrauma.enabled) covers.push('CHT');
     return covers;
   }
 

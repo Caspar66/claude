@@ -150,7 +150,7 @@ export function QuoteOptionsSidebar({
 
       {/* Business Expenses */}
       <div className="border-t border-gray-200 px-3 py-1 pb-4">
-        <SectionCheck label="Business Expenses" checked={businessExpenses.enabled} onChange={(v) => onBusinessExpensesChange({ enabled: v })} />
+        <SectionCheck label="Business Expenses" checked={businessExpenses.enabled} onChange={(v) => onBusinessExpensesChange({ ...businessExpenses, enabled: v })} />
       </div>
     </div>
   );

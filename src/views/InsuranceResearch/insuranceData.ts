@@ -283,8 +283,41 @@ export interface IncomeProtectionOptions {
   priority: TraumaPriority;
 }
 
+export interface TpdExtensionTraumaOptions {
+  enabled: boolean;
+  sumInsured: string;
+  owner: OwnerOption;
+  rollover: RolloverOption;
+  structure: ExtendedPremiumStructure;
+  occupationType: TpdOccupationType;
+  premiumWaiver: PremiumWaiverOption;
+}
+
 export interface BusinessExpensesOptions {
   enabled: boolean;
+  monthlyBenefit: string;
+  structure: 'Stepped' | 'Blended' | 'Level';
+  waitingPeriod: '14 days' | '30 days' | '60 days' | '90 days';
+  benefitPeriod: '1 year';
+}
+
+export interface NeedleStickOptions {
+  enabled: boolean;
+  sumInsured: string;
+  structure: 'Stepped' | 'Level';
+}
+
+export interface ChildTraumaChild {
+  id: string;
+  dateOfBirth: string;
+  age: string;
+  gender: 'Male' | 'Female';
+  sumInsured: string;
+}
+
+export interface ChildTraumaOptions {
+  enabled: boolean;
+  children: ChildTraumaChild[];
 }
 
 export type DisplayOption =
@@ -528,8 +561,11 @@ export interface CoverQuote {
   trauma: TraumaOptions;
   tpdStandalone: TpdStandaloneOptions;
   traumaStandalone: TraumaStandaloneOptions;
+  tpdExtensionTrauma: TpdExtensionTraumaOptions;
   incomeProtection: IncomeProtectionOptions;
   businessExpenses: BusinessExpensesOptions;
+  needleStick: NeedleStickOptions;
+  childTrauma: ChildTraumaOptions;
 }
 
 export function getDefaultCoverQuote(name: string, lifeInsured: 'client' | 'partner' = 'client'): CoverQuote {
@@ -542,8 +578,11 @@ export function getDefaultCoverQuote(name: string, lifeInsured: 'client' | 'part
     trauma: getDefaultTraumaExtension(),
     tpdStandalone: getDefaultTpdStandalone(),
     traumaStandalone: getDefaultTraumaStandalone(),
+    tpdExtensionTrauma: getDefaultTpdExtensionTrauma(),
     incomeProtection: { ...getDefaultIncomeProtection(), enabled: false },
-    businessExpenses: { enabled: false },
+    businessExpenses: getDefaultBusinessExpenses(),
+    needleStick: getDefaultNeedleStick(),
+    childTrauma: { enabled: false, children: [] },
   };
 }
 
@@ -639,5 +678,35 @@ export function getDefaultTraumaStandalone(): TraumaStandaloneOptions {
     premiumWaiver: 'Exclude',
     babyCare: 'Exclude if possible',
     priority: 'Cheapest',
+  };
+}
+
+export function getDefaultTpdExtensionTrauma(): TpdExtensionTraumaOptions {
+  return {
+    enabled: false,
+    sumInsured: '$350,000',
+    owner: 'Non-Super',
+    rollover: 'Exclude',
+    structure: 'Stepped',
+    occupationType: 'Best available',
+    premiumWaiver: 'Exclude',
+  };
+}
+
+export function getDefaultBusinessExpenses(): BusinessExpensesOptions {
+  return {
+    enabled: false,
+    monthlyBenefit: '',
+    structure: 'Stepped',
+    waitingPeriod: '30 days',
+    benefitPeriod: '1 year',
+  };
+}
+
+export function getDefaultNeedleStick(): NeedleStickOptions {
+  return {
+    enabled: false,
+    sumInsured: '',
+    structure: 'Stepped',
   };
 }
