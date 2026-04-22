@@ -188,10 +188,10 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
       setProductsError(null);
       setPendingRestore(rp);
     } else {
-      const inside = annualise(policy.premiumSuper, policy.premiumFrequency);
-      const outside = annualise(policy.premiumNonSuper, policy.premiumFrequency);
-      const stampIn = annualise(policy.stampDutySuper, policy.stampDutyFrequency);
-      const stampOut = annualise(policy.stampDutyNonSuper, policy.stampDutyFrequency);
+      const inside = annualise(policy.premiumSuper, policy.superFrequency);
+      const outside = annualise(policy.premiumNonSuper, policy.nonSuperFrequency);
+      const stampIn = annualise(policy.stampDutySuper, policy.superFrequency);
+      const stampOut = annualise(policy.stampDutyNonSuper, policy.nonSuperFrequency);
       setSupplierFilter('');
       setSupplierName('');
       setRevisionDate('');

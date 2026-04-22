@@ -152,7 +152,8 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                       const totalPa = totalPolicyPremiumPerAnnum(p);
                       const superPremium = p.premiumSuper > 0 ? formatMoney(p.premiumSuper) : 'N/A';
                       const nonSuperPremium = p.premiumNonSuper > 0 ? formatMoney(p.premiumNonSuper) : 'N/A';
-                      const freqSuffix = `/${PREMIUM_FREQUENCY_LABELS[p.premiumFrequency].toLowerCase()}`;
+                      const superFreqSuffix = `/${PREMIUM_FREQUENCY_LABELS[p.superFrequency].toLowerCase()}`;
+                      const nonSuperFreqSuffix = `/${PREMIUM_FREQUENCY_LABELS[p.nonSuperFrequency].toLowerCase()}`;
                       return (
                         <div key={p.id}>
                           {/* Policy header row */}
@@ -172,8 +173,8 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                               <div className="font-bold text-slate-800">{p.provider}</div>
                               <div className="text-slate-700">{p.policyDescription}</div>
                             </div>
-                            <div className="text-xs text-slate-700">{p.premiumSuper > 0 ? `${superPremium} ${freqSuffix}` : 'N/A'}</div>
-                            <div className="text-xs text-slate-700">{p.premiumNonSuper > 0 ? `${nonSuperPremium} ${freqSuffix}` : 'N/A'}</div>
+                            <div className="text-xs text-slate-700">{p.premiumSuper > 0 ? `${superPremium} ${superFreqSuffix}` : 'N/A'}</div>
+                            <div className="text-xs text-slate-700">{p.premiumNonSuper > 0 ? `${nonSuperPremium} ${nonSuperFreqSuffix}` : 'N/A'}</div>
                             <div className="text-xs text-slate-700 font-medium">{formatMoney(totalPa)}</div>
                             <div>
                               <select
