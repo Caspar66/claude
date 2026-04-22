@@ -160,15 +160,13 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                             <div className="flex items-center gap-1 pt-0.5">
                               <SquarePen size={12} className="text-blue-500 cursor-pointer" />
                               <button className="text-slate-400 hover:text-red-500" onClick={() => removePolicy(p.id)}>×</button>
-                              {p.researchPortfolio && (
-                                <button
-                                  className="text-blue-500 hover:text-blue-700"
-                                  title="Re-map supplier and products"
-                                  onClick={() => setReviewPolicyId(p.id)}
-                                >
-                                  <Link2 size={12} />
-                                </button>
-                              )}
+                              <button
+                                className="text-blue-500 hover:text-blue-700"
+                                title="Map supplier and products"
+                                onClick={() => setReviewPolicyId(p.id)}
+                              >
+                                <Link2 size={12} />
+                              </button>
                             </div>
                             <div className="text-xs">
                               <div className="font-bold text-slate-800">{p.provider}</div>
