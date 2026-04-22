@@ -138,8 +138,8 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
   const [error, setError] = useState<string | null>(null);
 
   const { totalPremium, totalFrequencyLabel } = useMemo(() => {
-    const superVal = parseMoney(premiumSuper);
-    const nonSuperVal = parseMoney(premiumNonSuper);
+    const superVal = parseMoney(premiumSuper) + parseMoney(stampDutySuper);
+    const nonSuperVal = parseMoney(premiumNonSuper) + parseMoney(stampDutyNonSuper);
     const superPerYear = superVal * PREMIUM_FREQUENCY_MULTIPLIER[superFreq];
     const nonSuperPerYear = nonSuperVal * PREMIUM_FREQUENCY_MULTIPLIER[nonSuperFreq];
     const total = superPerYear + nonSuperPerYear;
@@ -158,7 +158,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
     const displayTotal = freq === 'Y' ? total : total / PREMIUM_FREQUENCY_MULTIPLIER[freq];
     const suffix = freq === 'Y' ? 'pa' : PREMIUM_FREQUENCY_LABELS[freq].toLowerCase();
     return { totalPremium: displayTotal, totalFrequencyLabel: suffix };
-  }, [premiumSuper, superFreq, premiumNonSuper, nonSuperFreq]);
+  }, [premiumSuper, stampDutySuper, superFreq, premiumNonSuper, stampDutyNonSuper, nonSuperFreq]);
 
   const filteredSuppliers = providerQuery
     ? legacySuppliers.filter((s) => s.name.toLowerCase().includes(providerQuery.toLowerCase())).slice(0, 20)

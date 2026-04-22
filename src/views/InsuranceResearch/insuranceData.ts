@@ -185,8 +185,8 @@ export interface ExistingPolicy {
 }
 
 export function totalPolicyPremiumPerAnnum(p: ExistingPolicy): number {
-  return p.premiumSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.superFrequency]
-       + p.premiumNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.nonSuperFrequency];
+  return (p.premiumSuper + p.stampDutySuper) * PREMIUM_FREQUENCY_MULTIPLIER[p.superFrequency]
+       + (p.premiumNonSuper + p.stampDutyNonSuper) * PREMIUM_FREQUENCY_MULTIPLIER[p.nonSuperFrequency];
 }
 
 export interface QuoteOptions {
