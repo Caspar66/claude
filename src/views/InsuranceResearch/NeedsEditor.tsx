@@ -36,9 +36,9 @@ function countMultiSelectFields(needs: Need[]): number {
       if (isMultiSelect(val as FieldValue)) count++;
     }
     if (code === 'TRM') {
-      const trm = fields as TrmFields;
+      const trm = fields as unknown as TrmFields;
       for (const ln of trm.linkedNeeds) {
-        const lnFields = Object.values(ln)[0] as Record<string, unknown>;
+        const lnFields = Object.values(ln)[0] as unknown as Record<string, unknown>;
         for (const [key, val] of Object.entries(lnFields)) {
           if (key === 'sumInsured') continue;
           if (isMultiSelect(val as FieldValue)) count++;
@@ -46,9 +46,9 @@ function countMultiSelectFields(needs: Need[]): number {
       }
     }
     if (code === 'TRS') {
-      const trs = fields as TrsFields;
+      const trs = fields as unknown as TrsFields;
       for (const ln of trs.linkedNeeds) {
-        const lnFields = Object.values(ln)[0] as Record<string, unknown>;
+        const lnFields = Object.values(ln)[0] as unknown as Record<string, unknown>;
         for (const [key, val] of Object.entries(lnFields)) {
           if (key === 'sumInsured') continue;
           if (isMultiSelect(val as FieldValue)) count++;
