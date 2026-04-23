@@ -6,12 +6,8 @@ import type {
   TrmFields, TpeFields, TreFields, TpsFields, TrsFields, TprFields,
   IncFields, BusFields, NesFields, ChtFields, ChtChild,
   FieldValue,
-  Structure4, Structure3, Structure2,
-  OwnerTRM, OwnerTPE, OwnerINC,
-  Rollover, PremiumWaiver, OccupationType,
-  ThreeWay, FourWay, Priority,
-  LifeBuyBackTPE, LifeBuyBackTRE, AgreedValue,
-  WaitingPeriodINC, WaitingPeriodBUS, BenefitPeriodINC,
+  Structure2, OwnerINC, Rollover, FourWay,
+  WaitingPeriodINC, BenefitPeriodINC,
   ReplacementRatio, Gender,
 } from './needsTypes';
 import {
@@ -62,11 +58,10 @@ function CodeSel({ label, value, labelMap, onChange }: {
   );
 }
 
-function NumInp({ label, value, onChange, placeholder }: {
+function NumInp({ label, value, onChange }: {
   label: string;
   value: number;
   onChange: (v: number) => void;
-  placeholder?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1">
@@ -74,34 +69,145 @@ function NumInp({ label, value, onChange, placeholder }: {
       <input
         type="text"
         inputMode="numeric"
+        required
         className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
-        value={value || ''}
+        value={String(value)}
         onChange={(e) => {
           const num = parseInt(e.target.value.replace(/\D/g, ''), 10);
           onChange(isNaN(num) ? 0 : num);
         }}
-        placeholder={placeholder}
       />
     </div>
   );
 }
 
-function StrInp({ label, value, onChange, placeholder }: {
+function DateInp({ label, value, onChange }: {
   label: string;
   value: string;
   onChange: (v: string) => void;
-  placeholder?: string;
 }) {
   return (
     <div className="flex items-center justify-between gap-3 py-1">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <input
-        type="text"
+        type="date"
+        required
         className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
       />
+    </div>
+  );
+}
+
+function calculateAge(dob: string): number {
+  if (!dob) return 0;
+  const birth = new Date(dob);
+  if (isNaN(birth.getTime())) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return Math.max(0, age);
+}
+
+function AgeDisplay({ label, dob }: { label: string; dob: string }) {
+  const age = calculateAge(dob);
+  return (
+    <div className="flex items-center justify-between gap-3 py-1">
+      <label className="text-xs text-slate-600 shrink-0">{label}</label>
+      <span className="text-xs text-slate-700 w-[200px] px-2 py-1 bg-gray-50 border border-gray-200 rounded">
+        {age} {age === 1 ? 'year' : 'years'}
+      </span>
+    </div>
+  );
+}
+
+function todayISO(): string {
+  return new Date().toISOString().split('T')[0];
+}
+
+function MultiCodeSel<T extends string>({ label, value, labelMap, onChange }: {
+  label: string;
+  value: FieldValue<T>;
+  labelMap: Record<T, string>;
+  onChange: (v: FieldValue<T>) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const keys = Object.keys(labelMap) as T[];
+  const isAll = value === '*';
+  const isMulti = Array.isArray(value);
+  const selected = new Set<T>(Array.isArray(value) ? (value as T[]) : !isAll ? [value as T] : []);
+
+  let display: string;
+  if (isAll) display = 'All options (*)';
+  else if (Array.isArray(value)) display = (value as T[]).map((v) => labelMap[v]).join(', ');
+  else display = labelMap[value as T] ?? '';
+
+  function toggleAll() {
+    if (isAll) onChange(keys[0]);
+    else onChange('*' as FieldValue<T>);
+  }
+
+  function toggleOption(code: T) {
+    if (isAll) { onChange(code); return; }
+    const current: T[] = Array.isArray(value) ? (value as T[]) : [value as T];
+    const has = current.includes(code);
+    if (has) {
+      const next = current.filter((c) => c !== code);
+      if (next.length === 0) return;
+      onChange(next.length === 1 ? next[0] : next);
+    } else {
+      onChange([...current, code]);
+    }
+  }
+
+  const isComparison = isAll || isMulti;
+
+  return (
+    <div className="flex items-center justify-between gap-3 py-1">
+      <label className="text-xs text-slate-600 shrink-0">{label}</label>
+      <div className="relative w-[200px]" ref={ref}>
+        <button
+          type="button"
+          className={`w-full border rounded px-2 py-1 text-xs bg-white text-left focus:outline-none focus:ring-1 focus:ring-teal-600 flex items-center justify-between ${isComparison ? 'border-teal-500 bg-teal-50 font-semibold' : 'border-gray-300'}`}
+          onClick={() => setOpen(!open)}
+          title={display}
+        >
+          <span className="truncate">{display || 'Select…'}</span>
+          <ChevronDown size={10} className="shrink-0 text-gray-400" />
+        </button>
+        {open && (
+          <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[240px] max-h-60 overflow-auto">
+            <label className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 border-b border-gray-200 cursor-pointer bg-gray-50">
+              <input type="checkbox" checked={isAll} onChange={toggleAll} />
+              <span className="font-semibold">All options (*)</span>
+            </label>
+            {keys.map((code) => (
+              <label key={code} className={`flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer ${isAll ? 'opacity-50' : 'hover:bg-blue-50'}`}>
+                <input
+                  type="checkbox"
+                  checked={selected.has(code)}
+                  disabled={isAll}
+                  onChange={() => toggleOption(code)}
+                />
+                <span>{labelMap[code]}</span>
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -181,7 +287,7 @@ function NeedPicker({ existingCodes, onAdd }: {
 
 // ── Resolve INC availability query value ────────────────────────
 
-function resolveFieldValue(v: FieldValue | '?', fallback: string): FieldValue {
+function resolveFieldValue<T extends string>(v: FieldValue<T> | '?', fallback: T): FieldValue<T> {
   return v === '?' ? fallback : v;
 }
 
@@ -308,10 +414,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
               <div className="px-6 py-3">
                 <div className="space-y-0.5">
                   <NumInp label="Sum Insured" value={trm.sumInsured} onChange={(v) => updateNeed(index, { TRM: { ...trm, sumInsured: v } })} />
-                  <CodeSel label="Structure" value={trm.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, structure: v as Structure4 } })} />
-                  <CodeSel label="Owner" value={trm.owner} labelMap={OWNER_TRM_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, owner: v as OwnerTRM } })} />
-                  <CodeSel label="Rollover" value={trm.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, rollover: v as Rollover } })} />
-                  <CodeSel label="Premium Waiver" value={trm.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, premiumWaiver: v as PremiumWaiver } })} />
+                  <MultiCodeSel label="Structure" value={trm.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, structure: v } })} />
+                  <MultiCodeSel label="Owner" value={trm.owner} labelMap={OWNER_TRM_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, owner: v } })} />
+                  <MultiCodeSel label="Rollover" value={trm.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, rollover: v } })} />
+                  <MultiCodeSel label="Premium Waiver" value={trm.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, premiumWaiver: v } })} />
                 </div>
 
                 {/* Linked needs: TPE */}
@@ -326,13 +432,13 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                         {lnExp && (
                           <div className="px-4 py-2 space-y-0.5">
                             <NumInp label="Sum Insured" value={tpe.sumInsured} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, sumInsured: v })} />
-                            <CodeSel label="Structure" value={tpe.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, structure: v as Structure4 })} />
-                            <CodeSel label="Owner" value={tpe.owner} labelMap={OWNER_TPE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, owner: v as OwnerTPE })} />
-                            <CodeSel label="Rollover" value={tpe.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, rollover: v as Rollover })} />
-                            <CodeSel label="Occupation Type" value={tpe.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, occupationType: v as OccupationType })} />
-                            <CodeSel label="Life Buy Back" value={tpe.lifeBuyBack} labelMap={LIFE_BUY_BACK_TPE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, lifeBuyBack: v as LifeBuyBackTPE })} />
-                            <CodeSel label="Double TPD" value={tpe.doubleTPD} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, doubleTPD: v as ThreeWay })} />
-                            <CodeSel label="Premium Waiver" value={tpe.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, premiumWaiver: v as PremiumWaiver })} />
+                            <MultiCodeSel label="Structure" value={tpe.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, structure: v })} />
+                            <MultiCodeSel label="Owner" value={tpe.owner} labelMap={OWNER_TPE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, owner: v })} />
+                            <MultiCodeSel label="Rollover" value={tpe.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, rollover: v })} />
+                            <MultiCodeSel label="Occupation Type" value={tpe.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, occupationType: v })} />
+                            <MultiCodeSel label="Life Buy Back" value={tpe.lifeBuyBack} labelMap={LIFE_BUY_BACK_TPE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, lifeBuyBack: v })} />
+                            <MultiCodeSel label="Double TPD" value={tpe.doubleTPD} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, doubleTPD: v })} />
+                            <MultiCodeSel label="Premium Waiver" value={tpe.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, premiumWaiver: v })} />
                           </div>
                         )}
                       </div>
@@ -348,13 +454,13 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                         {lnExp && (
                           <div className="px-4 py-2 space-y-0.5">
                             <NumInp label="Sum Insured" value={tre.sumInsured} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, sumInsured: v })} />
-                            <CodeSel label="Structure" value={tre.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, structure: v as Structure4 })} />
-                            <CodeSel label="Life Buy Back" value={tre.lifeBuyBack} labelMap={LIFE_BUY_BACK_TRE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, lifeBuyBack: v as LifeBuyBackTRE })} />
-                            <CodeSel label="Double Trauma" value={tre.doubleTrauma} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, doubleTrauma: v as ThreeWay })} />
-                            <CodeSel label="Trauma Reinstatement" value={tre.traumaReinstatement} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, traumaReinstatement: v as ThreeWay })} />
-                            <CodeSel label="Premium Waiver" value={tre.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, premiumWaiver: v as PremiumWaiver })} />
+                            <MultiCodeSel label="Structure" value={tre.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, structure: v })} />
+                            <MultiCodeSel label="Life Buy Back" value={tre.lifeBuyBack} labelMap={LIFE_BUY_BACK_TRE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, lifeBuyBack: v })} />
+                            <MultiCodeSel label="Double Trauma" value={tre.doubleTrauma} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, doubleTrauma: v })} />
+                            <MultiCodeSel label="Trauma Reinstatement" value={tre.traumaReinstatement} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, traumaReinstatement: v })} />
+                            <MultiCodeSel label="Premium Waiver" value={tre.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, premiumWaiver: v })} />
                             <CodeSel label="Baby Care" value={tre.babyCare} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, babyCare: v as FourWay })} />
-                            <CodeSel label="Priority" value={tre.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, priority: v as Priority })} />
+                            <MultiCodeSel label="Priority" value={tre.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, priority: v })} />
                           </div>
                         )}
                       </div>
@@ -390,11 +496,11 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             {isExp && (
               <div className="px-6 py-3 space-y-0.5">
                 <NumInp label="Sum Insured" value={tps.sumInsured} onChange={(v) => updateNeed(index, { TPS: { ...tps, sumInsured: v } })} />
-                <CodeSel label="Structure" value={tps.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, structure: v as Structure4 } })} />
-                <CodeSel label="Owner" value={tps.owner} labelMap={OWNER_TPE_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, owner: v as OwnerTPE } })} />
-                <CodeSel label="Rollover" value={tps.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, rollover: v as Rollover } })} />
-                <CodeSel label="Occupation Type" value={tps.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, occupationType: v as OccupationType } })} />
-                <CodeSel label="Premium Waiver" value={tps.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, premiumWaiver: v as PremiumWaiver } })} />
+                <MultiCodeSel label="Structure" value={tps.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, structure: v } })} />
+                <MultiCodeSel label="Owner" value={tps.owner} labelMap={OWNER_TPE_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, owner: v } })} />
+                <MultiCodeSel label="Rollover" value={tps.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, rollover: v } })} />
+                <MultiCodeSel label="Occupation Type" value={tps.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, occupationType: v } })} />
+                <MultiCodeSel label="Premium Waiver" value={tps.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, premiumWaiver: v } })} />
               </div>
             )}
           </div>
@@ -412,11 +518,11 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
               <div className="px-6 py-3">
                 <div className="space-y-0.5">
                   <NumInp label="Sum Insured" value={trs.sumInsured} onChange={(v) => updateNeed(index, { TRS: { ...trs, sumInsured: v } })} />
-                  <CodeSel label="Structure" value={trs.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, structure: v as Structure4 } })} />
-                  <CodeSel label="Trauma Reinstatement" value={trs.traumaReinstatement} labelMap={THREE_WAY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, traumaReinstatement: v as ThreeWay } })} />
-                  <CodeSel label="Premium Waiver" value={trs.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, premiumWaiver: v as PremiumWaiver } })} />
+                  <MultiCodeSel label="Structure" value={trs.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, structure: v } })} />
+                  <MultiCodeSel label="Trauma Reinstatement" value={trs.traumaReinstatement} labelMap={THREE_WAY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, traumaReinstatement: v } })} />
+                  <MultiCodeSel label="Premium Waiver" value={trs.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, premiumWaiver: v } })} />
                   <CodeSel label="Baby Care" value={trs.babyCare} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, babyCare: v as FourWay } })} />
-                  <CodeSel label="Priority" value={trs.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, priority: v as Priority } })} />
+                  <MultiCodeSel label="Priority" value={trs.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, priority: v } })} />
                 </div>
 
                 {/* Linked TPR */}
@@ -431,11 +537,11 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                         {lnExp && (
                           <div className="px-4 py-2 space-y-0.5">
                             <NumInp label="Sum Insured" value={tpr.sumInsured} onChange={(v) => updateLinkedInTrs(index, { ...tpr, sumInsured: v })} />
-                            <CodeSel label="Structure" value={tpr.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, structure: v as Structure4 })} />
+                            <MultiCodeSel label="Structure" value={tpr.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, structure: v })} />
                             <CodeSel label="Owner" value={tpr.owner} labelMap={OWNER_INC_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, owner: v as OwnerINC })} />
                             <CodeSel label="Rollover" value={tpr.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, rollover: v as Rollover })} />
-                            <CodeSel label="Occupation Type" value={tpr.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, occupationType: v as OccupationType })} />
-                            <CodeSel label="Premium Waiver" value={tpr.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, premiumWaiver: v as PremiumWaiver })} />
+                            <MultiCodeSel label="Occupation Type" value={tpr.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, occupationType: v })} />
+                            <MultiCodeSel label="Premium Waiver" value={tpr.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, premiumWaiver: v })} />
                           </div>
                         )}
                       </div>
@@ -468,17 +574,17 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             {isExp && (
               <div className="px-6 py-3 space-y-0.5">
                 <NumInp label="Monthly Benefit" value={inc.monthlyBenefit} onChange={(v) => updateNeed(index, { INC: { ...inc, monthlyBenefit: v } })} />
-                <NumInp label="Super Contribution" value={inc.superContributionOption} onChange={(v) => updateNeed(index, { INC: { ...inc, superContributionOption: v } })} placeholder="Monthly amount" />
-                <CodeSel label="Structure" value={inc.structure} labelMap={STRUCTURE_3_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, structure: v as Structure3 } })} />
-                <CodeSel label="Owner" value={inc.owner} labelMap={OWNER_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, owner: v as OwnerINC } })} />
-                <CodeSel label="Rollover" value={inc.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, rollover: v as Rollover } })} />
-                <CodeSel label="Agreed Value" value={inc.agreedValue} labelMap={AGREED_VALUE_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, agreedValue: v as AgreedValue } })} />
-                <CodeSel label="Accident Benefit" value={inc.accidentBenefit} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, accidentBenefit: v as FourWay } })} />
-                <CodeSel label="Increase Claim Benefit" value={inc.increaseClaimBenefit} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, increaseClaimBenefit: v as FourWay } })} />
-                <CodeSel label="Waiting Period" value={resolveFieldValue(inc.waitingPeriod, '30')} labelMap={WAITING_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, waitingPeriod: v as WaitingPeriodINC } })} />
-                <CodeSel label="Benefit Period" value={resolveFieldValue(inc.benefitPeriod, '65')} labelMap={BENEFIT_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, benefitPeriod: v as BenefitPeriodINC } })} />
+                <NumInp label="Super Contribution" value={inc.superContributionOption} onChange={(v) => updateNeed(index, { INC: { ...inc, superContributionOption: v } })} />
+                <MultiCodeSel label="Structure" value={inc.structure} labelMap={STRUCTURE_3_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, structure: v } })} />
+                <MultiCodeSel label="Owner" value={inc.owner} labelMap={OWNER_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, owner: v } })} />
+                <MultiCodeSel label="Rollover" value={inc.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, rollover: v } })} />
+                <MultiCodeSel label="Agreed Value" value={inc.agreedValue} labelMap={AGREED_VALUE_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, agreedValue: v } })} />
+                <MultiCodeSel label="Accident Benefit" value={inc.accidentBenefit} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, accidentBenefit: v } })} />
+                <MultiCodeSel label="Increase Claim Benefit" value={inc.increaseClaimBenefit} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, increaseClaimBenefit: v } })} />
+                <MultiCodeSel label="Waiting Period" value={resolveFieldValue(inc.waitingPeriod, '30' as WaitingPeriodINC)} labelMap={WAITING_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, waitingPeriod: v } })} />
+                <MultiCodeSel label="Benefit Period" value={resolveFieldValue(inc.benefitPeriod, '65' as BenefitPeriodINC)} labelMap={BENEFIT_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, benefitPeriod: v } })} />
                 <CodeSel label="Replacement Ratio" value={inc.initialReplacementRatio} labelMap={REPLACEMENT_RATIO_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, initialReplacementRatio: v as ReplacementRatio } })} />
-                <CodeSel label="Priority" value={inc.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, priority: v as Priority } })} />
+                <MultiCodeSel label="Priority" value={inc.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, priority: v } })} />
               </div>
             )}
           </div>
@@ -493,8 +599,8 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             {isExp && (
               <div className="px-6 py-3 space-y-0.5">
                 <NumInp label="Monthly Benefit" value={bus.monthlyBenefit} onChange={(v) => updateNeed(index, { BUS: { ...bus, monthlyBenefit: v } })} />
-                <CodeSel label="Structure" value={bus.structure} labelMap={STRUCTURE_3_LABELS} onChange={(v) => updateNeed(index, { BUS: { ...bus, structure: v as Structure3 } })} />
-                <CodeSel label="Waiting Period" value={bus.waitingPeriod} labelMap={WAITING_BUS_LABELS} onChange={(v) => updateNeed(index, { BUS: { ...bus, waitingPeriod: v as WaitingPeriodBUS } })} />
+                <MultiCodeSel label="Structure" value={bus.structure} labelMap={STRUCTURE_3_LABELS} onChange={(v) => updateNeed(index, { BUS: { ...bus, structure: v } })} />
+                <MultiCodeSel label="Waiting Period" value={bus.waitingPeriod} labelMap={WAITING_BUS_LABELS} onChange={(v) => updateNeed(index, { BUS: { ...bus, waitingPeriod: v } })} />
                 <div className="flex items-center justify-between gap-3 py-1">
                   <label className="text-xs text-slate-600 shrink-0">Benefit Period</label>
                   <span className="text-xs text-slate-500 w-[200px]">1 year (fixed)</span>
@@ -527,7 +633,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
           updateNeed(index, { CHT: { ...cht, ...patch } });
         }
         function addChild() {
-          updateCht({ children: [...cht.children, { sumInsured: 0, gender: 'M' }] });
+          updateCht({ children: [...cht.children, { sumInsured: 0, gender: 'M', dateOfBirth: todayISO() }] });
         }
         function updateChild(childIdx: number, patch: Partial<ChtChild>) {
           updateCht({ children: cht.children.map((c, i) => i === childIdx ? { ...c, ...patch } : c) });
@@ -554,8 +660,8 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                     </div>
                     <div className="space-y-0.5">
                       <NumInp label="Sum Insured" value={child.sumInsured} onChange={(v) => updateChild(idx, { sumInsured: v })} />
-                      <StrInp label="Date of Birth" value={child.dateOfBirth ?? ''} onChange={(v) => updateChild(idx, { dateOfBirth: v || undefined })} placeholder="YYYY-MM-DD" />
-                      <NumInp label="Age" value={child.age ?? 0} onChange={(v) => updateChild(idx, { age: v || undefined })} />
+                      <DateInp label="Date of Birth" value={child.dateOfBirth ?? todayISO()} onChange={(v) => updateChild(idx, { dateOfBirth: v })} />
+                      <AgeDisplay label="Age" dob={child.dateOfBirth ?? todayISO()} />
                       <CodeSel label="Gender" value={child.gender} labelMap={GENDER_LABELS} onChange={(v) => updateChild(idx, { gender: v as Gender })} />
                     </div>
                   </div>
@@ -612,15 +718,6 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
               {partnerName && <option value="partner">{partnerName}</option>}
             </select>
           </div>
-          <label className="flex items-center gap-1.5 text-xs text-slate-700">
-            <input
-              type="checkbox"
-              checked={draft.compareAllCombinations}
-              onChange={(e) => setDraft((d) => ({ ...d, compareAllCombinations: e.target.checked }))}
-              className="rounded border-gray-300"
-            />
-            Cartesian mode
-          </label>
           <NeedPicker existingCodes={existingCodes} onAdd={addNeed} />
         </div>
       </div>

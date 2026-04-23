@@ -178,13 +178,13 @@ export const LINKED_NEED_LABELS: Record<LinkedNeedCode, string> = {
 // ── Field option labels (code → display) ───────────────────────────────────
 
 export const STRUCTURE_4_LABELS: Record<Structure4, string> = {
-  S: 'Stepped', B: 'Blended', L: 'Level to 65', '70': 'Level to 70',
+  S: 'Variable age-stepped', B: 'Blended', L: 'Variable to age 65', '70': 'Variable to age 70',
 };
 export const STRUCTURE_3_LABELS: Record<Structure3, string> = {
-  S: 'Stepped', B: 'Blended', L: 'Level',
+  S: 'Variable age-stepped', B: 'Blended', L: 'Variable',
 };
 export const STRUCTURE_2_LABELS: Record<Structure2, string> = {
-  S: 'Stepped', L: 'Level',
+  S: 'Variable age-stepped', L: 'Variable',
 };
 export const OWNER_TRM_LABELS: Record<OwnerTRM, string> = {
   O: 'Non-Super', M: 'SMSF', S: 'Super',
