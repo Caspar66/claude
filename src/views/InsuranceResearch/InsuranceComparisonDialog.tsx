@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, ChevronDown, ArrowLeft, Settings } from 'lucide-react';
+import { X, ChevronDown, ArrowLeft, Settings, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
@@ -10,7 +10,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { CreateScenarioModal } from './CreateScenarioModal';
 import { ClientDataCapture } from './ClientDataCapture';
-import { QuoteLeftPanel } from './QuoteLeftPanel';
+import { ClientQuoteTabsPanel } from './ClientQuoteTabsPanel';
 import { QuoteResultsPanel } from './QuoteResultsPanel';
 import { FeaturesReportModal } from './FeaturesReportModal';
 import { MapExistingPolicyModal } from './MapExistingPolicyModal';
@@ -45,7 +45,12 @@ import type {
   InsuranceProvider,
   InsurancePolicy,
   DisplayOption,
+  ExistingPolicy,
 } from './insuranceData';
+import type { NeedsQuote } from './needsTypes';
+import { buildPortfolioRequest, PORTFOLIO_QUERY_PARAMS } from './portfolioRequest';
+import { postQuotePortfolio } from '@/services/omnilifeApi';
+import { useOccupations } from '@/hooks/useOccupations';
 
 interface Props {
   open: boolean;
@@ -195,6 +200,16 @@ export function InsuranceComparisonDialog({
   const [mapPolicyOpen, setMapPolicyOpen] = useState(false);
   const [mappedPolicies, setMappedPolicies] = useState<MappedPolicy[]>([]);
 
+  // Lifted state: existing policies + needs-based quotes from Cover Selection
+  const [policies, setPolicies] = useState<ExistingPolicy[]>([]);
+  const [coverQuotes, setCoverQuotes] = useState<NeedsQuote[]>([]);
+
+  // Portfolio API state
+  const [portfolioLoading, setPortfolioLoading] = useState(false);
+  const [portfolioError, setPortfolioError] = useState<string | null>(null);
+
+  const { options: occupations } = useOccupations();
+
   const showPartner = caseType === 'Client & Partner';
 
   function resetState() {
@@ -224,6 +239,10 @@ export function InsuranceComparisonDialog({
     setFeaturesReportOpen(false);
     setMapPolicyOpen(false);
     setMappedPolicies([]);
+    setPolicies([]);
+    setCoverQuotes([]);
+    setPortfolioLoading(false);
+    setPortfolioError(null);
   }
 
   function handleClose() {
@@ -237,8 +256,31 @@ export function InsuranceComparisonDialog({
     setScreen('personal');
   }
 
-  function handleGetQuotes() {
-    setScreen(1);
+  async function handleGetQuotes() {
+    if (coverQuotes.length === 0) return;
+    setPortfolioLoading(true);
+    setPortfolioError(null);
+    try {
+      const body = buildPortfolioRequest({
+        clientData,
+        partnerData: showPartner ? partnerData : null,
+        quotes: coverQuotes,
+        policies,
+        occupations,
+      });
+      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
+      console.info('[OmniLife] /quote/portfolio response:', res.raw);
+      setQuoteResults(generateMockQuoteResults());
+      setScreen(1);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setPortfolioError(msg);
+      // Fall through to results screen with mock data so the UI can be iterated on.
+      setQuoteResults(generateMockQuoteResults());
+      setScreen(1);
+    } finally {
+      setPortfolioLoading(false);
+    }
   }
 
   function toggleDisplayOption(opt: DisplayOption) {
@@ -372,6 +414,11 @@ export function InsuranceComparisonDialog({
           {/* Personal Details screen */}
           {screen === 'personal' && (
             <>
+              {portfolioError && (
+                <div className="px-4 py-2 bg-red-50 border-b border-red-200 text-xs text-red-700">
+                  Quote request failed: {portfolioError}
+                </div>
+              )}
               <ClientDataCapture
                 clientData={clientData}
                 partnerData={showPartner ? partnerData : null}
@@ -379,6 +426,12 @@ export function InsuranceComparisonDialog({
                 onPartnerChange={setPartnerData}
                 onLaunchNeedsAnalysis={() => {}}
                 onGetQuotes={handleGetQuotes}
+                policies={policies}
+                onChangePolicies={setPolicies}
+                quotes={coverQuotes}
+                onChangeQuotes={setCoverQuotes}
+                getQuotesDisabled={portfolioLoading}
+                getQuotesLabel={portfolioLoading ? 'Fetching quotes…' : undefined}
               />
             </>
           )}
@@ -394,28 +447,24 @@ export function InsuranceComparisonDialog({
                 onToggleClient={setActiveClient}
               />
 
-              {/* Screen nav tabs */}
-              <div className="flex items-center gap-1 px-3 py-1.5 bg-gray-100 border-b border-gray-200 text-xs">
+              {/* Screen nav: Back + Save */}
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border-b border-gray-200 text-xs">
                 <button
                   onClick={() => setScreen('personal')}
-                  className="flex items-center gap-1 text-teal-700 hover:underline mr-2"
+                  className="flex items-center gap-1 text-teal-700 hover:underline"
                 >
                   <ArrowLeft size={12} />
                   Personal Details
                 </button>
-                {([1, 2, 3, 4] as const).map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => setScreen(s)}
-                    className={`px-3 py-1 rounded text-xs font-medium transition-colors ${
-                      screen === s
-                        ? 'bg-teal-700 text-white'
-                        : 'bg-white border border-gray-300 text-slate-600 hover:bg-gray-50'
-                    }`}
-                  >
-                    {DETAIL_LABELS[s]}
-                  </button>
-                ))}
+                {portfolioLoading && (
+                  <span className="flex items-center gap-1 text-slate-500 ml-2">
+                    <Loader2 size={12} className="animate-spin" />
+                    Fetching quotes…
+                  </span>
+                )}
+                {portfolioError && !portfolioLoading && (
+                  <span className="text-red-600 ml-2">Quote error: {portfolioError}</span>
+                )}
                 <div className="flex-1" />
                 <Button
                   size="sm"
@@ -426,23 +475,13 @@ export function InsuranceComparisonDialog({
                 </Button>
               </div>
 
-              {/* Main content: sidebar + table */}
+              {/* Main content: tabbed client/quote panel + results table */}
               <div className="flex flex-1 overflow-hidden">
-                <QuoteLeftPanel
-                  form={quoteForm}
-                  onChange={setQuoteForm}
-                  onReset={() => {
-                    if (activeClient === 'partner') {
-                      setPartnerQuoteForm(getDefaultQuoteForm(59, 'Female', '$100,000', 'Generic 4: Clerical', 'VIC'));
-                      setPartnerQuoteResults(getEmptyQuoteResults());
-                    } else {
-                      setClientQuoteForm(getDefaultQuoteForm(61, 'Male', '$120,000', 'Generic 4: Clerical', 'QLD'));
-                      setClientQuoteResults(getEmptyQuoteResults());
-                    }
-                  }}
-                  onSaveQuotes={handleSaveToScenario}
-                  onUpdateQuotes={handleUpdateQuotes}
-                  onMapExistingPolicies={() => setMapPolicyOpen(true)}
+                <ClientQuoteTabsPanel
+                  clientData={clientData}
+                  partnerData={showPartner ? partnerData : null}
+                  activeClient={activeClient}
+                  quotes={coverQuotes}
                 />
                 <QuoteResultsPanel
                   results={quoteResults}

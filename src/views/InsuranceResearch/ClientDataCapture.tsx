@@ -5,7 +5,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useOccupations } from '@/hooks/useOccupations';
 import type { OccupationOption } from '@/services/omnilifeApi';
 import type { ClientFormData, EmploymentStatus, ExistingPolicy, HealthDiscount, Loadings } from './insuranceData';
-import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS, EMPTY_LOADINGS, hasLoadings } from './insuranceData';
+import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS, hasLoadings } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { createNeedsQuote } from './needsTypes';
 import { OccupationRatingsModal } from './OccupationRatingsModal';
@@ -21,6 +21,12 @@ interface Props {
   onPartnerChange: (data: ClientFormData) => void;
   onLaunchNeedsAnalysis: () => void;
   onGetQuotes: () => void;
+  policies: ExistingPolicy[];
+  onChangePolicies: (policies: ExistingPolicy[]) => void;
+  quotes: NeedsQuote[];
+  onChangeQuotes: (quotes: NeedsQuote[]) => void;
+  getQuotesDisabled?: boolean;
+  getQuotesLabel?: string;
 }
 
 function Inp({ value, onChange, className = '' }: { value: string; onChange: (v: string) => void; className?: string }) {
@@ -350,6 +356,12 @@ export function ClientDataCapture({
   onPartnerChange,
   onLaunchNeedsAnalysis,
   onGetQuotes,
+  policies,
+  onChangePolicies,
+  quotes: coverQuotes,
+  onChangeQuotes,
+  getQuotesDisabled,
+  getQuotesLabel,
 }: Props) {
   const showPartner = partnerData !== null;
   const { options: occupations, loading: occupationsLoading, error: occupationsError } = useOccupations();
@@ -357,27 +369,29 @@ export function ClientDataCapture({
 
   const [ratingsModal, setRatingsModal] = useState<{ label: string; code: string } | null>(null);
   const [loadingsTarget, setLoadingsTarget] = useState<'client' | 'partner' | null>(null);
-  const [policies, setPolicies] = useState<ExistingPolicy[]>([]);
   const [addCoverOpen, setAddCoverOpen] = useState(false);
-  const [coverQuotes, setCoverQuotes] = useState<NeedsQuote[]>([]);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
   const clientDisplayName = `${clientData.lastName || 'Client'}, ${clientData.firstName || ''}`.trim().replace(/,$/, '');
   const partnerDisplayName = partnerData ? `${partnerData.lastName || 'Partner'}, ${partnerData.firstName || ''}`.trim().replace(/,$/, '') : null;
 
   function handleSaveNewCover(policy: ExistingPolicy) {
-    setPolicies((prev) => [...prev, policy]);
+    onChangePolicies([...policies, policy]);
     setAddCoverOpen(false);
   }
 
   function handleAddQuote() {
     const newQuote = createNeedsQuote(`Quote ${coverQuotes.length + 1}`);
-    setCoverQuotes((prev) => [...prev, newQuote]);
+    onChangeQuotes([...coverQuotes, newQuote]);
     setEditingQuoteId(newQuote.id);
   }
 
+  function handleChangeQuotes(updated: NeedsQuote[]) {
+    onChangeQuotes(updated);
+  }
+
   function handleSaveQuote(updated: NeedsQuote) {
-    setCoverQuotes((prev) => prev.map((q) => q.id === updated.id ? updated : q));
+    onChangeQuotes(coverQuotes.map((q) => q.id === updated.id ? updated : q));
     setEditingQuoteId(null);
   }
 
@@ -495,7 +509,7 @@ export function ClientDataCapture({
         clientName={clientDisplayName}
         partnerName={partnerDisplayName}
         onAddCover={() => setAddCoverOpen(true)}
-        onChangePolicies={setPolicies}
+        onChangePolicies={onChangePolicies}
       />
 
       {/* Cover Selection section */}
@@ -505,7 +519,7 @@ export function ClientDataCapture({
         partnerName={partnerDisplayName}
         onAddQuote={handleAddQuote}
         onEditQuote={(id) => setEditingQuoteId(id)}
-        onChangeQuotes={setCoverQuotes}
+        onChangeQuotes={handleChangeQuotes}
       />
 
       {/* Action buttons */}
@@ -513,8 +527,13 @@ export function ClientDataCapture({
         <Button className="bg-teal-700 hover:bg-teal-800 text-white px-6" onClick={onLaunchNeedsAnalysis}>
           Launch Needs Analysis
         </Button>
-        <Button className="bg-teal-700 hover:bg-teal-800 text-white px-6" onClick={onGetQuotes}>
-          Get Quotes
+        <Button
+          className="bg-teal-700 hover:bg-teal-800 text-white px-6 disabled:bg-slate-300 disabled:cursor-not-allowed"
+          onClick={onGetQuotes}
+          disabled={getQuotesDisabled || coverQuotes.length === 0}
+          title={coverQuotes.length === 0 ? 'Add at least one quote to the Cover Selection section' : undefined}
+        >
+          {getQuotesLabel ?? 'Get Quotes'}
         </Button>
       </div>
 

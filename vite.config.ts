@@ -89,6 +89,15 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/quote-portfolio': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => p.replace('/api/quote-portfolio', '/quote/portfolio'),
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
       },
     },
   }

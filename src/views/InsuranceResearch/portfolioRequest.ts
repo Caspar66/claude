@@ -1,0 +1,168 @@
+// ── OmniLife /quote/portfolio request builder ──────────────────────────────
+// Maps ClientFormData + NeedsQuote[] + ExistingPolicy[] into the API payload.
+
+import type { ClientFormData, ExistingPolicy, ResearchPortfolio } from './insuranceData';
+import type { NeedsQuote } from './needsTypes';
+import { serialiseNeeds } from './needsTypes';
+import type { OccupationOption } from '@/services/omnilifeApi';
+
+export interface PortfolioAdviser {
+  id: string;
+  email: string;
+  crm: string | null;
+  firstName: string;
+  lastName: string;
+}
+
+export interface PortfolioTags {
+  userId: string;
+  groupId: string;
+}
+
+export interface BuildPortfolioArgs {
+  clientData: ClientFormData;
+  partnerData: ClientFormData | null;
+  quotes: NeedsQuote[];
+  policies: ExistingPolicy[];
+  occupations: OccupationOption[];
+  adviser?: PortfolioAdviser;
+  tags?: PortfolioTags;
+}
+
+const DEFAULT_ADVISER: PortfolioAdviser = {
+  id: '2314a147-afbb-4c0a-8e3d-0ba3b5ca4193',
+  email: 'caspar.jacobs@finuragroup.com',
+  crm: null,
+  firstName: 'Caspar',
+  lastName: 'Jacobs',
+};
+
+const DEFAULT_TAGS: PortfolioTags = {
+  userId: '2314a147-afbb-4c0a-8e3d-0ba3b5ca4193',
+  groupId: 'TEST_OMNILIFE',
+};
+
+function parseIncome(raw: string): number {
+  const n = parseFloat(raw.replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+function parseDobToISO(dob: string): string {
+  if (!dob) return '';
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dob)) return dob;
+  const parts = dob.split('/');
+  if (parts.length !== 3) return '';
+  const [d, m, y] = parts.map((p) => p.trim());
+  const dd = d.padStart(2, '0');
+  const mm = m.padStart(2, '0');
+  return `${y}-${mm}-${dd}`;
+}
+
+function calcAgeFromDob(iso: string): number {
+  if (!iso) return 0;
+  const birth = new Date(iso);
+  if (isNaN(birth.getTime())) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - birth.getFullYear();
+  const m = today.getMonth() - birth.getMonth();
+  if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
+  return Math.max(0, age);
+}
+
+function occupationIdFromLabel(label: string, occupations: OccupationOption[]): string {
+  const match = occupations.find((o) => o.label === label);
+  return match?.code ?? '';
+}
+
+function portfolioFromPolicy(p: ExistingPolicy): ResearchPortfolio | null {
+  if (!p.researchPortfolio) return null;
+  return p.researchPortfolio;
+}
+
+function buildClient(
+  who: 'client' | 'partner',
+  data: ClientFormData,
+  quotes: NeedsQuote[],
+  policies: ExistingPolicy[],
+  occupations: OccupationOption[],
+): Record<string, unknown> | null {
+  const myQuotes = quotes.filter((q) => q.lifeInsured === who);
+  if (myQuotes.length === 0) return null;
+
+  const allNeeds = myQuotes.flatMap((q) => q.needs);
+  const dobIso = parseDobToISO(data.dateOfBirth);
+  const age = dobIso ? calcAgeFromDob(dobIso) : data.age;
+
+  const researchPortfolios = policies
+    .filter((p) => p.lifeInsured === who)
+    .map(portfolioFromPolicy)
+    .filter((x): x is ResearchPortfolio => x !== null);
+
+  return {
+    firstName: data.firstName,
+    lastName: data.lastName,
+    title: '',
+    age,
+    dateOfBirth: dobIso,
+    income: parseIncome(data.annualIncome),
+    gender: data.gender === 'Male' ? 'M' : 'F',
+    smoker: data.smoker === 'Yes',
+    employmentStatus: data.employmentStatus,
+    state: data.state,
+    healthDiscount: data.healthDiscount === 'E' ? 'X' : 'I',
+    occupationId: occupationIdFromLabel(data.occupationCode, occupations),
+    loadings: {
+      percentage: {},
+      dollarsPerThousand: {},
+      supplierOverrides: {},
+    },
+    requiredFeatures: {},
+    customOccupations: {},
+    clientId: crypto.randomUUID(),
+    researchPortfolios,
+    needs: serialiseNeeds(allNeeds),
+  };
+}
+
+export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, unknown> {
+  const { clientData, partnerData, quotes, policies, occupations, adviser, tags } = args;
+  const clients: Record<string, unknown>[] = [];
+
+  const clientPayload = buildClient('client', clientData, quotes, policies, occupations);
+  if (clientPayload) clients.push(clientPayload);
+
+  if (partnerData) {
+    const partnerPayload = buildClient('partner', partnerData, quotes, policies, occupations);
+    if (partnerPayload) clients.push(partnerPayload);
+  }
+
+  return {
+    clients,
+    settings: {
+      commissionOptions: {},
+      campaignOptions: { AMG: [''] },
+      frequency: 'M',
+      superFrequency: 'M',
+      priceWeighting: 0,
+      includedSuppliers: [],
+      excludedProducts: [],
+      scoreWeightingFeatureType: 'Balanced',
+      scoreModeType: 'AllScores',
+      priceWeightingNeedOverride: null,
+      indexationRate: 0,
+      useQuoteDefaultAPL: false,
+      projectionYears: '15',
+    },
+    adviser: adviser ?? DEFAULT_ADVISER,
+    tags: tags ?? DEFAULT_TAGS,
+  };
+}
+
+export const PORTFOLIO_QUERY_PARAMS = new URLSearchParams({
+  premiumBreakdown: 'covertype',
+  premiumComponents: 'commission',
+  includeTopFeatures: '5',
+  includeBottomFeatures: '5',
+  compareAllCombinations: 'true',
+  scoreWeightingType: 'Balanced',
+});

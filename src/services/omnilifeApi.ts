@@ -312,6 +312,35 @@ function normaliseSupplier(raw: Record<string, unknown>): Supplier | null {
   };
 }
 
+// ── Portfolio Quote ──────────────────────────────────────────────────────────
+
+export interface PortfolioQuoteResponse {
+  raw: unknown;
+}
+
+export async function postQuotePortfolio(
+  body: Record<string, unknown>,
+  query?: URLSearchParams,
+): Promise<PortfolioQuoteResponse> {
+  const qs = query ? `?${query.toString()}` : '';
+  const res = await fetch(`/api/quote-portfolio${qs}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OmniLife /quote/portfolio returned ${res.status} ${res.statusText}${text ? ': ' + text : ''}`);
+  }
+
+  const payload: unknown = await res.json().catch(() => null);
+  return { raw: payload };
+}
+
 export async function fetchSuppliers(): Promise<Supplier[]> {
   const res = await fetch('/api/suppliers', {
     headers: { Accept: 'application/json' },

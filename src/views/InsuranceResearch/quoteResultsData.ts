@@ -20,6 +20,7 @@ export interface QuoteResultRow {
   insurer: string;
   insurerShort: string;
   insurerColor: string;
+  insurerLogo?: string;
   product: string;
   lifeTpdDouble: string;
   tpdOwnership: string;

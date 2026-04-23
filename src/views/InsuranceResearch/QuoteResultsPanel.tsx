@@ -33,7 +33,20 @@ function scoreColor(score: number): string {
 }
 
 type SortField = 'annualPremium' | 'fifteenYearPremium' | 'featureScore' | 'valueScore';
-type PremiumFreq = 'Annual' | 'Monthly';
+type PremiumFreq = 'Weekly' | 'Fortnightly' | 'Monthly' | 'Quarterly' | 'Half Yearly' | 'Yearly';
+
+const PREMIUM_FREQ_OPTIONS: PremiumFreq[] = [
+  'Weekly', 'Fortnightly', 'Monthly', 'Quarterly', 'Half Yearly', 'Yearly',
+];
+
+const FREQ_MULTIPLIER: Record<PremiumFreq, number> = {
+  Weekly: 1 / 52,
+  Fortnightly: 1 / 26,
+  Monthly: 1 / 12,
+  Quarterly: 1 / 4,
+  'Half Yearly': 1 / 2,
+  Yearly: 1,
+};
 
 // ── Toggle filter columns ────────────────────────────────────────────────────
 
@@ -127,6 +140,37 @@ function BreakdownRow({ row }: { row: QuoteResultRow }) {
   );
 }
 
+// ── Insurer logo ─────────────────────────────────────────────────────────────
+
+function InsurerLogo({ row }: { row: QuoteResultRow }) {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  if (row.insurerLogo && !loadFailed) {
+    return (
+      <img
+        src={row.insurerLogo}
+        alt={row.insurer}
+        className="w-10 h-10 object-contain bg-white border border-gray-200 rounded"
+        onError={() => setLoadFailed(true)}
+      />
+    );
+  }
+
+  // Fallback: initials on a coloured tile mirroring insurerColor
+  const initials = row.insurerShort.slice(0, 3).toUpperCase();
+  const bgClass = row.insurerColor
+    ? row.insurerColor.replace('text-', 'bg-').replace(/-(\d+)/, (_m, d) => `-${Math.max(50, parseInt(d, 10) - 500)}`)
+    : 'bg-slate-100';
+  return (
+    <div
+      className={`w-10 h-10 flex items-center justify-center rounded border border-gray-200 ${bgClass}`}
+      aria-label={row.insurer}
+    >
+      <span className={`font-bold text-xs ${row.insurerColor}`}>{initials}</span>
+    </div>
+  );
+}
+
 // ── Excluded product row ─────────────────────────────────────────────────────
 
 function ExcludedRow({ item }: { item: ExcludedProduct }) {
@@ -168,7 +212,8 @@ interface Props {
 
 export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [premiumFreq, setPremiumFreq] = useState<PremiumFreq>('Annual');
+  const [superFreq, setSuperFreq] = useState<PremiumFreq>('Monthly');
+  const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFreq>('Monthly');
   const [sortField, setSortField] = useState<SortField>('annualPremium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -214,7 +259,8 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
     return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
   });
 
-  const premiumMultiplier = premiumFreq === 'Monthly' ? 1 / 12 : 1;
+  const superMult = FREQ_MULTIPLIER[superFreq];
+  const nonSuperMult = FREQ_MULTIPLIER[nonSuperFreq];
 
   const selectAll = sorted.length > 0 && sorted.every((r) => r.selected);
 
@@ -274,16 +320,31 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
 
         <div className="flex-1" />
 
-        {/* Premium frequency */}
+        {/* Super premium frequency */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="text-xs gap-1 h-7">
-              {premiumFreq} Premium <ChevronDown size={10} />
+              Super {superFreq} <ChevronDown size={10} />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setPremiumFreq('Annual')}>Annual Premium</DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setPremiumFreq('Monthly')}>Monthly Premium</DropdownMenuItem>
+            {PREMIUM_FREQ_OPTIONS.map((opt) => (
+              <DropdownMenuItem key={opt} onClick={() => setSuperFreq(opt)}>{opt}</DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Non-Super premium frequency */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="text-xs gap-1 h-7">
+              Non-Super {nonSuperFreq} <ChevronDown size={10} />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            {PREMIUM_FREQ_OPTIONS.map((opt) => (
+              <DropdownMenuItem key={opt} onClick={() => setNonSuperFreq(opt)}>{opt}</DropdownMenuItem>
+            ))}
           </DropdownMenuContent>
         </DropdownMenu>
 
@@ -330,7 +391,7 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
               <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
                 <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('annualPremium')}>
                   <ArrowUpDown size={11} />
-                  {premiumFreq} Premiums
+                  Premiums
                 </button>
               </th>
               <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
@@ -361,7 +422,10 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
                   key={row.id}
                   row={row}
                   expanded={expanded}
-                  premiumMultiplier={premiumMultiplier}
+                  superMult={superMult}
+                  nonSuperMult={nonSuperMult}
+                  superFreq={superFreq}
+                  nonSuperFreq={nonSuperFreq}
                   visibleFilters={visibleFilters}
                   onToggleSelect={() => onToggleSelect(row.id)}
                   onToggleExpand={() => toggleExpand(row.id)}
@@ -431,21 +495,27 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
 function ResultRowGroup({
   row,
   expanded,
-  premiumMultiplier,
+  superMult,
+  nonSuperMult,
+  superFreq,
+  nonSuperFreq,
   visibleFilters,
   onToggleSelect,
   onToggleExpand,
 }: {
   row: QuoteResultRow;
   expanded: boolean;
-  premiumMultiplier: number;
+  superMult: number;
+  nonSuperMult: number;
+  superFreq: PremiumFreq;
+  nonSuperFreq: PremiumFreq;
   visibleFilters: Set<FilterColumn>;
   onToggleSelect: () => void;
   onToggleExpand: () => void;
 }) {
-  const premium = row.annualPremium * premiumMultiplier;
-  const superAmt = row.superAmount * premiumMultiplier;
-  const nonSuperAmt = row.nonSuperAmount * premiumMultiplier;
+  const superAmt = row.superAmount * superMult;
+  const nonSuperAmt = row.nonSuperAmount * nonSuperMult;
+  const total = superAmt + nonSuperAmt;
 
   return (
     <>
@@ -467,12 +537,15 @@ function ResultRowGroup({
           </button>
         </td>
 
-        {/* Insurer */}
+        {/* Insurer + logo badge */}
         <td className="px-3 py-2.5">
           <div className="flex items-center gap-2">
-            <span className={`font-bold text-sm ${row.insurerColor}`}>{row.insurerShort}</span>
+            <InsurerLogo row={row} />
+            <div className="flex flex-col">
+              <span className={`font-bold text-sm ${row.insurerColor}`}>{row.insurerShort}</span>
+              <span className="text-[10px] text-slate-500 leading-tight">{row.insurer}</span>
+            </div>
           </div>
-          <div className="text-xs text-slate-500">{row.insurer}</div>
         </td>
 
         {/* Products */}
@@ -488,11 +561,15 @@ function ResultRowGroup({
           <td className="px-3 py-2.5 text-center text-xs text-slate-700">{row.tpdOwnership}</td>
         )}
 
-        {/* Annual Premiums */}
+        {/* Premiums — separate super / non-super lines using independent frequencies */}
         <td className="px-3 py-2.5 text-right">
-          <div className="font-semibold text-slate-800">{fmt(premium)}</div>
-          {superAmt > 0 && <div className="text-[10px] text-blue-600">Super: {fmt(superAmt)}</div>}
-          {nonSuperAmt > 0 && <div className="text-[10px] text-slate-500">Non-Super: {fmt(nonSuperAmt)}</div>}
+          <div className="font-semibold text-slate-800">{fmt(total)}</div>
+          {superAmt > 0 && (
+            <div className="text-[10px] text-blue-600">Super ({superFreq}): {fmt(superAmt)}</div>
+          )}
+          {nonSuperAmt > 0 && (
+            <div className="text-[10px] text-slate-500">Non-Super ({nonSuperFreq}): {fmt(nonSuperAmt)}</div>
+          )}
         </td>
 
         {/* 15 Year Premiums */}
