@@ -51,7 +51,6 @@ export interface TpeFields {
   lifeBuyBack: FieldValue<LifeBuyBackTPE>;
   doubleTPD: FieldValue<ThreeWay>;
   premiumWaiver: FieldValue<PremiumWaiver>;
-  productCodes: Record<string, string>;
 }
 
 export interface TreFields {
@@ -63,7 +62,6 @@ export interface TreFields {
   premiumWaiver: FieldValue<PremiumWaiver>;
   babyCare: FieldValue<FourWay>;
   priority: FieldValue<Priority>;
-  productCodes: Record<string, string>;
 }
 
 export interface TpsFields {
@@ -94,7 +92,6 @@ export interface TprFields {
   rollover: FieldValue<Rollover>;
   occupationType: FieldValue<OccupationType>;
   premiumWaiver: FieldValue<PremiumWaiver>;
-  productCodes: Record<string, string>;
 }
 
 export interface IncFields {
@@ -247,10 +244,10 @@ export function defaultTrm(): TrmFields {
   return { sumInsured: 500000, structure: 'S', owner: 'O', rollover: 'N', premiumWaiver: 'I', linkedNeeds: [], productCodes: {} };
 }
 export function defaultTpe(): TpeFields {
-  return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', lifeBuyBack: 'L', doubleTPD: 'X', premiumWaiver: 'I', productCodes: {} };
+  return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', lifeBuyBack: 'L', doubleTPD: 'X', premiumWaiver: 'I' };
 }
 export function defaultTre(): TreFields {
-  return { sumInsured: 0, structure: 'S', lifeBuyBack: 'L', doubleTrauma: 'X', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C', productCodes: {} };
+  return { sumInsured: 0, structure: 'S', lifeBuyBack: 'L', doubleTrauma: 'X', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C' };
 }
 export function defaultTps(): TpsFields {
   return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', premiumWaiver: 'I', productCodes: {} };
@@ -259,7 +256,7 @@ export function defaultTrs(): TrsFields {
   return { sumInsured: 0, structure: 'S', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C', linkedNeeds: [], productCodes: {} };
 }
 export function defaultTpr(): TprFields {
-  return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', premiumWaiver: 'I', productCodes: {} };
+  return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', premiumWaiver: 'I' };
 }
 export function defaultInc(): IncFields {
   return { monthlyBenefit: 0, superContributionOption: 0, structure: 'S', owner: 'O', rollover: 'N', agreedValue: 'N', accidentBenefit: 'X', increaseClaimBenefit: 'X', waitingPeriod: '30', benefitPeriod: '65', initialReplacementRatio: 'A', priority: 'C', productCodes: {} };
