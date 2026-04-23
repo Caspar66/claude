@@ -74,28 +74,18 @@ function occupationIdFromLabel(label: string, occupations: OccupationOption[]): 
   return match?.code ?? '';
 }
 
-function portfolioFromPolicy(p: ExistingPolicy): ResearchPortfolio | null {
-  if (!p.researchPortfolio) return null;
-  return p.researchPortfolio;
-}
-
-function buildClient(
-  who: 'client' | 'partner',
+function buildClientForQuote(
+  quote: NeedsQuote,
   data: ClientFormData,
-  quotes: NeedsQuote[],
   policies: ExistingPolicy[],
   occupations: OccupationOption[],
-): Record<string, unknown> | null {
-  const myQuotes = quotes.filter((q) => q.lifeInsured === who);
-  if (myQuotes.length === 0) return null;
-
-  const allNeeds = myQuotes.flatMap((q) => q.needs);
+): Record<string, unknown> {
   const dobIso = parseDobToISO(data.dateOfBirth);
   const age = dobIso ? calcAgeFromDob(dobIso) : data.age;
 
   const researchPortfolios = policies
-    .filter((p) => p.lifeInsured === who)
-    .map(portfolioFromPolicy)
+    .filter((p) => p.lifeInsured === quote.lifeInsured)
+    .map((p) => p.researchPortfolio)
     .filter((x): x is ResearchPortfolio => x !== null);
 
   return {
@@ -118,9 +108,9 @@ function buildClient(
     },
     requiredFeatures: {},
     customOccupations: {},
-    clientId: crypto.randomUUID(),
+    clientId: `${crypto.randomUUID()}_${quote.name}`,
     researchPortfolios,
-    needs: serialiseNeeds(allNeeds),
+    needs: serialiseNeeds(quote.needs),
   };
 }
 
@@ -128,12 +118,9 @@ export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, 
   const { clientData, partnerData, quotes, policies, occupations, adviser, tags } = args;
   const clients: Record<string, unknown>[] = [];
 
-  const clientPayload = buildClient('client', clientData, quotes, policies, occupations);
-  if (clientPayload) clients.push(clientPayload);
-
-  if (partnerData) {
-    const partnerPayload = buildClient('partner', partnerData, quotes, policies, occupations);
-    if (partnerPayload) clients.push(partnerPayload);
+  for (const quote of quotes) {
+    const data = quote.lifeInsured === 'partner' && partnerData ? partnerData : clientData;
+    clients.push(buildClientForQuote(quote, data, policies, occupations));
   }
 
   return {
