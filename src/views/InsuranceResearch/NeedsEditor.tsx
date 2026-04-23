@@ -182,11 +182,10 @@ function MultiCodeSel<T extends string>({ label, value, labelMap, onChange, lock
   }, [open]);
 
   const keys = Object.keys(labelMap) as T[];
-  const isAll = value === '*';
   const isMulti = Array.isArray(value);
-  const isCurrentlyMulti = isAll || isMulti;
+  const isAll = isMulti && value.length === keys.length && keys.every((k) => (value as T[]).includes(k));
 
-  if (locked && !isCurrentlyMulti) {
+  if (locked && !isMulti) {
     const sv = toSingleValue(value, keys[0]);
     return (
       <div className="flex items-center justify-between gap-3 py-1">
@@ -203,21 +202,20 @@ function MultiCodeSel<T extends string>({ label, value, labelMap, onChange, lock
       </div>
     );
   }
-  const selected = new Set<T>(Array.isArray(value) ? (value as T[]) : !isAll ? [value as T] : []);
+  const selected = new Set<T>(isMulti ? (value as T[]) : [value as T]);
 
   let display: string;
-  if (isAll) display = 'All options (*)';
-  else if (Array.isArray(value)) display = (value as T[]).map((v) => labelMap[v]).join(', ');
+  if (isAll) display = 'All options';
+  else if (isMulti) display = (value as T[]).map((v) => labelMap[v]).join(', ');
   else display = labelMap[value as T] ?? '';
 
   function toggleAll() {
     if (isAll) onChange(keys[0]);
-    else onChange('*' as FieldValue<T>);
+    else onChange([...keys]);
   }
 
   function toggleOption(code: T) {
-    if (isAll) { onChange(code); return; }
-    const current: T[] = Array.isArray(value) ? (value as T[]) : [value as T];
+    const current: T[] = isMulti ? (value as T[]) : [value as T];
     const has = current.includes(code);
     if (has) {
       const next = current.filter((c) => c !== code);
@@ -228,7 +226,7 @@ function MultiCodeSel<T extends string>({ label, value, labelMap, onChange, lock
     }
   }
 
-  const isComparison = isAll || isMulti;
+  const isComparison = isMulti;
 
   return (
     <div className="flex items-center justify-between gap-3 py-1">
@@ -247,14 +245,13 @@ function MultiCodeSel<T extends string>({ label, value, labelMap, onChange, lock
           <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[240px] max-h-60 overflow-auto">
             <label className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-blue-50 border-b border-gray-200 cursor-pointer bg-gray-50">
               <input type="checkbox" checked={isAll} onChange={toggleAll} />
-              <span className="font-semibold">All options (*)</span>
+              <span className="font-semibold">All options</span>
             </label>
             {keys.map((code) => (
-              <label key={code} className={`flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer ${isAll ? 'opacity-50' : 'hover:bg-blue-50'}`}>
+              <label key={code} className="flex items-center gap-2 px-3 py-1.5 text-xs cursor-pointer hover:bg-blue-50">
                 <input
                   type="checkbox"
                   checked={selected.has(code)}
-                  disabled={isAll}
                   onChange={() => toggleOption(code)}
                 />
                 <span>{labelMap[code]}</span>

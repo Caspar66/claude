@@ -4,7 +4,7 @@
 
 // ── Multi-select field value ────────────────────────────────────────────────
 
-export type FieldValue<T extends string = string> = T | T[] | '*';
+export type FieldValue<T extends string = string> = T | T[];
 
 // ── Shared enumerations ────────────────────────────────────────────────────
 
@@ -320,89 +320,6 @@ export function removeLinkedNeed(parent: TrmFields | TrsFields, code: LinkedNeed
 
 // ── Serialisation ──────────────────────────────────────────────────────────
 
-// Map of need code → field name → valid code keys, used to expand '*'
-// (All options) into an explicit array, since the OmniLife API rejects '*'.
-const FIELD_CODES: Record<string, Record<string, string[]>> = {
-  TRM: {
-    structure: Object.keys(STRUCTURE_4_LABELS),
-    owner: Object.keys(OWNER_TRM_LABELS),
-    rollover: Object.keys(ROLLOVER_LABELS),
-    premiumWaiver: Object.keys(PREMIUM_WAIVER_LABELS),
-  },
-  TPE: {
-    structure: Object.keys(STRUCTURE_4_LABELS),
-    owner: Object.keys(OWNER_TPE_LABELS),
-    rollover: Object.keys(ROLLOVER_LABELS),
-    occupationType: Object.keys(OCCUPATION_LABELS),
-    lifeBuyBack: Object.keys(LIFE_BUY_BACK_TPE_LABELS),
-    doubleTPD: Object.keys(THREE_WAY_LABELS),
-    premiumWaiver: Object.keys(PREMIUM_WAIVER_LABELS),
-  },
-  TRE: {
-    structure: Object.keys(STRUCTURE_4_LABELS),
-    lifeBuyBack: Object.keys(LIFE_BUY_BACK_TRE_LABELS),
-    doubleTrauma: Object.keys(THREE_WAY_LABELS),
-    traumaReinstatement: Object.keys(THREE_WAY_LABELS),
-    premiumWaiver: Object.keys(PREMIUM_WAIVER_LABELS),
-    babyCare: Object.keys(FOUR_WAY_LABELS),
-    priority: Object.keys(PRIORITY_LABELS),
-  },
-  TPS: {
-    structure: Object.keys(STRUCTURE_4_LABELS),
-    owner: Object.keys(OWNER_TPE_LABELS),
-    rollover: Object.keys(ROLLOVER_LABELS),
-    occupationType: Object.keys(OCCUPATION_LABELS),
-    premiumWaiver: Object.keys(PREMIUM_WAIVER_LABELS),
-  },
-  TRS: {
-    structure: Object.keys(STRUCTURE_4_LABELS),
-    traumaReinstatement: Object.keys(THREE_WAY_LABELS),
-    premiumWaiver: Object.keys(PREMIUM_WAIVER_LABELS),
-    babyCare: Object.keys(FOUR_WAY_LABELS),
-    priority: Object.keys(PRIORITY_LABELS),
-  },
-  TPR: {
-    structure: Object.keys(STRUCTURE_4_LABELS),
-    owner: Object.keys(OWNER_INC_LABELS),
-    rollover: Object.keys(ROLLOVER_LABELS),
-    occupationType: Object.keys(OCCUPATION_LABELS),
-    premiumWaiver: Object.keys(PREMIUM_WAIVER_LABELS),
-  },
-  INC: {
-    structure: Object.keys(STRUCTURE_3_LABELS),
-    owner: Object.keys(OWNER_INC_LABELS),
-    rollover: Object.keys(ROLLOVER_LABELS),
-    agreedValue: Object.keys(AGREED_VALUE_LABELS),
-    accidentBenefit: Object.keys(FOUR_WAY_LABELS),
-    increaseClaimBenefit: Object.keys(FOUR_WAY_LABELS),
-    waitingPeriod: Object.keys(WAITING_INC_LABELS),
-    benefitPeriod: Object.keys(BENEFIT_INC_LABELS),
-    initialReplacementRatio: Object.keys(REPLACEMENT_RATIO_LABELS),
-    priority: Object.keys(PRIORITY_LABELS),
-  },
-  BUS: {
-    structure: Object.keys(STRUCTURE_3_LABELS),
-    waitingPeriod: Object.keys(WAITING_BUS_LABELS),
-  },
-  NES: {
-    structure: Object.keys(STRUCTURE_2_LABELS),
-  },
-};
-
-function expandStar(code: string, fields: Record<string, unknown>): Record<string, unknown> {
-  const codesForNeed = FIELD_CODES[code];
-  if (!codesForNeed) return fields;
-  const out: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(fields)) {
-    if (v === '*' && codesForNeed[k]) {
-      out[k] = [...codesForNeed[k]];
-    } else {
-      out[k] = v;
-    }
-  }
-  return out;
-}
-
 function omitEmpty(obj: Record<string, unknown>): Record<string, unknown> {
   const result: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(obj)) {
@@ -420,16 +337,14 @@ export function serialiseNeeds(needs: Need[]): unknown[] {
 
     if (code === 'CHT') return { CHT: fields };
 
-    const expanded = expandStar(code, fields);
-    const cleaned = omitEmpty(expanded);
+    const cleaned = omitEmpty(fields);
 
     if ('linkedNeeds' in cleaned) {
       const linked = cleaned.linkedNeeds as Record<string, unknown>[];
       cleaned.linkedNeeds = linked.map((ln) => {
         const lnCode = Object.keys(ln)[0];
         const lnFields = { ...(Object.values(ln)[0] as Record<string, unknown>) };
-        const lnExpanded = expandStar(lnCode, lnFields);
-        return { [lnCode]: omitEmpty(lnExpanded) };
+        return { [lnCode]: omitEmpty(lnFields) };
       });
     }
 
@@ -440,23 +355,20 @@ export function serialiseNeeds(needs: Need[]): unknown[] {
 // ── Multi-select helpers ───────────────────────────────────────────────────
 
 export function isMultiSelect(value: FieldValue): boolean {
-  return Array.isArray(value) || value === '*';
+  return Array.isArray(value);
 }
 
 export function fieldValueCount(value: FieldValue): number {
-  if (value === '*') return Infinity;
   if (Array.isArray(value)) return value.length;
   return 1;
 }
 
 export function toSingleValue<T extends string>(value: FieldValue<T>, fallback: T): T {
-  if (value === '*') return fallback;
   if (Array.isArray(value)) return value[0] ?? fallback;
   return value;
 }
 
 export function toggleMultiValue<T extends string>(current: FieldValue<T>, option: T): FieldValue<T> {
-  if (current === '*') return [option];
   if (Array.isArray(current)) {
     const exists = current.includes(option);
     if (exists) {
