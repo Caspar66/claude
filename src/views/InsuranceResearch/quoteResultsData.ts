@@ -64,10 +64,17 @@ function asFreqMap(v: unknown): FreqPremiumMap {
   return out;
 }
 
+function ensureUrl(v: string): string {
+  if (!v) return '';
+  if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('//')) return v;
+  return `https://${v}`;
+}
+
 function parsePortfolio(p: Record<string, unknown>, idx: number): QuoteResultRow | ExcludedProduct {
   const supplier = (p.supplier ?? {}) as Record<string, unknown>;
   const supplierName = asStr(supplier.name);
-  const supplierLogo = asStr(supplier.logo) || undefined;
+  const rawLogo = asStr(supplier.logo);
+  const supplierLogo = rawLogo ? ensureUrl(rawLogo) : undefined;
   const portfolioName = asStr(p.name);
   const allNeedsMet = p.allNeedsMet === true;
 
@@ -82,8 +89,8 @@ function parsePortfolio(p: Record<string, unknown>, idx: number): QuoteResultRow
       supplierLogo,
       portfolioName,
       errors,
-      pdsLink: asStr(links.pds) || undefined,
-      tmdLink: asStr(links.tmd) || undefined,
+      pdsLink: ensureUrl(asStr(links.pds)) || undefined,
+      tmdLink: ensureUrl(asStr(links.tmd)) || undefined,
     };
   }
 
@@ -96,10 +103,19 @@ function parsePortfolio(p: Record<string, unknown>, idx: number): QuoteResultRow
   const superPremiumByFreq = asFreqMap(pt.premiumInsideSuper);
   const nonSuperPremiumByFreq = asFreqMap(pt.premiumOutsideSuper);
 
-  const projections = (p.premiumTotalProjections ?? {}) as Record<string, unknown>;
-  const projPremium = (projections.premium ?? {}) as Record<string, unknown>;
-  const yearlyProjections = Array.isArray(projPremium.Y) ? (projPremium.Y as number[]) : [];
-  const cumulativePremium = yearlyProjections.reduce((sum, v) => sum + (typeof v === 'number' ? v : 0), 0);
+  const projections = p.premiumTotalProjections;
+  let cumulativePremium = 0;
+  if (Array.isArray(projections)) {
+    for (const proj of projections) {
+      if (proj && typeof proj === 'object') {
+        const premObj = (proj as Record<string, unknown>).premium;
+        if (premObj && typeof premObj === 'object') {
+          const yearly = (premObj as Record<string, unknown>).Y;
+          if (typeof yearly === 'number') cumulativePremium += yearly;
+        }
+      }
+    }
+  }
 
   const score = (p.score ?? {}) as Record<string, unknown>;
   const featureObj = (score.feature ?? {}) as Record<string, unknown>;
