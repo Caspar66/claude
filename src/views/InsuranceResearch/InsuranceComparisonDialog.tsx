@@ -32,7 +32,7 @@ import {
 } from './insuranceData';
 import { getDefaultQuoteForm } from './quoteFormTypes';
 import type { QuoteFormState } from './quoteFormTypes';
-import { generateMockQuoteResults, getEmptyQuoteResults } from './quoteResultsData';
+import { getEmptyQuoteResults, parsePortfolioResponse } from './quoteResultsData';
 import type { QuoteResults } from './quoteResultsData';
 import type {
   ClientFormData,
@@ -270,13 +270,12 @@ export function InsuranceComparisonDialog({
       });
       const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
       console.info('[OmniLife] /quote/portfolio response:', res.raw);
-      setQuoteResults(generateMockQuoteResults());
+      const parsed = parsePortfolioResponse(res.raw);
+      setQuoteResults(parsed);
       setScreen(1);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setPortfolioError(msg);
-      // Fall through to results screen with mock data so the UI can be iterated on.
-      setQuoteResults(generateMockQuoteResults());
       setScreen(1);
     } finally {
       setPortfolioLoading(false);
@@ -300,7 +299,7 @@ export function InsuranceComparisonDialog({
   }
 
   function handleUpdateQuotes() {
-    setQuoteResults(generateMockQuoteResults());
+    handleGetQuotes();
   }
 
   function handleMapPolicyClose(policies: MappedPolicy[]) {
