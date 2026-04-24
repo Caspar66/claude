@@ -163,7 +163,7 @@ export function InsuranceComparisonDialog({
       gender: 'Male',
       dateOfBirth: '15/06/1964',
       state: 'QLD',
-      occupationCode: '1P - Accounting Professionals',
+      occupationCode: 'Accountant',
     })
   );
   const [partnerData, setPartnerData] = useState<ClientFormData>(
@@ -171,7 +171,7 @@ export function InsuranceComparisonDialog({
       gender: 'Female',
       dateOfBirth: '2/07/1966',
       state: 'VIC',
-      occupationCode: '2B - Clerical & Administration',
+      occupationCode: 'Accountant',
     })
   );
 
@@ -217,10 +217,10 @@ export function InsuranceComparisonDialog({
     setScenarioName('');
     setCaseType('Client & Partner');
     setClientData(getDefaultClientData(clientParts[0] || 'Example', clientParts.slice(1).join(' ') || 'Client', 61, {
-      gender: 'Male', dateOfBirth: '15/06/1964', state: 'QLD', occupationCode: '1P - Accounting Professionals',
+      gender: 'Male', dateOfBirth: '15/06/1964', state: 'QLD', occupationCode: 'Accountant',
     }));
     setPartnerData(getDefaultClientData(partnerParts[0] || 'Example', partnerParts.slice(1).join(' ') || 'Partner', 59, {
-      gender: 'Female', dateOfBirth: '2/07/1966', state: 'VIC', occupationCode: '2B - Clerical & Administration',
+      gender: 'Female', dateOfBirth: '2/07/1966', state: 'VIC', occupationCode: 'Accountant',
     }));
     setQuoteOptions(getDefaultQuoteOptions());
     setLifeCover(getDefaultLifeCover());
