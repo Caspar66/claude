@@ -11,15 +11,10 @@ import {
   FileText,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
 import type { QuoteResults, QuoteResultRow, ExcludedProduct } from './quoteResultsData';
 import type { PremiumFrequency } from './insuranceData';
 import { PREMIUM_FREQUENCY_LABELS } from './insuranceData';
+import type { NeedsQuote } from './needsTypes';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -34,8 +29,6 @@ function scoreColor(score: number): string {
 }
 
 type SortField = 'premium' | 'cumulativePremium' | 'featureScore' | 'valueScore';
-
-const FREQ_OPTIONS: PremiumFrequency[] = ['W', 'F', 'M', 'Q', 'H', 'Y'];
 
 function freqLabel(code: PremiumFrequency): string {
   return PREMIUM_FREQUENCY_LABELS[code];
@@ -138,14 +131,13 @@ function ExcludedRow({ item }: { item: ExcludedProduct }) {
 interface Props {
   results: QuoteResults;
   activeQuoteIndex: number | null;
+  quotes: NeedsQuote[];
   onToggleSelect: (id: string) => void;
   onCompareProducts: () => void;
 }
 
-export function QuoteResultsPanel({ results, activeQuoteIndex, onToggleSelect, onCompareProducts }: Props) {
+export function QuoteResultsPanel({ results, activeQuoteIndex, quotes, onToggleSelect, onCompareProducts }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [superFreq, setSuperFreq] = useState<PremiumFrequency>('M');
-  const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFrequency>('M');
   const [sortField, setSortField] = useState<SortField>('premium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -235,34 +227,6 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, onToggleSelect, o
 
         <div className="flex-1" />
 
-        {/* Super premium frequency */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="text-xs gap-1 h-7">
-              Super {freqLabel(superFreq)} <ChevronDown size={10} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {FREQ_OPTIONS.map((opt) => (
-              <DropdownMenuItem key={opt} onClick={() => setSuperFreq(opt)}>{freqLabel(opt)}</DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {/* Non-Super premium frequency */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="text-xs gap-1 h-7">
-              Non-Super {freqLabel(nonSuperFreq)} <ChevronDown size={10} />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            {FREQ_OPTIONS.map((opt) => (
-              <DropdownMenuItem key={opt} onClick={() => setNonSuperFreq(opt)}>{freqLabel(opt)}</DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
         {/* Search */}
         <div className="relative">
           <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -322,17 +286,20 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, onToggleSelect, o
             </tr>
           </thead>
           <tbody>
-            {sorted.map((row) => (
-              <ResultRow
-                key={row.id}
-                row={row}
-                expanded={expandedRows.has(row.id)}
-                superFreq={superFreq}
-                nonSuperFreq={nonSuperFreq}
-                onToggleSelect={() => onToggleSelect(row.id)}
-                onToggleExpand={() => toggleExpand(row.id)}
-              />
-            ))}
+            {sorted.map((row) => {
+              const quote = quotes[row.quoteIndex];
+              return (
+                <ResultRow
+                  key={row.id}
+                  row={row}
+                  expanded={expandedRows.has(row.id)}
+                  superFreq={(quote?.superFrequency ?? 'M') as PremiumFrequency}
+                  nonSuperFreq={(quote?.nonSuperFrequency ?? 'M') as PremiumFrequency}
+                  onToggleSelect={() => onToggleSelect(row.id)}
+                  onToggleExpand={() => toggleExpand(row.id)}
+                />
+              );
+            })}
             {sorted.length === 0 && (
               <tr>
                 <td colSpan={99} className="px-6 py-8 text-center text-muted-foreground">

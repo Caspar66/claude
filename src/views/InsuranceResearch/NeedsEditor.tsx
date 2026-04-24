@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type {
-  NeedsQuote, Need, NeedCode, LinkedNeedCode,
+  NeedsQuote, Need, NeedCode, LinkedNeedCode, QuoteFrequency,
   TrmFields, TpeFields, TreFields, TpsFields, TrsFields, TprFields,
   IncFields, BusFields, NesFields, ChtFields, ChtChild,
   FieldValue,
@@ -28,6 +28,15 @@ import {
 } from './needsTypes';
 
 const MAX_OWNER_COMPARISONS = 3;
+
+const FREQ_OPTIONS: { code: QuoteFrequency; label: string }[] = [
+  { code: 'W', label: 'Weekly' },
+  { code: 'F', label: 'Fortnightly' },
+  { code: 'M', label: 'Monthly' },
+  { code: 'Q', label: 'Quarterly' },
+  { code: 'H', label: 'Half Yearly' },
+  { code: 'Y', label: 'Yearly' },
+];
 
 function countMultiOwnerNeeds(needs: Need[]): number {
   let count = 0;
@@ -762,6 +771,26 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             >
               <option value="client">{clientName}</option>
               {partnerName && <option value="partner">{partnerName}</option>}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-700">Super Frequency</label>
+            <select
+              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
+              value={draft.superFrequency}
+              onChange={(e) => setDraft((d) => ({ ...d, superFrequency: e.target.value as QuoteFrequency }))}
+            >
+              {FREQ_OPTIONS.map((f) => <option key={f.code} value={f.code}>{f.label}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs font-semibold text-slate-700">Non-Super Frequency</label>
+            <select
+              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
+              value={draft.nonSuperFrequency}
+              onChange={(e) => setDraft((d) => ({ ...d, nonSuperFrequency: e.target.value as QuoteFrequency }))}
+            >
+              {FREQ_OPTIONS.map((f) => <option key={f.code} value={f.code}>{f.label}</option>)}
             </select>
           </div>
           <NeedPicker existingCodes={existingCodes} onAdd={addNeed} />

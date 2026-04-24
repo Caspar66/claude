@@ -382,12 +382,16 @@ export function toggleMultiValue<T extends string>(current: FieldValue<T>, optio
 
 // ── Quote wrapper ──────────────────────────────────────────────────────────
 
+export type QuoteFrequency = 'Y' | 'H' | 'Q' | 'M' | 'F' | 'W';
+
 export interface NeedsQuote {
   id: string;
   name: string;
   lifeInsured: 'client' | 'partner';
   needs: Need[];
   compareAllCombinations: boolean;
+  superFrequency: QuoteFrequency;
+  nonSuperFrequency: QuoteFrequency;
 }
 
 export function createNeedsQuote(name: string, lifeInsured: 'client' | 'partner' = 'client'): NeedsQuote {
@@ -397,5 +401,7 @@ export function createNeedsQuote(name: string, lifeInsured: 'client' | 'partner'
     lifeInsured,
     needs: [],
     compareAllCombinations: true,
+    superFrequency: 'M',
+    nonSuperFrequency: 'M',
   };
 }

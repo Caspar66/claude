@@ -1,7 +1,11 @@
 import { SquarePen } from 'lucide-react';
-import type { NeedsQuote, Need, TrmFields, TrsFields } from './needsTypes';
+import type { NeedsQuote, Need, TrmFields, TrsFields, QuoteFrequency } from './needsTypes';
 import { getNeedCode, NEED_CODE_LABELS, LINKED_NEED_LABELS } from './needsTypes';
 import type { ClientFormData } from './insuranceData';
+
+const FREQ_LABEL: Record<QuoteFrequency, string> = {
+  Y: 'Yearly', H: 'Half Yearly', Q: 'Quarterly', M: 'Monthly', F: 'Fortnightly', W: 'Weekly',
+};
 
 interface Props {
   clientData: ClientFormData;
@@ -141,6 +145,11 @@ export function ClientQuoteTabsPanel({
                     );
                   })
                 )}
+                {/* Premium frequency settings */}
+                <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex gap-3 text-[10px] text-slate-500">
+                  <span>Super: <span className="font-medium text-slate-700">{FREQ_LABEL[q.superFrequency]}</span></span>
+                  <span>Non-Super: <span className="font-medium text-slate-700">{FREQ_LABEL[q.nonSuperFrequency]}</span></span>
+                </div>
               </div>
             </div>
           );

@@ -32,7 +32,12 @@ import {
 } from './insuranceData';
 import { getDefaultQuoteForm } from './quoteFormTypes';
 import type { QuoteFormState } from './quoteFormTypes';
-import { getEmptyQuoteResults, parsePortfolioResponse } from './quoteResultsData';
+import {
+  getEmptyQuoteResults,
+  parseSingleQuoteResponse,
+  mergeQuoteResults,
+  replaceQuoteInResults,
+} from './quoteResultsData';
 import type { QuoteResults } from './quoteResultsData';
 import type {
   ClientFormData,
@@ -48,7 +53,8 @@ import type {
   ExistingPolicy,
 } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
-import { buildPortfolioRequest, PORTFOLIO_QUERY_PARAMS } from './portfolioRequest';
+import { NeedsEditor } from './NeedsEditor';
+import { buildSingleQuoteRequest, buildQueryParamsForQuote } from './portfolioRequest';
 import { postQuotePortfolio } from '@/services/omnilifeApi';
 import { useOccupations } from '@/hooks/useOccupations';
 
@@ -61,8 +67,7 @@ interface Props {
   existingScenarioNames: string[];
 }
 
-// Screens: 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare' | 'options'
-type Screen = 'create' | 'personal' | 1 | 2 | 3 | 4 | 'compare' | 'options';
+type Screen = 'create' | 'personal' | 'editQuote' | 1 | 2 | 3 | 4 | 'compare' | 'options';
 
 const DETAIL_LABELS: Record<number, string> = {
   1: 'Insurance Details',
@@ -211,6 +216,9 @@ export function InsuranceComparisonDialog({
   // Active quote filter (null = show all quotes)
   const [activeQuoteIndex, setActiveQuoteIndex] = useState<number | null>(null);
 
+  // Editing a quote from the results page
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+
   const { options: occupations } = useOccupations();
 
   const showPartner = caseType === 'Client & Partner';
@@ -247,6 +255,7 @@ export function InsuranceComparisonDialog({
     setPortfolioLoading(false);
     setPortfolioError(null);
     setActiveQuoteIndex(null);
+    setEditingQuoteId(null);
   }
 
   function handleClose() {
@@ -260,27 +269,70 @@ export function InsuranceComparisonDialog({
     setScreen('personal');
   }
 
+  async function fetchSingleQuote(quote: NeedsQuote, quoteIndex: number): Promise<QuoteResults> {
+    const body = buildSingleQuoteRequest({
+      clientData,
+      partnerData: showPartner ? partnerData : null,
+      quote,
+      policies,
+      occupations,
+    });
+    const queryParams = buildQueryParamsForQuote(quote);
+    const res = await postQuotePortfolio(body, queryParams);
+    console.info(`[OmniLife] /quote/portfolio response for "${quote.name}":`, res.raw);
+    return parseSingleQuoteResponse(res.raw, quoteIndex);
+  }
+
   async function handleGetQuotes() {
     if (coverQuotes.length === 0) return;
     setPortfolioLoading(true);
     setPortfolioError(null);
     try {
-      const body = buildPortfolioRequest({
-        clientData,
-        partnerData: showPartner ? partnerData : null,
-        quotes: coverQuotes,
-        policies,
-        occupations,
-      });
-      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
-      console.info('[OmniLife] /quote/portfolio response:', res.raw);
-      const parsed = parsePortfolioResponse(res.raw);
-      setQuoteResults(parsed);
+      const results = await Promise.all(
+        coverQuotes.map((quote, idx) => fetchSingleQuote(quote, idx)),
+      );
+      const merged = mergeQuoteResults(results);
+      setQuoteResults(merged);
       setScreen(1);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setPortfolioError(msg);
       setScreen(1);
+    } finally {
+      setPortfolioLoading(false);
+    }
+  }
+
+  async function handleRerunSingleQuote(quoteIndex: number) {
+    const quote = coverQuotes[quoteIndex];
+    if (!quote) return;
+    setPortfolioLoading(true);
+    setPortfolioError(null);
+    try {
+      const updated = await fetchSingleQuote(quote, quoteIndex);
+      setQuoteResults((prev) => replaceQuoteInResults(prev, quoteIndex, updated));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setPortfolioError(msg);
+    } finally {
+      setPortfolioLoading(false);
+    }
+  }
+
+  async function handleSaveQuoteFromResults(updated: NeedsQuote) {
+    const quoteIndex = coverQuotes.findIndex((q) => q.id === updated.id);
+    setCoverQuotes((prev) => prev.map((q) => q.id === updated.id ? updated : q));
+    setEditingQuoteId(null);
+    setScreen(1);
+    if (quoteIndex < 0) return;
+    setPortfolioLoading(true);
+    setPortfolioError(null);
+    try {
+      const result = await fetchSingleQuote(updated, quoteIndex);
+      setQuoteResults((prev) => replaceQuoteInResults(prev, quoteIndex, result));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setPortfolioError(msg);
     } finally {
       setPortfolioLoading(false);
     }
@@ -439,6 +491,25 @@ export function InsuranceComparisonDialog({
             </>
           )}
 
+          {/* Edit Quote from results (NeedsEditor) */}
+          {screen === 'editQuote' && editingQuoteId && (() => {
+            const editQuote = coverQuotes.find((q) => q.id === editingQuoteId);
+            if (!editQuote) return null;
+            const clientDisplayName = `${clientData.lastName || 'Client'}, ${clientData.firstName || ''}`.trim().replace(/,$/, '');
+            const partnerDisplayName = showPartner && partnerData
+              ? `${partnerData.lastName || 'Partner'}, ${partnerData.firstName || ''}`.trim().replace(/,$/, '')
+              : null;
+            return (
+              <NeedsEditor
+                quote={editQuote}
+                clientName={clientDisplayName}
+                partnerName={partnerDisplayName}
+                onSave={handleSaveQuoteFromResults}
+                onCancel={() => { setEditingQuoteId(null); setScreen(1); }}
+              />
+            );
+          })()}
+
           {/* Insurance Details screens 1-4 */}
           {typeof screen === 'number' && screen >= 1 && (
             <>
@@ -487,14 +558,14 @@ export function InsuranceComparisonDialog({
                   activeQuoteIndex={activeQuoteIndex}
                   onSelectQuote={setActiveQuoteIndex}
                   onEditQuote={(id) => {
-                    const idx = coverQuotes.findIndex((q) => q.id === id);
-                    if (idx >= 0) setActiveQuoteIndex(idx);
-                    setScreen('personal');
+                    setEditingQuoteId(id);
+                    setScreen('editQuote');
                   }}
                 />
                 <QuoteResultsPanel
                   results={quoteResults}
                   activeQuoteIndex={activeQuoteIndex}
+                  quotes={coverQuotes}
                   onToggleSelect={handleToggleQuoteSelect}
                   onCompareProducts={handleCompareProducts}
                 />

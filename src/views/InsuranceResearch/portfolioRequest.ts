@@ -29,6 +29,16 @@ export interface BuildPortfolioArgs {
   tags?: PortfolioTags;
 }
 
+export interface BuildSingleQuoteArgs {
+  clientData: ClientFormData;
+  partnerData: ClientFormData | null;
+  quote: NeedsQuote;
+  policies: ExistingPolicy[];
+  occupations: OccupationOption[];
+  adviser?: PortfolioAdviser;
+  tags?: PortfolioTags;
+}
+
 const DEFAULT_ADVISER: PortfolioAdviser = {
   id: '2314a147-afbb-4c0a-8e3d-0ba3b5ca4193',
   email: 'caspar.jacobs@finuragroup.com',
@@ -114,6 +124,51 @@ function buildClientForQuote(
   };
 }
 
+function buildSettings(quote: NeedsQuote): Record<string, unknown> {
+  return {
+    commissionOptions: {},
+    campaignOptions: { AMG: [''] },
+    frequency: quote.nonSuperFrequency,
+    superFrequency: quote.superFrequency,
+    priceWeighting: 0,
+    includedSuppliers: [],
+    excludedProducts: [],
+    scoreWeightingFeatureType: 'Balanced',
+    scoreModeType: 'AllScores',
+    priceWeightingNeedOverride: null,
+    indexationRate: 0,
+    useQuoteDefaultAPL: false,
+    projectionYears: '15',
+  };
+}
+
+export function buildSingleQuoteRequest(args: BuildSingleQuoteArgs): Record<string, unknown> {
+  const { clientData, partnerData, quote, policies, occupations, adviser, tags } = args;
+  const data = quote.lifeInsured === 'partner' && partnerData ? partnerData : clientData;
+  const client = buildClientForQuote(quote, data, policies, occupations);
+
+  return {
+    clients: [client],
+    settings: buildSettings(quote),
+    adviser: adviser ?? DEFAULT_ADVISER,
+    tags: tags ?? DEFAULT_TAGS,
+  };
+}
+
+export function buildQueryParamsForQuote(quote: NeedsQuote): URLSearchParams {
+  return new URLSearchParams({
+    premiumBreakdown: 'covertype',
+    premiumComponents: 'commission',
+    nonSuperFrequency: quote.nonSuperFrequency,
+    superFrequency: quote.superFrequency,
+    includeTopFeatures: '5',
+    includeBottomFeatures: '5',
+    compareAllCombinations: quote.compareAllCombinations ? 'true' : 'false',
+    scoreWeightingType: 'Balanced',
+  });
+}
+
+// Legacy: multi-quote combined request (kept for reference, no longer used)
 export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, unknown> {
   const { clientData, partnerData, quotes, policies, occupations, adviser, tags } = args;
   const clients: Record<string, unknown>[] = [];

@@ -210,6 +210,57 @@ export function parsePortfolioResponse(raw: unknown): QuoteResults {
   return { rows, excluded, populated: rows.length > 0 || excluded.length > 0 };
 }
 
+export function parseSingleQuoteResponse(raw: unknown, quoteIndex: number): QuoteResults {
+  const clientGroups = extractClientGroups(raw);
+
+  const rows: QuoteResultRow[] = [];
+  const excluded: ExcludedProduct[] = [];
+  let globalIdx = 0;
+
+  for (const group of clientGroups) {
+    for (const p of group.portfolios) {
+      const result = parsePortfolio(p, globalIdx++, quoteIndex);
+      if ('products' in result) rows.push(result);
+      else excluded.push(result);
+    }
+  }
+
+  return { rows, excluded, populated: rows.length > 0 || excluded.length > 0 };
+}
+
+export function mergeQuoteResults(results: QuoteResults[]): QuoteResults {
+  const rows: QuoteResultRow[] = [];
+  const excluded: ExcludedProduct[] = [];
+  let globalIdx = 0;
+
+  for (const r of results) {
+    for (const row of r.rows) {
+      rows.push({ ...row, id: `qr-${globalIdx++}` });
+    }
+    for (const ex of r.excluded) {
+      excluded.push({ ...ex, id: `ex-${globalIdx++}` });
+    }
+  }
+
+  return { rows, excluded, populated: rows.length > 0 || excluded.length > 0 };
+}
+
+export function replaceQuoteInResults(
+  current: QuoteResults,
+  quoteIndex: number,
+  updated: QuoteResults,
+): QuoteResults {
+  const rows = [
+    ...current.rows.filter((r) => r.quoteIndex !== quoteIndex),
+    ...updated.rows,
+  ];
+  const excluded = [
+    ...current.excluded.filter((e) => e.quoteIndex !== quoteIndex),
+    ...updated.excluded,
+  ];
+  return { rows, excluded, populated: rows.length > 0 || excluded.length > 0 };
+}
+
 export function getEmptyQuoteResults(): QuoteResults {
   return { rows: [], excluded: [], populated: false };
 }
