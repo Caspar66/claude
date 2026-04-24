@@ -208,6 +208,9 @@ export function InsuranceComparisonDialog({
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
 
+  // Active quote filter (null = show all quotes)
+  const [activeQuoteIndex, setActiveQuoteIndex] = useState<number | null>(null);
+
   const { options: occupations } = useOccupations();
 
   const showPartner = caseType === 'Client & Partner';
@@ -243,6 +246,7 @@ export function InsuranceComparisonDialog({
     setCoverQuotes([]);
     setPortfolioLoading(false);
     setPortfolioError(null);
+    setActiveQuoteIndex(null);
   }
 
   function handleClose() {
@@ -479,11 +483,18 @@ export function InsuranceComparisonDialog({
                 <ClientQuoteTabsPanel
                   clientData={clientData}
                   partnerData={showPartner ? partnerData : null}
-                  activeClient={activeClient}
                   quotes={coverQuotes}
+                  activeQuoteIndex={activeQuoteIndex}
+                  onSelectQuote={setActiveQuoteIndex}
+                  onEditQuote={(id) => {
+                    const idx = coverQuotes.findIndex((q) => q.id === id);
+                    if (idx >= 0) setActiveQuoteIndex(idx);
+                    setScreen('personal');
+                  }}
                 />
                 <QuoteResultsPanel
                   results={quoteResults}
+                  activeQuoteIndex={activeQuoteIndex}
                   onToggleSelect={handleToggleQuoteSelect}
                   onCompareProducts={handleCompareProducts}
                 />

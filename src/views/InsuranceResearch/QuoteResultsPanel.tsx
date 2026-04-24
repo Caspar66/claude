@@ -137,11 +137,12 @@ function ExcludedRow({ item }: { item: ExcludedProduct }) {
 
 interface Props {
   results: QuoteResults;
+  activeQuoteIndex: number | null;
   onToggleSelect: (id: string) => void;
   onCompareProducts: () => void;
 }
 
-export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }: Props) {
+export function QuoteResultsPanel({ results, activeQuoteIndex, onToggleSelect, onCompareProducts }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [superFreq, setSuperFreq] = useState<PremiumFrequency>('M');
   const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFrequency>('M');
@@ -175,8 +176,15 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
     }
   }
 
-  // Filter
-  const filtered = results.rows.filter((r) => {
+  // Filter by active quote, then by search term
+  const visibleRows = activeQuoteIndex !== null
+    ? results.rows.filter((r) => r.quoteIndex === activeQuoteIndex)
+    : results.rows;
+  const visibleExcluded = activeQuoteIndex !== null
+    ? results.excluded.filter((e) => e.quoteIndex === activeQuoteIndex)
+    : results.excluded;
+
+  const filtered = visibleRows.filter((r) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
     return r.supplierName.toLowerCase().includes(term) || r.products.toLowerCase().includes(term);
@@ -337,7 +345,7 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
       </div>
 
       {/* ── Excluded products section ────────────────────────────────────── */}
-      {results.excluded.length > 0 && (
+      {visibleExcluded.length > 0 && (
         <div className="border-t border-gray-200">
           <button
             className="flex items-center gap-2 w-full px-6 py-2.5 bg-orange-50 hover:bg-orange-100 transition-colors text-left"
@@ -345,13 +353,13 @@ export function QuoteResultsPanel({ results, onToggleSelect, onCompareProducts }
           >
             {excludedCollapsed ? <ChevronRight size={14} className="text-orange-600" /> : <ChevronDown size={14} className="text-orange-600" />}
             <span className="text-xs font-bold text-orange-800">
-              EXCLUDED PRODUCTS ({results.excluded.length})
+              EXCLUDED PRODUCTS ({visibleExcluded.length})
             </span>
           </button>
           {!excludedCollapsed && (
             <table className="w-full text-sm">
               <tbody>
-                {results.excluded.map((ex) => (
+                {visibleExcluded.map((ex) => (
                   <ExcludedRow key={ex.id} item={ex} />
                 ))}
               </tbody>

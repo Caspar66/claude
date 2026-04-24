@@ -10,6 +10,7 @@ export type FreqPremiumMap = Partial<Record<PremiumFrequency, number>>;
 
 export interface QuoteResultRow {
   id: string;
+  quoteIndex: number;
   supplierName: string;
   supplierLogo?: string;
   portfolioName: string;
@@ -27,6 +28,7 @@ export interface QuoteResultRow {
 
 export interface ExcludedProduct {
   id: string;
+  quoteIndex: number;
   supplierName: string;
   supplierLogo?: string;
   portfolioName: string;
@@ -70,7 +72,11 @@ function ensureUrl(v: string): string {
   return `https://${v}`;
 }
 
-function parsePortfolio(p: Record<string, unknown>, idx: number): QuoteResultRow | ExcludedProduct {
+function parsePortfolio(
+  p: Record<string, unknown>,
+  globalIdx: number,
+  quoteIndex: number,
+): QuoteResultRow | ExcludedProduct {
   const supplier = (p.supplier ?? {}) as Record<string, unknown>;
   const supplierName = asStr(supplier.name);
   const rawLogo = asStr(supplier.logo);
@@ -84,7 +90,8 @@ function parsePortfolio(p: Record<string, unknown>, idx: number): QuoteResultRow
       ? (p.errors as unknown[]).map((e) => (typeof e === 'string' ? e : asStr((e as Record<string, unknown>)?.message ?? e)))
       : [];
     return {
-      id: `ex-${idx}`,
+      id: `ex-${globalIdx}`,
+      quoteIndex,
       supplierName,
       supplierLogo,
       portfolioName,
@@ -122,7 +129,8 @@ function parsePortfolio(p: Record<string, unknown>, idx: number): QuoteResultRow
   const combinedObj = (score.combined ?? {}) as Record<string, unknown>;
 
   return {
-    id: `qr-${idx}`,
+    id: `qr-${globalIdx}`,
+    quoteIndex,
     supplierName,
     supplierLogo,
     portfolioName,
@@ -137,59 +145,66 @@ function parsePortfolio(p: Record<string, unknown>, idx: number): QuoteResultRow
   };
 }
 
-function extractPortfolios(raw: unknown): Record<string, unknown>[] {
+interface ClientGroup {
+  portfolios: Record<string, unknown>[];
+}
+
+function extractClientGroups(raw: unknown): ClientGroup[] {
   if (!raw || typeof raw !== 'object') return [];
 
-  // Direct array of portfolios
   if (Array.isArray(raw)) {
-    // Check if items look like portfolios (have supplier or allNeedsMet)
-    if (raw.length > 0 && typeof raw[0] === 'object' && raw[0] !== null) {
-      const first = raw[0] as Record<string, unknown>;
-      if ('supplier' in first || 'allNeedsMet' in first) return raw as Record<string, unknown>[];
-      // Array of client results — collect all portfolios
-      const all: Record<string, unknown>[] = [];
-      for (const item of raw) {
-        if (item && typeof item === 'object' && 'portfolios' in (item as Record<string, unknown>)) {
-          const ps = (item as Record<string, unknown>).portfolios;
-          if (Array.isArray(ps)) all.push(...(ps as Record<string, unknown>[]));
-        }
-      }
-      return all;
+    if (raw.length === 0) return [];
+    const first = raw[0] as Record<string, unknown> | null;
+    if (!first || typeof first !== 'object') return [];
+
+    // Array of portfolio objects directly (single client)
+    if ('supplier' in first || 'allNeedsMet' in first) {
+      return [{ portfolios: raw as Record<string, unknown>[] }];
     }
-    return [];
+
+    // Array of client results, each with portfolios
+    return raw
+      .filter((item): item is Record<string, unknown> =>
+        !!item && typeof item === 'object' && 'portfolios' in (item as Record<string, unknown>))
+      .map((item) => ({
+        portfolios: Array.isArray(item.portfolios) ? (item.portfolios as Record<string, unknown>[]) : [],
+      }));
   }
 
   const obj = raw as Record<string, unknown>;
 
   // { portfolios: [...] }
-  if (Array.isArray(obj.portfolios)) return obj.portfolios as Record<string, unknown>[];
+  if (Array.isArray(obj.portfolios)) {
+    return [{ portfolios: obj.portfolios as Record<string, unknown>[] }];
+  }
 
-  // { clients: [{ portfolios: [...] }] }  or  { results: [{ portfolios: [...] }] }
+  // { clients: [...] } or { results: [...] } or { data: [...] }
   const nested = (obj.clients ?? obj.results ?? obj.data) as unknown;
   if (Array.isArray(nested)) {
-    const all: Record<string, unknown>[] = [];
-    for (const item of nested) {
-      if (item && typeof item === 'object' && 'portfolios' in (item as Record<string, unknown>)) {
-        const ps = (item as Record<string, unknown>).portfolios;
-        if (Array.isArray(ps)) all.push(...(ps as Record<string, unknown>[]));
-      }
-    }
-    return all;
+    return nested
+      .filter((item): item is Record<string, unknown> =>
+        !!item && typeof item === 'object' && 'portfolios' in (item as Record<string, unknown>))
+      .map((item) => ({
+        portfolios: Array.isArray(item.portfolios) ? (item.portfolios as Record<string, unknown>[]) : [],
+      }));
   }
 
   return [];
 }
 
 export function parsePortfolioResponse(raw: unknown): QuoteResults {
-  const portfolios = extractPortfolios(raw);
+  const clientGroups = extractClientGroups(raw);
 
   const rows: QuoteResultRow[] = [];
   const excluded: ExcludedProduct[] = [];
+  let globalIdx = 0;
 
-  portfolios.forEach((p, idx) => {
-    const result = parsePortfolio(p, idx);
-    if ('products' in result) rows.push(result);
-    else excluded.push(result);
+  clientGroups.forEach((group, quoteIndex) => {
+    for (const p of group.portfolios) {
+      const result = parsePortfolio(p, globalIdx++, quoteIndex);
+      if ('products' in result) rows.push(result);
+      else excluded.push(result);
+    }
   });
 
   return { rows, excluded, populated: rows.length > 0 || excluded.length > 0 };
