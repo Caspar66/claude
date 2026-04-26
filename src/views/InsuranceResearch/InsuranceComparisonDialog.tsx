@@ -32,12 +32,7 @@ import {
 } from './insuranceData';
 import { getDefaultQuoteForm } from './quoteFormTypes';
 import type { QuoteFormState } from './quoteFormTypes';
-import {
-  getEmptyQuoteResults,
-  parseSingleQuoteResponse,
-  mergeQuoteResults,
-  replaceQuoteInResults,
-} from './quoteResultsData';
+import { getEmptyQuoteResults, parsePortfolioResponse } from './quoteResultsData';
 import type { QuoteResults } from './quoteResultsData';
 import type {
   ClientFormData,
@@ -54,7 +49,7 @@ import type {
 } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { NeedsEditor } from './NeedsEditor';
-import { buildSingleQuoteRequest, buildQueryParamsForQuote } from './portfolioRequest';
+import { buildPortfolioRequest, PORTFOLIO_QUERY_PARAMS } from './portfolioRequest';
 import { postQuotePortfolio } from '@/services/omnilifeApi';
 import { useOccupations } from '@/hooks/useOccupations';
 
@@ -269,73 +264,39 @@ export function InsuranceComparisonDialog({
     setScreen('personal');
   }
 
-  async function fetchSingleQuote(quote: NeedsQuote, quoteIndex: number): Promise<QuoteResults> {
-    const body = buildSingleQuoteRequest({
-      clientData,
-      partnerData: showPartner ? partnerData : null,
-      quote,
-      policies,
-      occupations,
-    });
-    const queryParams = buildQueryParamsForQuote(quote);
-    const res = await postQuotePortfolio(body, queryParams);
-    console.info(`[OmniLife] /quote/portfolio response for "${quote.name}":`, res.raw);
-    return parseSingleQuoteResponse(res.raw, quoteIndex);
-  }
-
-  async function handleGetQuotes() {
-    if (coverQuotes.length === 0) return;
+  async function handleGetQuotes(quotesToUse?: NeedsQuote[]) {
+    const quotes = quotesToUse ?? coverQuotes;
+    if (quotes.length === 0) return;
     setPortfolioLoading(true);
     setPortfolioError(null);
     try {
-      const results = await Promise.all(
-        coverQuotes.map((quote, idx) => fetchSingleQuote(quote, idx)),
-      );
-      const merged = mergeQuoteResults(results);
-      setQuoteResults(merged);
+      const body = buildPortfolioRequest({
+        clientData,
+        partnerData: showPartner ? partnerData : null,
+        quotes,
+        policies,
+        occupations,
+      });
+      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
+      console.info('[OmniLife] /quote/portfolio response:', res.raw);
+      const parsed = parsePortfolioResponse(res.raw);
+      setQuoteResults(parsed);
       setScreen(1);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setPortfolioError(msg);
       setScreen(1);
-    } finally {
-      setPortfolioLoading(false);
-    }
-  }
-
-  async function handleRerunSingleQuote(quoteIndex: number) {
-    const quote = coverQuotes[quoteIndex];
-    if (!quote) return;
-    setPortfolioLoading(true);
-    setPortfolioError(null);
-    try {
-      const updated = await fetchSingleQuote(quote, quoteIndex);
-      setQuoteResults((prev) => replaceQuoteInResults(prev, quoteIndex, updated));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setPortfolioError(msg);
     } finally {
       setPortfolioLoading(false);
     }
   }
 
   async function handleSaveQuoteFromResults(updated: NeedsQuote) {
-    const quoteIndex = coverQuotes.findIndex((q) => q.id === updated.id);
-    setCoverQuotes((prev) => prev.map((q) => q.id === updated.id ? updated : q));
+    const updatedQuotes = coverQuotes.map((q) => q.id === updated.id ? updated : q);
+    setCoverQuotes(updatedQuotes);
     setEditingQuoteId(null);
     setScreen(1);
-    if (quoteIndex < 0) return;
-    setPortfolioLoading(true);
-    setPortfolioError(null);
-    try {
-      const result = await fetchSingleQuote(updated, quoteIndex);
-      setQuoteResults((prev) => replaceQuoteInResults(prev, quoteIndex, result));
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      setPortfolioError(msg);
-    } finally {
-      setPortfolioLoading(false);
-    }
+    await handleGetQuotes(updatedQuotes);
   }
 
   function toggleDisplayOption(opt: DisplayOption) {
@@ -518,7 +479,7 @@ export function InsuranceComparisonDialog({
                 client={clientData}
                 partner={showPartner ? partnerData : null}
                 activeClient={activeClient}
-                onToggleClient={setActiveClient}
+                onToggleClient={(who) => { setActiveClient(who); setActiveQuoteIndex(null); }}
               />
 
               {/* Screen nav: Back + Save */}
@@ -554,6 +515,7 @@ export function InsuranceComparisonDialog({
                 <ClientQuoteTabsPanel
                   clientData={clientData}
                   partnerData={showPartner ? partnerData : null}
+                  activeClient={activeClient}
                   quotes={coverQuotes}
                   activeQuoteIndex={activeQuoteIndex}
                   onSelectQuote={setActiveQuoteIndex}

@@ -10,6 +10,7 @@ const FREQ_LABEL: Record<QuoteFrequency, string> = {
 interface Props {
   clientData: ClientFormData;
   partnerData: ClientFormData | null;
+  activeClient: 'client' | 'partner';
   quotes: NeedsQuote[];
   activeQuoteIndex: number | null;
   onSelectQuote: (index: number | null) => void;
@@ -61,11 +62,16 @@ function clientLabelFor(
 export function ClientQuoteTabsPanel({
   clientData,
   partnerData,
+  activeClient,
   quotes,
   activeQuoteIndex,
   onSelectQuote,
   onEditQuote,
 }: Props) {
+  const filteredQuotes = quotes
+    .map((q, idx) => ({ quote: q, originalIndex: idx }))
+    .filter(({ quote }) => quote.lifeInsured === activeClient);
+
   return (
     <div className="w-[320px] border-r border-gray-200 bg-white flex flex-col overflow-hidden">
       {/* Header */}
@@ -87,13 +93,13 @@ export function ClientQuoteTabsPanel({
           All Quotes
         </button>
 
-        {quotes.length === 0 && (
+        {filteredQuotes.length === 0 && (
           <div className="text-xs text-slate-400 text-center py-8">
-            No quotes configured.
+            No quotes for this life insured.
           </div>
         )}
 
-        {quotes.map((q, idx) => {
+        {filteredQuotes.map(({ quote: q, originalIndex: idx }) => {
           const isActive = activeQuoteIndex === idx;
           return (
             <div
