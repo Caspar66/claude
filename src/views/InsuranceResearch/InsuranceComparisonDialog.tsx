@@ -441,7 +441,7 @@ export function InsuranceComparisonDialog({
                 onClientChange={setClientData}
                 onPartnerChange={setPartnerData}
                 onLaunchNeedsAnalysis={() => {}}
-                onGetQuotes={handleGetQuotes}
+                onGetQuotes={() => handleGetQuotes()}
                 policies={policies}
                 onChangePolicies={setPolicies}
                 quotes={coverQuotes}
