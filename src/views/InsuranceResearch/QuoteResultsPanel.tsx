@@ -131,12 +131,13 @@ function ExcludedRow({ item }: { item: ExcludedProduct }) {
 interface Props {
   results: QuoteResults;
   activeQuoteIndex: number | null;
+  activeClient: 'client' | 'partner';
   quotes: NeedsQuote[];
   onToggleSelect: (id: string) => void;
   onCompareProducts: () => void;
 }
 
-export function QuoteResultsPanel({ results, activeQuoteIndex, quotes, onToggleSelect, onCompareProducts }: Props) {
+export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, onToggleSelect, onCompareProducts }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('premium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -168,13 +169,20 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, quotes, onToggleS
     }
   }
 
-  // Filter by active quote, then by search term
+  // Quote indices belonging to the active life insured
+  const clientQuoteIndices = new Set(
+    quotes.map((q, idx) => ({ q, idx }))
+      .filter(({ q }) => q.lifeInsured === activeClient)
+      .map(({ idx }) => idx),
+  );
+
+  // Filter by specific quote or all quotes for the active client
   const visibleRows = activeQuoteIndex !== null
     ? results.rows.filter((r) => r.quoteIndex === activeQuoteIndex)
-    : results.rows;
+    : results.rows.filter((r) => clientQuoteIndices.has(r.quoteIndex));
   const visibleExcluded = activeQuoteIndex !== null
     ? results.excluded.filter((e) => e.quoteIndex === activeQuoteIndex)
-    : results.excluded;
+    : results.excluded.filter((e) => clientQuoteIndices.has(e.quoteIndex));
 
   const filtered = visibleRows.filter((r) => {
     if (!searchTerm) return true;

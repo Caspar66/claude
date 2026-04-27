@@ -527,6 +527,7 @@ export function InsuranceComparisonDialog({
                 <QuoteResultsPanel
                   results={quoteResults}
                   activeQuoteIndex={activeQuoteIndex}
+                  activeClient={activeClient}
                   quotes={coverQuotes}
                   onToggleSelect={handleToggleQuoteSelect}
                   onCompareProducts={handleCompareProducts}
