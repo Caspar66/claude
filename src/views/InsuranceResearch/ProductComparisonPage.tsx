@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ArrowUp, ArrowDown, Minus, Search, Download, ArrowLeft, ChevronDown, ChevronRight, SlidersHorizontal, Check, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { QuoteResultRow } from './quoteResultsData';
+import { computePremiumTotal } from './quoteResultsData';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -463,7 +464,7 @@ function downloadComparisonPdf(
       ${existing}
       <div style="font-weight:bold;font-size:13px;color:#334155;">${col.row.supplierName}</div>
       <div style="font-size:10px;color:#64748b;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${col.row.products}</div>
-      <div style="font-size:11px;font-weight:600;color:#1e293b;">$${(col.row.premiumByFreq['Y'] ?? 0).toLocaleString('en-AU', { minimumFractionDigits: 2 })} p.a.</div>
+      <div style="font-size:11px;font-weight:600;color:#1e293b;">$${(computePremiumTotal(col.row, 'Y', 'Y')).toLocaleString('en-AU', { minimumFractionDigits: 2 })} p.a.</div>
       <div style="font-size:10px;font-weight:bold;color:${col.row.featureScore >= 70 ? '#15803d' : '#b45309'};">Feature: ${col.row.featureScore}</div>
     </th>`;
   }).join('');
@@ -635,7 +636,7 @@ export function ProductComparisonPage({ selectedRows, existingRowId, onBack }: P
                       {col.row.products}
                     </span>
                     <span className="text-xs font-semibold text-slate-800">
-                      {fmt(col.row.premiumByFreq['Y'] ?? 0)} p.a.
+                      {fmt(computePremiumTotal(col.row, 'Y', 'Y'))} p.a.
                     </span>
                     {filters.featureScore && (
                       <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold ${scoreBg(col.row.featureScore)}`}>

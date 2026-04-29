@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { QuoteResults, QuoteResultRow, ExcludedProduct } from './quoteResultsData';
+import { computePremiumTotal, computeCumulativePremium } from './quoteResultsData';
 import type { PremiumFrequency } from './insuranceData';
 import { PREMIUM_FREQUENCY_LABELS } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
@@ -32,10 +33,6 @@ type SortField = 'premium' | 'cumulativePremium' | 'featureScore' | 'valueScore'
 
 function freqLabel(code: PremiumFrequency): string {
   return PREMIUM_FREQUENCY_LABELS[code];
-}
-
-function getFreqPremium(map: Partial<Record<PremiumFrequency, number>>, freq: PremiumFrequency): number {
-  return map[freq] ?? 0;
 }
 
 // ── Insurer logo ─────────────────────────────────────────────────────────────
@@ -160,10 +157,19 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
     });
   }
 
+  function getRowFreqs(row: QuoteResultRow): { superFreq: PremiumFrequency; nonSuperFreq: PremiumFrequency } {
+    const q = quotes[row.quoteIndex];
+    return {
+      superFreq: (q?.superFrequency ?? 'M') as PremiumFrequency,
+      nonSuperFreq: (q?.nonSuperFrequency ?? 'M') as PremiumFrequency,
+    };
+  }
+
   function getSortValue(row: QuoteResultRow, field: SortField): number {
+    const { superFreq, nonSuperFreq } = getRowFreqs(row);
     switch (field) {
-      case 'premium': return getFreqPremium(row.premiumByFreq, 'Y');
-      case 'cumulativePremium': return row.cumulativePremium;
+      case 'premium': return computePremiumTotal(row, superFreq, nonSuperFreq);
+      case 'cumulativePremium': return computeCumulativePremium(row, superFreq, nonSuperFreq);
       case 'featureScore': return row.featureScore;
       case 'valueScore': return row.valueScore;
     }
@@ -383,15 +389,9 @@ function ResultRow({
   onToggleSelect: () => void;
   onToggleExpand: () => void;
 }) {
-  const superAmt = getFreqPremium(row.superPremiumByFreq, superFreq);
-  const nonSuperAmt = getFreqPremium(row.nonSuperPremiumByFreq, nonSuperFreq);
-
-  // If both frequencies match, show the combined premium at that frequency;
-  // otherwise fall back to yearly total.
-  const displayFreq = superFreq === nonSuperFreq ? superFreq : 'Y';
-  const totalPremium = superFreq === nonSuperFreq
-    ? getFreqPremium(row.premiumByFreq, displayFreq)
-    : getFreqPremium(row.premiumByFreq, 'Y');
+  const totalPremium = computePremiumTotal(row, superFreq, nonSuperFreq);
+  const cumulativePremium = computeCumulativePremium(row, superFreq, nonSuperFreq);
+  const sameFreq = superFreq === nonSuperFreq;
 
   return (
     <>
@@ -434,24 +434,14 @@ function ResultRow({
         {/* Premiums */}
         <td className="px-3 py-2.5 text-right">
           <div className="font-semibold text-slate-800">{fmt(totalPremium)}</div>
-          {superFreq !== nonSuperFreq && (
-            <div className="text-[10px] text-slate-400">{freqLabel('Y')}</div>
-          )}
-          {superAmt > 0 && (
-            <div className="text-[10px] text-blue-600">
-              Super ({freqLabel(superFreq)}): {fmt(superAmt)}
-            </div>
-          )}
-          {nonSuperAmt > 0 && (
-            <div className="text-[10px] text-slate-500">
-              Non-Super ({freqLabel(nonSuperFreq)}): {fmt(nonSuperAmt)}
-            </div>
-          )}
+          <div className="text-[10px] text-slate-400">
+            {sameFreq ? freqLabel(superFreq) : 'Annualised'}
+          </div>
         </td>
 
         {/* Cumulative Premiums */}
         <td className="px-3 py-2.5 text-right font-medium text-slate-700">
-          {fmt(row.cumulativePremium)}
+          {fmt(cumulativePremium)}
         </td>
 
         {/* Feature Score */}

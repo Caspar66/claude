@@ -6,6 +6,21 @@ import type { PremiumFrequency } from './insuranceData';
 
 export type FreqPremiumMap = Partial<Record<PremiumFrequency, number>>;
 
+// ── Annualisation multipliers ───────────────────────────────────────────────
+
+export const FREQ_ANNUAL_MULTIPLIER: Record<PremiumFrequency, number> = {
+  Y: 1, H: 2, Q: 4, M: 12, F: 26, W: 52,
+};
+
+// ── Projection entry (one per year) ────────────────────────────────────────
+
+export interface ProjectionEntry {
+  premiumInsideSuper: FreqPremiumMap;
+  stampDutyInsideSuper: FreqPremiumMap;
+  premiumOutsideSuper: FreqPremiumMap;
+  stampDutyOutsideSuper: FreqPremiumMap;
+}
+
 // ── Included portfolio (allNeedsMet: true) ──────────────────────────────────
 
 export interface QuoteResultRow {
@@ -15,13 +30,46 @@ export interface QuoteResultRow {
   supplierLogo?: string;
   portfolioName: string;
   products: string;
-  premiumByFreq: FreqPremiumMap;
-  superPremiumByFreq: FreqPremiumMap;
-  nonSuperPremiumByFreq: FreqPremiumMap;
-  cumulativePremium: number;
+  premiumInsideSuper: FreqPremiumMap;
+  stampDutyInsideSuper: FreqPremiumMap;
+  premiumOutsideSuper: FreqPremiumMap;
+  stampDutyOutsideSuper: FreqPremiumMap;
+  projections: ProjectionEntry[];
   featureScore: number;
   valueScore: number;
   selected: boolean;
+}
+
+// ── Premium computation helpers ─────────────────────────────────────────────
+
+export function computePremiumTotal(
+  row: QuoteResultRow,
+  superFreq: PremiumFrequency,
+  nonSuperFreq: PremiumFrequency,
+): number {
+  const superPrem = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
+  const nonSuperPrem = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
+
+  if (superFreq === nonSuperFreq) {
+    return superPrem + nonSuperPrem;
+  }
+  return superPrem * FREQ_ANNUAL_MULTIPLIER[superFreq]
+       + nonSuperPrem * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq];
+}
+
+export function computeCumulativePremium(
+  row: QuoteResultRow,
+  superFreq: PremiumFrequency,
+  nonSuperFreq: PremiumFrequency,
+): number {
+  let total = 0;
+  for (const proj of row.projections) {
+    const superPart = (proj.premiumInsideSuper[superFreq] ?? 0) + (proj.stampDutyInsideSuper[superFreq] ?? 0);
+    const nonSuperPart = (proj.premiumOutsideSuper[nonSuperFreq] ?? 0) + (proj.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
+    total += superPart * FREQ_ANNUAL_MULTIPLIER[superFreq]
+           + nonSuperPart * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq];
+  }
+  return total;
 }
 
 // ── Excluded portfolio (allNeedsMet: false) ─────────────────────────────────
@@ -72,6 +120,22 @@ function ensureUrl(v: string): string {
   return `https://${v}`;
 }
 
+function parseProjections(raw: unknown): ProjectionEntry[] {
+  if (!Array.isArray(raw)) return [];
+  const entries: ProjectionEntry[] = [];
+  for (const proj of raw) {
+    if (!proj || typeof proj !== 'object') continue;
+    const p = proj as Record<string, unknown>;
+    entries.push({
+      premiumInsideSuper: asFreqMap(p.premiumInsideSuper),
+      stampDutyInsideSuper: asFreqMap(p.stampDutyInsideSuper),
+      premiumOutsideSuper: asFreqMap(p.premiumOutsideSuper),
+      stampDutyOutsideSuper: asFreqMap(p.stampDutyOutsideSuper),
+    });
+  }
+  return entries;
+}
+
 function parsePortfolio(
   p: Record<string, unknown>,
   globalIdx: number,
@@ -106,23 +170,12 @@ function parsePortfolio(
     : '';
 
   const pt = (p.premiumTotal ?? {}) as Record<string, unknown>;
-  const premiumByFreq = asFreqMap(pt.premium);
-  const superPremiumByFreq = asFreqMap(pt.premiumInsideSuper);
-  const nonSuperPremiumByFreq = asFreqMap(pt.premiumOutsideSuper);
+  const premiumInsideSuper = asFreqMap(pt.premiumInsideSuper);
+  const stampDutyInsideSuper = asFreqMap(pt.stampDutyInsideSuper);
+  const premiumOutsideSuper = asFreqMap(pt.premiumOutsideSuper);
+  const stampDutyOutsideSuper = asFreqMap(pt.stampDutyOutsideSuper);
 
-  const projections = p.premiumTotalProjections;
-  let cumulativePremium = 0;
-  if (Array.isArray(projections)) {
-    for (const proj of projections) {
-      if (proj && typeof proj === 'object') {
-        const premObj = (proj as Record<string, unknown>).premium;
-        if (premObj && typeof premObj === 'object') {
-          const yearly = (premObj as Record<string, unknown>).Y;
-          if (typeof yearly === 'number') cumulativePremium += yearly;
-        }
-      }
-    }
-  }
+  const projections = parseProjections(p.premiumTotalProjections);
 
   const score = (p.score ?? {}) as Record<string, unknown>;
   const featureObj = (score.feature ?? {}) as Record<string, unknown>;
@@ -135,10 +188,11 @@ function parsePortfolio(
     supplierLogo,
     portfolioName,
     products,
-    premiumByFreq,
-    superPremiumByFreq,
-    nonSuperPremiumByFreq,
-    cumulativePremium,
+    premiumInsideSuper,
+    stampDutyInsideSuper,
+    premiumOutsideSuper,
+    stampDutyOutsideSuper,
+    projections,
     featureScore: asNum(featureObj.raw),
     valueScore: asNum(combinedObj.raw),
     selected: false,
