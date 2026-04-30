@@ -98,6 +98,15 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/portfolio-features': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => p.replace('/api/portfolio-features', '/research/portfolio/features'),
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
       },
     },
   }

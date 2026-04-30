@@ -341,6 +341,40 @@ export async function postQuotePortfolio(
   return { raw: payload };
 }
 
+// ── Portfolio Features ──────────────────────────────────────────────────────
+
+export interface FeatureRequestEntry {
+  supplierCode: string;
+  revisionDate?: string;
+  products: Record<string, string>;
+}
+
+export async function postPortfolioFeatures(body: FeatureRequestEntry[]): Promise<unknown> {
+  const params = new URLSearchParams({
+    excludeSimilarities: '0',
+    score: '1',
+    coverNeedType: '1',
+    scoreWeightingType: '1',
+  });
+  const res = await fetch(`/api/portfolio-features?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OmniLife /research/portfolio/features returned ${res.status} ${res.statusText}${text ? ': ' + text : ''}`);
+  }
+
+  return res.json();
+}
+
+// ── Suppliers ────────────────────────────────────────────────────────────────
+
 export async function fetchSuppliers(): Promise<Supplier[]> {
   const res = await fetch('/api/suppliers', {
     headers: { Accept: 'application/json' },

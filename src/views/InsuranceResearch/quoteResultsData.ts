@@ -28,8 +28,11 @@ export interface QuoteResultRow {
   quoteIndex: number;
   supplierName: string;
   supplierLogo?: string;
+  supplierCode: string;
   portfolioName: string;
   products: string;
+  productCodes: Record<string, string>;
+  revisionDate?: string;
   premiumInsideSuper: FreqPremiumMap;
   stampDutyInsideSuper: FreqPremiumMap;
   premiumOutsideSuper: FreqPremiumMap;
@@ -144,11 +147,13 @@ function parsePortfolio(
 ): QuoteResultRow | ExcludedProduct {
   const supplier = (p.supplier ?? {}) as Record<string, unknown>;
   const supplierName = asStr(supplier.name);
+  const supplierCode = asStr(supplier.code) || asStr(supplier.supplierCode);
   const rawLogo = asStr(supplier.logo);
   const supplierLogo = rawLogo ? ensureUrl(rawLogo) : undefined;
   const portfolioName = asStr(p.name);
   const allNeedsMet = p.allNeedsMet === true;
   const isExistingCover = p.existingCover === true && asStr(p.portfolioType) === 'Research';
+  const revisionDate = asStr(p.revisionDate) || undefined;
 
   if (!allNeedsMet && !isExistingCover) {
     const links = (p.links ?? {}) as Record<string, unknown>;
@@ -167,8 +172,14 @@ function parsePortfolio(
     };
   }
 
+  const productCodes: Record<string, string> = {};
   const products = Array.isArray(p.products)
-    ? (p.products as Record<string, unknown>[]).map((pr) => asStr(pr.name)).filter(Boolean).join(', ')
+    ? (p.products as Record<string, unknown>[]).map((pr) => {
+        const code = asStr(pr.code) || asStr(pr.productCode) || asStr(pr.researchProductCode);
+        const type = asStr(pr.coverNeedCode) || asStr(pr.type) || asStr(pr.coverType);
+        if (code && type) productCodes[type] = code;
+        return asStr(pr.name);
+      }).filter(Boolean).join(', ')
     : '';
 
   const pt = (p.premiumTotal ?? {}) as Record<string, unknown>;
@@ -188,8 +199,11 @@ function parsePortfolio(
     quoteIndex,
     supplierName,
     supplierLogo,
+    supplierCode,
     portfolioName,
     products,
+    productCodes,
+    revisionDate,
     premiumInsideSuper,
     stampDutyInsideSuper,
     premiumOutsideSuper,
