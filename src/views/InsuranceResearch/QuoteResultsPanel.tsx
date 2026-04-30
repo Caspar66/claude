@@ -392,6 +392,8 @@ function ResultRow({
   const totalPremium = computePremiumTotal(row, superFreq, nonSuperFreq);
   const cumulativePremium = computeCumulativePremium(row, superFreq, nonSuperFreq);
   const sameFreq = superFreq === nonSuperFreq;
+  const superPrem = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
+  const nonSuperPrem = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
 
   return (
     <>
@@ -437,6 +439,16 @@ function ResultRow({
           <div className="text-[10px] text-slate-400">
             {sameFreq ? freqLabel(superFreq) : 'Annualised'}
           </div>
+          {superPrem !== 0 && (
+            <div className="text-[10px] text-slate-500 mt-0.5">
+              Super ({freqLabel(superFreq)}) {fmt(superPrem)}
+            </div>
+          )}
+          {nonSuperPrem !== 0 && (
+            <div className="text-[10px] text-slate-500">
+              Non Super ({freqLabel(nonSuperFreq)}) {fmt(nonSuperPrem)}
+            </div>
+          )}
         </td>
 
         {/* Cumulative Premiums */}
