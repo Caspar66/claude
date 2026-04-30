@@ -196,12 +196,22 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
     return r.supplierName.toLowerCase().includes(term) || r.products.toLowerCase().includes(term);
   });
 
-  // Sort
-  const sorted = [...filtered].sort((a, b) => {
+  // Sort — existing cover rows always at the bottom
+  const quoteRows = filtered.filter((r) => !r.existingCover);
+  const existingRows = filtered.filter((r) => r.existingCover);
+
+  quoteRows.sort((a, b) => {
     const aVal = getSortValue(a, sortField);
     const bVal = getSortValue(b, sortField);
     return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
   });
+  existingRows.sort((a, b) => {
+    const aVal = getSortValue(a, sortField);
+    const bVal = getSortValue(b, sortField);
+    return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
+  });
+
+  const sorted = [...quoteRows, ...existingRows];
 
   const selectAll = sorted.length > 0 && sorted.every((r) => r.selected);
 
@@ -420,7 +430,14 @@ function ResultRow({
           <div className="flex items-center gap-2">
             <InsurerLogo name={row.supplierName} logo={row.supplierLogo} />
             <div className="flex flex-col">
-              <span className="font-bold text-sm text-slate-800">{row.supplierName}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-sm text-slate-800">{row.supplierName}</span>
+                {row.existingCover && (
+                  <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
+                    EXISTING
+                  </span>
+                )}
+              </div>
               {row.portfolioName && (
                 <span className="text-[10px] text-slate-500 leading-tight">{row.portfolioName}</span>
               )}
@@ -453,7 +470,7 @@ function ResultRow({
 
         {/* Cumulative Premiums */}
         <td className="px-3 py-2.5 text-right font-medium text-slate-700">
-          {fmt(cumulativePremium)}
+          {row.existingCover ? <span className="text-xs text-slate-400">N/A</span> : fmt(cumulativePremium)}
         </td>
 
         {/* Feature Score */}
@@ -465,9 +482,13 @@ function ResultRow({
 
         {/* Value Score */}
         <td className="px-3 py-2.5 text-center">
-          <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold ${scoreColor(row.valueScore)}`}>
-            {row.valueScore}
-          </span>
+          {row.existingCover
+            ? <span className="text-xs text-slate-400">N/A</span>
+            : (
+              <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold ${scoreColor(row.valueScore)}`}>
+                {row.valueScore}
+              </span>
+            )}
         </td>
       </tr>
 

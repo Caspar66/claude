@@ -38,6 +38,7 @@ export interface QuoteResultRow {
   featureScore: number;
   valueScore: number;
   selected: boolean;
+  existingCover: boolean;
 }
 
 // ── Premium computation helpers ─────────────────────────────────────────────
@@ -147,8 +148,9 @@ function parsePortfolio(
   const supplierLogo = rawLogo ? ensureUrl(rawLogo) : undefined;
   const portfolioName = asStr(p.name);
   const allNeedsMet = p.allNeedsMet === true;
+  const isExistingCover = p.existingCover === true && asStr(p.portfolioType) === 'Research';
 
-  if (!allNeedsMet) {
+  if (!allNeedsMet && !isExistingCover) {
     const links = (p.links ?? {}) as Record<string, unknown>;
     const errors = Array.isArray(p.errors)
       ? (p.errors as unknown[]).map((e) => (typeof e === 'string' ? e : asStr((e as Record<string, unknown>)?.message ?? e)))
@@ -196,6 +198,7 @@ function parsePortfolio(
     featureScore: asNum(featureObj.raw),
     valueScore: asNum(combinedObj.raw),
     selected: false,
+    existingCover: isExistingCover,
   };
 }
 
