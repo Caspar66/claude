@@ -84,9 +84,8 @@ function buildClientForQuote(
   const age = dobIso ? calcAgeFromDob(dobIso) : data.age;
 
   const researchPortfolios = policies
-    .filter((p) => p.lifeInsured === quote.lifeInsured)
-    .map((p) => p.researchPortfolio)
-    .filter((x): x is ResearchPortfolio => x !== null);
+    .filter((p) => p.lifeInsured === quote.lifeInsured && p.researchPortfolio != null)
+    .map((p) => p.researchPortfolio as ResearchPortfolio);
 
   return {
     firstName: data.firstName,

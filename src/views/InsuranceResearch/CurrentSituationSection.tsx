@@ -162,15 +162,22 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                               <SquarePen size={12} className="text-blue-500 cursor-pointer" />
                               <button className="text-slate-400 hover:text-red-500" onClick={() => removePolicy(p.id)}>×</button>
                               <button
-                                className="text-blue-500 hover:text-blue-700"
-                                title="Map supplier and products"
+                                className={p.researchPortfolio ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-500 hover:text-blue-700'}
+                                title={p.researchPortfolio ? 'Linked — click to edit' : 'Map supplier and products'}
                                 onClick={() => setReviewPolicyId(p.id)}
                               >
                                 <Link2 size={12} />
                               </button>
                             </div>
                             <div className="text-xs">
-                              <div className="font-bold text-slate-800">{p.provider}</div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-800">{p.provider}</span>
+                                {p.researchPortfolio && (
+                                  <span className="text-[9px] font-bold bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
+                                    Linked
+                                  </span>
+                                )}
+                              </div>
                               <div className="text-slate-700">{p.policyDescription}</div>
                             </div>
                             <div className="text-xs text-slate-700">{p.premiumSuper > 0 ? `${superPremium} ${superFreqSuffix}` : 'N/A'}</div>
