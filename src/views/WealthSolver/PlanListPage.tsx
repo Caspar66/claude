@@ -63,7 +63,7 @@ export function PlanListPage() {
           <label className="block text-xs font-semibold text-muted-foreground mb-1">Search</label>
           <input
             type="text"
-            className="w-full border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600"
+            className="w-full border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400"
             placeholder="Plan name…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -139,7 +139,7 @@ function FilterSelect({
     <div>
       <label className="block text-xs font-semibold text-muted-foreground mb-1">{label}</label>
       <select
-        className="w-full border border-border rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+        className="w-full border border-border rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >

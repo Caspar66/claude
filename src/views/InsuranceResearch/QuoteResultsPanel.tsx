@@ -237,13 +237,13 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
       {/* ── Toolbar ──────────────────────────────────────────────────────── */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200 bg-gray-50 flex-wrap">
         <button
-          className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showGraphs ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-gray-300 text-slate-600 hover:bg-gray-50'}`}
+          className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showGraphs ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
           onClick={() => setShowGraphs(!showGraphs)}
         >
           All GRAPHS
         </button>
         <button
-          className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showOccRating ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-gray-300 text-slate-600 hover:bg-gray-50'}`}
+          className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showOccRating ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
           onClick={() => setShowOccRating(!showOccRating)}
         >
           Occupation Rating
@@ -257,7 +257,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
           <input
             type="text"
             placeholder="Search by product or insurer"
-            className="pl-7 pr-3 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-52"
+            className="pl-7 pr-3 py-1 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-52"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
@@ -275,7 +275,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
                     const target = !selectAll;
                     sorted.forEach((r) => { if (r.selected !== target) onToggleSelect(r.id); });
                   }}
-                  className={`w-4 h-4 rounded-sm border flex items-center justify-center ${selectAll ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}
+                  className={`w-4 h-4 rounded-sm border flex items-center justify-center ${selectAll ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}
                 >
                   {selectAll && <Check size={10} strokeWidth={3} />}
                 </button>
@@ -407,12 +407,12 @@ function ResultRow({
 
   return (
     <>
-      <tr className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${row.selected ? 'bg-teal-50/40' : ''}`}>
+      <tr className={`border-b border-gray-100 hover:bg-slate-50/50 transition-colors ${row.selected ? 'bg-teal-50/40' : ''}`}>
         {/* Checkbox */}
         <td className="px-2 py-2.5">
           <button
             onClick={onToggleSelect}
-            className={`w-4 h-4 rounded-sm border flex items-center justify-center ${row.selected ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}
+            className={`w-4 h-4 rounded-sm border flex items-center justify-center ${row.selected ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}
           >
             {row.selected && <Check size={10} strokeWidth={3} />}
           </button>

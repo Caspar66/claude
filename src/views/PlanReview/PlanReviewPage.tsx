@@ -341,7 +341,7 @@ function EditPlanPanel({
                 <td className="px-3 py-2 text-right">
                   <input
                     type="number"
-                    className="border border-border rounded px-2 py-0.5 text-xs text-right w-28 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                    className="border border-border rounded px-2 py-0.5 text-xs text-right w-28 focus:outline-none focus:ring-1 focus:ring-teal-400"
                     value={inv.amount}
                     onChange={(e) => onSetAmount(inv.id, parseFloat(e.target.value) || 0)}
                   />
@@ -484,7 +484,7 @@ function AddInvestmentPanel({ platformName, onCancel, onConfirm }: AddInvestment
       </div>
 
       <div className="border border-border rounded mb-4">
-        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">Add Investment</div>
+        <div className="px-4 py-2 bg-navy text-white text-sm font-semibold">Add Investment</div>
         <div className="p-4 border-b border-border">
           <select
             value={mode}
@@ -503,7 +503,7 @@ function AddInvestmentPanel({ platformName, onCancel, onConfirm }: AddInvestment
       </div>
 
       <div className="border border-border rounded">
-        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">
+        <div className="px-4 py-2 bg-navy text-white text-sm font-semibold">
           Selected Investments{selected.length > 0 ? ` (${selected.length})` : ''}
         </div>
         <table className="w-full text-sm">
@@ -873,7 +873,7 @@ export function PlanReviewPage() {
 
       {/* Section */}
       <section>
-        <div className="flex items-center justify-between px-4 py-2 bg-teal-700 text-white rounded-t">
+        <div className="flex items-center justify-between px-4 py-2 bg-navy text-white rounded-t">
           <span className="text-sm font-semibold flex items-center gap-2">
             {sectionTitle}
           </span>
@@ -1048,7 +1048,7 @@ export function PlanReviewPage() {
                           ) : (
                             <div className="relative">
                               <select
-                                className="appearance-none border border-border rounded px-2 py-1 pr-7 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-52"
+                                className="appearance-none border border-border rounded px-2 py-1 pr-7 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-52"
                                 value={entry.recommendation}
                                 onChange={(e) =>
                                   pageDispatch({

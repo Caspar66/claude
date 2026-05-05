@@ -216,7 +216,7 @@ export function InsuranceResearchContent({ clientName, partnerName }: Props) {
             </thead>
             <tbody>
               {insuranceScenarios.map((s) => (
-                <tr key={s.id} className="border-b border-border hover:bg-gray-50/50">
+                <tr key={s.id} className="border-b border-border hover:bg-slate-50/50">
                   <td className="px-6 py-3">
                     <button
                       onClick={() => handleViewScenario(s.id)}
@@ -239,8 +239,8 @@ export function InsuranceResearchContent({ clientName, partnerName }: Props) {
                       onClick={() => handleToggleInclude(s.id)}
                       className={`w-5 h-5 rounded border-2 inline-flex items-center justify-center transition-colors ${
                         s.includedInPlan
-                          ? 'bg-teal-600 border-teal-600 text-white'
-                          : 'border-gray-300 hover:border-teal-500'
+                          ? 'bg-teal-700 border-teal-700 text-white'
+                          : 'border-slate-300 hover:border-teal-500'
                       }`}
                     >
                       {s.includedInPlan && <Check size={14} strokeWidth={3} />}

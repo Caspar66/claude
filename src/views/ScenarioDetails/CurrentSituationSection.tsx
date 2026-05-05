@@ -189,7 +189,7 @@ export function CurrentSituationSection({ entities, scenarioId }: Props) {
 
   return (
     <section className="mb-4">
-      <div className="flex items-center justify-between px-4 py-2 bg-teal-700 text-white rounded-t">
+      <div className="flex items-center justify-between px-4 py-2 bg-navy text-white rounded-t">
         <span className="text-sm font-semibold flex items-center gap-2">
           <Settings size={14} />
           Current Situation

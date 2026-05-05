@@ -110,7 +110,7 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
                   <div>
                     <input
                       type="text"
-                      className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full max-w-[200px]"
+                      className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500 w-full max-w-[200px]"
                       value={q.name}
                       onChange={(e) => updateQuoteName(q.id, e.target.value)}
                       placeholder="Quote name"

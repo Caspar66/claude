@@ -198,7 +198,7 @@ export function InvestmentOptionsView({ plan }: Props) {
         <div className="flex items-center gap-2">
           <input
             type="text"
-            className="border border-border rounded px-2 py-1.5 text-xs w-48 focus:outline-none focus:ring-1 focus:ring-teal-600"
+            className="border border-border rounded px-2 py-1.5 text-xs w-48 focus:outline-none focus:ring-1 focus:ring-teal-400"
             placeholder="filter by name or APIR"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -248,7 +248,7 @@ export function InvestmentOptionsView({ plan }: Props) {
           </thead>
           <tbody>
             {filtered.map((opt) => (
-              <tr key={opt.id} className="border-b border-border hover:bg-gray-50">
+              <tr key={opt.id} className="border-b border-border hover:bg-slate-50">
                 <td className="px-3 py-2">
                   <span className="flex items-center gap-1.5">
                     <button
@@ -434,7 +434,7 @@ function InvestmentViewModal({
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col p-0">
         {/* Modal header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-teal-700 text-white flex-shrink-0">
+        <div className="flex items-center justify-between px-5 py-3 bg-navy text-white flex-shrink-0">
           <span className="text-sm font-semibold">Investment Details</span>
           <button onClick={onClose} className="text-white/80 hover:text-white">
             <X size={18} />
@@ -744,12 +744,12 @@ function AddExistingModal({
 
         {/* Option Selection section */}
         <div className="shrink-0">
-          <div className="bg-teal-700 text-white text-xs font-semibold px-4 py-1.5">Option Selection</div>
+          <div className="bg-navy text-white text-xs font-semibold px-4 py-1.5">Option Selection</div>
           <div className="flex items-center gap-3 px-4 py-3">
             <label className="text-sm font-medium text-muted-foreground w-32 shrink-0">Code/Description</label>
             <input
               type="text"
-              className="border border-border rounded px-2 py-1 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-teal-600"
+              className="border border-border rounded px-2 py-1 text-sm w-48 focus:outline-none focus:ring-1 focus:ring-teal-400"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && setCommitted(query)}
@@ -766,7 +766,7 @@ function AddExistingModal({
 
         {/* Search Results section */}
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
-          <div className="bg-teal-700 text-white text-xs font-semibold px-4 py-1.5 shrink-0">Search Results</div>
+          <div className="bg-navy text-white text-xs font-semibold px-4 py-1.5 shrink-0">Search Results</div>
           <div className="flex-1 overflow-auto">
             <table className="w-full text-sm border-collapse">
               <thead className="sticky top-0 bg-white z-10">
@@ -780,7 +780,7 @@ function AddExistingModal({
                 {filtered.map((opt) => (
                   <tr
                     key={opt.id}
-                    className="border-b border-border last:border-0 cursor-pointer hover:bg-gray-50"
+                    className="border-b border-border last:border-0 cursor-pointer hover:bg-slate-50"
                     onClick={() => toggleId(opt.id)}
                   >
                     <td className="px-3 py-1.5 text-center">
@@ -845,7 +845,7 @@ function PctInput({
     <input
       type="text"
       inputMode="decimal"
-      className={`border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 ${className}`}
+      className={`border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-400 ${className}`}
       value={editing ? raw : `${value.toFixed(decimals)}%`}
       onFocus={() => { setEditing(true); setRaw(String(value)); }}
       onChange={(e) => setRaw(e.target.value)}
@@ -884,7 +884,7 @@ function AddCustomModal({
 
   const planFees = getAllPlanFees(plan);
 
-  const fieldCls = 'border border-border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full';
+  const fieldCls = 'border border-border rounded px-2 py-0.5 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400 w-full';
   const computedCls = 'border border-border rounded px-2 py-0.5 text-xs w-full text-right bg-gray-50 text-muted-foreground';
 
   function setAllocKey(key: keyof WsAssetAllocation, val: number) {
@@ -923,7 +923,7 @@ function AddCustomModal({
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col p-0">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white flex-shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-navy text-white flex-shrink-0">
           <span className="text-sm font-semibold">Add New Investment Option</span>
           <button onClick={onClose} className="text-white/80 hover:text-white"><X size={16} /></button>
         </div>
@@ -1056,7 +1056,7 @@ function AddCustomModal({
 
         {/* Footer */}
         <div className="flex items-center justify-end gap-2 px-5 py-3 border-t border-border bg-white flex-shrink-0">
-          <Button className="bg-white border border-border text-foreground hover:bg-gray-50 h-7 text-xs px-4" disabled={!canAdd} onClick={handleOK}>OK</Button>
+          <Button className="bg-white border border-border text-foreground hover:bg-slate-50 h-7 text-xs px-4" disabled={!canAdd} onClick={handleOK}>OK</Button>
           <Button variant="outline" className="h-7 text-xs px-4" onClick={onClose}>Cancel</Button>
         </div>
       </DialogContent>
@@ -1121,7 +1121,7 @@ function EditCustomFundTab({
               <td className="px-2 py-1.5">
                 <input
                   type="text"
-                  className="border border-border rounded px-2 py-0.5 text-xs w-40 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  className="border border-border rounded px-2 py-0.5 text-xs w-40 focus:outline-none focus:ring-1 focus:ring-teal-400"
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 />
@@ -1129,7 +1129,7 @@ function EditCustomFundTab({
               <td className="px-2 py-1.5">
                 <input
                   type="text"
-                  className="border border-border rounded px-2 py-0.5 text-xs w-24 focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  className="border border-border rounded px-2 py-0.5 text-xs w-24 focus:outline-none focus:ring-1 focus:ring-teal-400"
                   value={form.apir}
                   onChange={(e) => setForm((f) => ({ ...f, apir: e.target.value }))}
                 />
@@ -1205,7 +1205,7 @@ function EditCustomFundTab({
       </div>
 
       <Button
-        className="bg-white border border-border text-foreground hover:bg-gray-50 h-7 text-xs px-4"
+        className="bg-white border border-border text-foreground hover:bg-slate-50 h-7 text-xs px-4"
         onClick={() => onUpdate({ ...form, assetAllocation: primaryAlloc(form.alloc) })}
       >
         Update

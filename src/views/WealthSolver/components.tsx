@@ -36,7 +36,7 @@ export function ColHead({
   return (
     <div className="border border-border rounded mb-3">
       <button
-        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 rounded-t"
+        className="w-full flex items-center justify-between px-4 py-2.5 text-sm font-semibold text-white bg-navy rounded-t"
         onClick={() => setOpen((v) => !v)}
       >
         <span>{title}</span>

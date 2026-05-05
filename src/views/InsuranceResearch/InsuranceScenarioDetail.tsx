@@ -112,12 +112,12 @@ function PolicyRow({
   return (
     <>
       {/* Main policy row */}
-      <tr className="border-b border-gray-200 hover:bg-gray-50/50">
+      <tr className="border-b border-gray-200 hover:bg-slate-50/50">
         <td className="px-2 py-2.5">
           <button
             onClick={onToggleExpand}
             className={`w-6 h-6 rounded-full flex items-center justify-center text-white ${
-              policy.expanded ? 'bg-slate-400' : 'bg-teal-600'
+              policy.expanded ? 'bg-slate-400' : 'bg-teal-700'
             }`}
           >
             {policy.expanded ? <Minus size={14} /> : <Plus size={14} />}

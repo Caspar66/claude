@@ -269,7 +269,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
           <div className="relative max-w-md">
             <input
               type="text"
-              className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={provider}
               onChange={(e) => { setProvider(e.target.value); setProviderQuery(e.target.value); setProviderOpen(true); }}
               onFocus={() => setProviderOpen(true)}
@@ -278,7 +278,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             />
             {suppliersLoading && <Loader2 size={12} className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-blue-500" />}
             {providerOpen && filteredSuppliers.length > 0 && (
-              <div className="absolute z-50 mt-0.5 w-full bg-white border border-gray-300 rounded shadow-lg max-h-48 overflow-y-auto">
+              <div className="absolute z-50 mt-0.5 w-full bg-white border border-slate-300 rounded shadow-lg max-h-48 overflow-y-auto">
                 {filteredSuppliers.map((s) => (
                   <button
                     key={s.code}
@@ -299,7 +299,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
           <label className="text-sm font-semibold text-slate-700">Policy Description:</label>
           <input
             type="text"
-            className="max-w-md border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="max-w-md border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={policyDescription}
             onChange={(e) => setPolicyDescription(e.target.value)}
           />
@@ -309,7 +309,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
         <div className="grid grid-cols-[160px_1fr] gap-3 items-center">
           <label className="text-sm font-semibold text-slate-700">Life Insured:</label>
           <select
-            className="max-w-md border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="max-w-md border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={lifeInsured}
             onChange={(e) => setLifeInsured(e.target.value as 'client' | 'partner')}
           >
@@ -332,19 +332,19 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             <input
               type="text"
               inputMode="decimal"
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={premiumSuper}
               onChange={(e) => setPremiumSuper(sanitizeMoneyInput(e.target.value))}
             />
             <input
               type="text"
               inputMode="decimal"
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={stampDutySuper}
               onChange={(e) => setStampDutySuper(sanitizeMoneyInput(e.target.value))}
             />
             <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={superFreq}
               onChange={(e) => setSuperFreq(e.target.value as PremiumFrequency)}
             >
@@ -358,19 +358,19 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             <input
               type="text"
               inputMode="decimal"
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={premiumNonSuper}
               onChange={(e) => setPremiumNonSuper(sanitizeMoneyInput(e.target.value))}
             />
             <input
               type="text"
               inputMode="decimal"
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={stampDutyNonSuper}
               onChange={(e) => setStampDutyNonSuper(sanitizeMoneyInput(e.target.value))}
             />
             <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               value={nonSuperFreq}
               onChange={(e) => setNonSuperFreq(e.target.value as PremiumFrequency)}
             >
@@ -383,7 +383,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
             <label className="text-sm italic text-slate-600">Total Premium:</label>
             <span className="text-sm text-slate-700">
               <strong>${totalPremium.toFixed(2)}</strong>
-              <span className="text-teal-600 ml-1"> / {totalFrequencyLabel}</span>
+              <span className="text-teal-700 ml-1"> / {totalFrequencyLabel}</span>
             </span>
           </div>
         </div>
@@ -394,7 +394,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
           <div className="overflow-x-auto">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-gray-300 bg-gray-50">
+                <tr className="border-b border-slate-300 bg-gray-50">
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Cover Type</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Sum Insured</th>
                   <th className="text-left px-2 py-2 font-bold text-slate-700">Premium Style</th>
@@ -427,7 +427,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         <input
                           type="text"
-                          className="w-24 border border-gray-300 rounded px-1.5 py-1 text-xs text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-24 border border-slate-300 rounded px-1.5 py-1 text-xs text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={c.sumInsured}
                           onChange={(e) => updateCover(type, { sumInsured: e.target.value })}
                         />
@@ -435,7 +435,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {styleOpts ? (
                           <select
-                            className="w-36 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-36 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.premiumStyle}
                             onChange={(e) => updateCover(type, { premiumStyle: e.target.value })}
                           >
@@ -446,7 +446,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {showOwnership ? (
                           <select
-                            className="w-32 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-32 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.ownership ?? 'O'}
                             onChange={(e) => updateCover(type, { ownership: e.target.value })}
                           >
@@ -462,7 +462,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {vis.definition ? (
                           <select
-                            className="w-32 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-32 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.definition ?? ''}
                             onChange={(e) => updateCover(type, { definition: e.target.value })}
                           >
@@ -473,7 +473,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {vis.standAlone ? (
                           <select
-                            className="w-16 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-16 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.standAlone ?? 'No'}
                             onChange={(e) => updateCover(type, { standAlone: e.target.value })}
                           >
@@ -485,7 +485,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {vis.flexiLinked ? (
                           <select
-                            className="w-16 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-16 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.flexiLinked ?? 'No'}
                             onChange={(e) => updateCover(type, { flexiLinked: e.target.value })}
                           >
@@ -497,7 +497,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {vis.superLinked ? (
                           <select
-                            className="w-16 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-16 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.superLinked ?? 'No'}
                             onChange={(e) => updateCover(type, { superLinked: e.target.value })}
                           >
@@ -509,7 +509,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {vis.waitingPeriod ? (
                           <select
-                            className="w-24 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-24 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.waitingPeriod ?? ''}
                             onChange={(e) => updateCover(type, { waitingPeriod: e.target.value })}
                           >
@@ -520,7 +520,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                       <td className="px-2 py-1.5">
                         {vis.benefitPeriod ? (
                           <select
-                            className="w-24 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-24 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.benefitPeriod ?? ''}
                             onChange={(e) => updateCover(type, { benefitPeriod: e.target.value })}
                           >
@@ -532,7 +532,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
                         {vis.addDeathCover ? (
                           <input
                             type="text"
-                            className="w-24 border border-gray-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            className="w-24 border border-slate-300 rounded px-1.5 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                             value={c.addDeathCover ?? ''}
                             onChange={(e) => updateCover(type, { addDeathCover: e.target.value })}
                           />

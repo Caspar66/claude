@@ -213,7 +213,7 @@ function StepProviderSearch({
               ref={inputRef}
               type="text"
               placeholder="Type provider name (e.g. AIA, TAL, AAMI...)"
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-teal-600 focus:border-transparent"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-slate-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-teal-400 focus:border-transparent"
               value={searchTerm}
               onChange={(e) => {
                 setSearchTerm(e.target.value);
@@ -237,7 +237,7 @@ function StepProviderSearch({
                   onClick={() => handleSelectProvider(pv)}
                 >
                   <span className="text-slate-700 group-hover:text-teal-700 font-medium">{pv.provider}</span>
-                  <ChevronRight size={14} className="text-gray-400 group-hover:text-teal-600" />
+                  <ChevronRight size={14} className="text-gray-400 group-hover:text-teal-700" />
                 </button>
               ))
             ) : (
@@ -255,7 +255,7 @@ function StepProviderSearch({
               Policy Version
             </label>
             <select
-              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-600"
+              className="w-full border border-slate-300 rounded-md px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-400"
               value={selectedVersion}
               onChange={(e) => setSelectedVersion(e.target.value)}
             >
@@ -354,7 +354,7 @@ function StepCoverSelection({
           </thead>
           <tbody>
             {productNames.map((name) => (
-              <tr key={name} className="border-b border-gray-100 hover:bg-gray-50/50">
+              <tr key={name} className="border-b border-gray-100 hover:bg-slate-50/50">
                 <td className="py-2.5 pr-3 text-sm text-slate-700 max-w-[280px]">
                   <span className="line-clamp-1">{name}</span>
                 </td>
@@ -366,8 +366,8 @@ function StepCoverSelection({
                         onClick={() => toggleCover(name, ct.key)}
                         className={`w-5 h-5 rounded border-2 inline-flex items-center justify-center transition-colors ${
                           checked
-                            ? 'bg-teal-600 border-teal-600 text-white'
-                            : 'border-gray-300 hover:border-teal-400'
+                            ? 'bg-teal-700 border-teal-700 text-white'
+                            : 'border-slate-300 hover:border-teal-400'
                         }`}
                       >
                         {checked && <Check size={12} strokeWidth={3} />}
@@ -569,7 +569,7 @@ export function MapExistingPolicyModal({ open, onClose, existingPolicies }: Prop
                 <div
                   className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                     s === step
-                      ? 'bg-teal-600 text-white'
+                      ? 'bg-teal-700 text-white'
                       : policies.length > 0 && s === 'confirm' && step !== 'search' && step !== 'covers'
                       ? 'bg-emerald-100 text-emerald-700'
                       : 'bg-gray-200 text-gray-500'

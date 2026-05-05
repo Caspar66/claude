@@ -198,7 +198,7 @@ function PlanDetail({ plan, onMode, plans }: { plan: WsPlan; onMode: (m: string)
             </thead>
             <tbody>
               {plan.investmentOptions.map((opt) => (
-                <tr key={opt.id} className="border-b border-border last:border-0 hover:bg-gray-50">
+                <tr key={opt.id} className="border-b border-border last:border-0 hover:bg-slate-50">
                   <td className="px-3 py-1.5">{opt.name}</td>
                   <td className="px-3 py-1.5 font-mono text-muted-foreground">{opt.apir}</td>
                   <td className="px-3 py-1.5 text-right">{fmtPct(opt.investFees)}</td>

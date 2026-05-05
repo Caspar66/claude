@@ -19,7 +19,7 @@ export function ScenarioSelectionPanel() {
   return (
     <div className="border border-border rounded mb-4">
       <button
-        className="w-full flex items-center justify-between px-4 py-2 bg-teal-700 text-white text-sm font-semibold rounded-t hover:bg-teal-800 transition-colors"
+        className="w-full flex items-center justify-between px-4 py-2 bg-navy text-white text-sm font-semibold rounded-t hover:bg-navy/90 transition-colors"
         onClick={() => setOpen((o) => !o)}
       >
         Scenario Selection

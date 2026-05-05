@@ -84,7 +84,7 @@ export function OccupationRatingsModal({ open, onClose, occupationLabel, occupat
             {!loading && !error && mappings.length > 0 && (
               <table className="w-full text-xs">
                 <thead>
-                  <tr className="bg-slate-100 border-b border-gray-300">
+                  <tr className="bg-slate-100 border-b border-slate-300">
                     <th className="text-left px-3 py-2 font-bold text-slate-700 sticky left-0 bg-slate-100">Insurer</th>
                     <th className="text-left px-3 py-2 font-bold text-slate-700">Description</th>
                     {COLUMNS.map((col) => (

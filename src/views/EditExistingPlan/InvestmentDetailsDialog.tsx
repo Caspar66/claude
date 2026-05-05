@@ -263,7 +263,7 @@ function AssetAllocationTab({ inv }: { inv: Investment }) {
               <Row key={k} label={k} value={allocVal(inv, k)} />
             ))}
             <Row label="Total Other" value={otherTotal} bold />
-            <tr className="border-t-2 border-gray-300">
+            <tr className="border-t-2 border-slate-300">
               <td className="py-1.5 pr-4 text-sm font-bold">TOTAL</td>
               <td className="py-1.5 text-right text-sm font-bold tabular-nums">{pct(grandTotal)}</td>
             </tr>
@@ -432,7 +432,7 @@ function TMDTab({ inv }: { inv: Investment }) {
   return (
     <div className="p-4">
       <div className="border border-border rounded overflow-hidden">
-        <div className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-gray-50 cursor-pointer">
+        <div className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-slate-50 cursor-pointer">
           <FileText size={15} className="text-blue-600 shrink-0" />
           <span className="text-blue-600 hover:underline">{inv.name}</span>
         </div>
@@ -516,7 +516,7 @@ function EditAssetAllocationsTab({
         <div className="flex items-center gap-3">
           <button
             onClick={handleUpdate}
-            className="border border-border rounded px-4 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+            className="border border-border rounded px-4 py-1.5 text-sm hover:bg-slate-50 transition-colors"
           >
             Update
           </button>
@@ -666,7 +666,7 @@ function EditCustomFundTab({
         <div className="flex items-center gap-3">
           <button
             onClick={handleUpdate}
-            className="border border-border rounded px-4 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+            className="border border-border rounded px-4 py-1.5 text-sm hover:bg-slate-50 transition-colors"
           >
             Update
           </button>
@@ -733,8 +733,8 @@ export function InvestmentDetailsDialog({ investment, open, onClose, scenarioId,
         className="max-w-4xl w-full p-0 overflow-hidden rounded-lg flex flex-col"
         style={{ maxHeight: '88vh' }}
       >
-        {/* Teal header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-teal-700 text-white shrink-0">
+        {/* Navy header */}
+        <div className="flex items-center justify-between px-5 py-3 bg-navy text-white shrink-0">
           <span className="font-semibold text-sm">Investment Details</span>
           <DialogClose className="text-white/80 hover:text-white rounded p-0.5">
             <X size={16} />
@@ -823,7 +823,7 @@ export function InvestmentDetailsDialog({ investment, open, onClose, scenarioId,
           <FundDataLogo />
           <button
             onClick={onClose}
-            className="border border-border rounded px-4 py-1.5 text-sm hover:bg-gray-50 transition-colors"
+            className="border border-border rounded px-4 py-1.5 text-sm hover:bg-slate-50 transition-colors"
           >
             Close
           </button>

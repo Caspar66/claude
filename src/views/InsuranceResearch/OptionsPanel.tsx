@@ -20,7 +20,7 @@ function Sel({ label, value, options, onChange }: { label: string; value: string
   return (
     <div className="flex items-center justify-between gap-3 py-1">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
-      <select className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[180px]" value={value} onChange={(e) => onChange(e.target.value)}>
+      <select className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[180px]" value={value} onChange={(e) => onChange(e.target.value)}>
         {options.map((o) => <option key={o} value={o}>{o}</option>)}
       </select>
     </div>
@@ -32,11 +32,11 @@ function Toggle({ label, value, onChange }: { label: string; value: string; onCh
   return (
     <div className="flex items-center justify-between gap-3 py-1">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
-      <div className="flex rounded border border-gray-300 overflow-hidden">
+      <div className="flex rounded border border-slate-300 overflow-hidden">
         {opts.map((o) => (
           <button
             key={o}
-            className={`px-3 py-0.5 text-xs font-medium transition-colors ${value === o ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
+            className={`px-3 py-0.5 text-xs font-medium transition-colors ${value === o ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
             onClick={() => onChange(o)}
           >
             {o}
@@ -50,7 +50,7 @@ function Toggle({ label, value, onChange }: { label: string; value: string; onCh
 function Chk({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
   return (
     <button className="flex items-center gap-2 py-1 w-full text-left" onClick={() => onChange(!checked)}>
-      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300 bg-white'}`}>
+      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300 bg-white'}`}>
         {checked && <Check size={10} strokeWidth={3} />}
       </div>
       <span className="text-xs text-slate-700">{label}</span>
@@ -351,15 +351,15 @@ function InsurerOptions({ onClose, defaultsMode }: { onClose: () => void; defaul
                         <div
                           key={s.code}
                           className={`flex items-center gap-2 px-3 py-1.5 border-t border-gray-100 cursor-pointer ${
-                            isSelected ? 'bg-teal-50 border-l-2 border-l-teal-600' : 'hover:bg-gray-100'
+                            isSelected ? 'bg-teal-50 border-l-2 border-l-teal-700' : 'hover:bg-gray-100'
                           }`}
                           onClick={() => setSelectedSupplierCode(s.code)}
                         >
                           <button
                             className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${
                               checkedSuppliers.has(s.code)
-                                ? 'bg-teal-600 border-teal-600 text-white'
-                                : 'border-gray-300 bg-white'
+                                ? 'bg-teal-700 border-teal-700 text-white'
+                                : 'border-slate-300 bg-white'
                             }`}
                             onClick={(e) => { e.stopPropagation(); toggleSupplier(s); }}
                           >
@@ -396,7 +396,7 @@ function InsurerOptions({ onClose, defaultsMode }: { onClose: () => void; defaul
                 <div className="flex items-center gap-3">
                   <label className="text-xs font-medium text-slate-600 shrink-0">Default Commission</label>
                   <select
-                    className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 flex-1 max-w-[280px]"
+                    className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 flex-1 max-w-[280px]"
                     value={commissionBySupplier[selectedSupplier.code] ?? selectedSupplier.defaultCommissionCode ?? ''}
                     onChange={(e) => updateCommission(selectedSupplier.code, e.target.value)}
                   >
@@ -495,7 +495,7 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
             <button
               key={ins}
               className={`w-full text-left px-3 py-2.5 text-xs font-medium border-b border-gray-100 transition-colors ${
-                selected === ins ? 'bg-teal-50 text-teal-700 border-l-2 border-l-teal-600' : 'text-slate-600 hover:bg-gray-100'
+                selected === ins ? 'bg-teal-50 text-teal-700 border-l-2 border-l-teal-700' : 'text-slate-600 hover:bg-gray-100'
               }`}
               onClick={() => setSelected(ins)}
             >
@@ -512,7 +512,7 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
                 <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Adviser Code</label>
                 <input
                   type="text"
-                  className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
+                  className="w-full border border-slate-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 max-w-xs"
                   value={cur.adviserCode}
                   onChange={(e) => updateField('adviserCode', e.target.value)}
                 />
@@ -523,7 +523,7 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
                   <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Username</label>
                   <input
                     type="text"
-                    className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
+                    className="w-full border border-slate-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 max-w-xs"
                     value={cur.username}
                     onChange={(e) => updateField('username', e.target.value)}
                   />
@@ -532,7 +532,7 @@ function InsurerLogins({ onClose }: { onClose: () => void }) {
                   <label className="block text-xs font-medium text-slate-600 mb-1">{selected} Password</label>
                   <input
                     type="password"
-                    className="w-full border border-gray-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 max-w-xs"
+                    className="w-full border border-slate-300 rounded px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 max-w-xs"
                     value={cur.password}
                     onChange={(e) => updateField('password', e.target.value)}
                   />
@@ -598,15 +598,15 @@ export function OptionsModalContent({ activeTab, onTabChange, onClose }: Options
                 : 'Your custom defaults (including selected Insurers & Products) will be applied to quotes.'}
             </p>
           </div>
-          <div className="flex rounded border border-gray-300 overflow-hidden shrink-0">
+          <div className="flex rounded border border-slate-300 overflow-hidden shrink-0">
             <button
-              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'adviser' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
+              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'adviser' ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
               onClick={() => setDefaultsMode('adviser')}
             >
               Use Adviser defaults
             </button>
             <button
-              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'my' ? 'bg-teal-600 text-white' : 'bg-white text-slate-600 hover:bg-gray-50'}`}
+              className={`px-3 py-1 text-xs font-medium transition-colors ${defaultsMode === 'my' ? 'bg-teal-700 text-white' : 'bg-white text-slate-600 hover:bg-slate-50'}`}
               onClick={() => setDefaultsMode('my')}
             >
               Use my defaults

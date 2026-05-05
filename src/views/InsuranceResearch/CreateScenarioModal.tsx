@@ -64,7 +64,7 @@ export function CreateScenarioModal({ open, onSave, onCancel, existingNames }: P
             <input
               ref={inputRef}
               type="text"
-              className="w-56 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="w-56 border border-slate-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               value={name}
               onChange={(e) => { setName(e.target.value); setError(''); }}
               onKeyDown={handleKeyDown}
@@ -79,7 +79,7 @@ export function CreateScenarioModal({ open, onSave, onCancel, existingNames }: P
               Case
             </label>
             <select
-              className="w-32 border border-gray-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="w-32 border border-slate-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               value={caseType}
               onChange={(e) => setCaseType(e.target.value)}
             >

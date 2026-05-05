@@ -301,7 +301,7 @@ function SetRows({ feeSet, calc, tiers, padCount, fee, balStr, onBalanceChange, 
             step="1000"
             value={balStr}
             onChange={(e) => onBalanceChange(e.target.value)}
-            className="w-28 border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 bg-yellow-100 font-medium"
+            className="w-28 border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-400 bg-yellow-100 font-medium"
           />
         </td>
         <td className={`${tdR} ${muted}`}>1.0</td>

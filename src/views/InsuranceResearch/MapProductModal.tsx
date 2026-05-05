@@ -392,7 +392,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
           );
         })}
         <select
-          className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
           value={selectedCode ?? ''}
           onChange={(e) => setProductSelections((prev) => ({ ...prev, [section.code]: e.target.value }))}
         >
@@ -424,7 +424,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
             <label className="text-sm text-blue-700">Filter suppliers:</label>
             <input
               type="text"
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Search Suppliers"
               value={supplierFilter}
               onChange={(e) => setSupplierFilter(e.target.value)}
@@ -438,7 +438,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
             <label className="text-sm text-blue-700">Supplier:</label>
             <div className="relative">
               <select
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
+                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-50"
                 value={supplierName}
                 onChange={(e) => setSupplierName(e.target.value)}
                 disabled={portfoliosLoading}
@@ -467,7 +467,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
             <div className="grid grid-cols-[140px_1fr] gap-3 items-center">
               <label className="text-sm text-blue-700">PDS issue date:</label>
               <select
-                className="w-full border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                 value={revisionDate}
                 onChange={(e) => setRevisionDate(e.target.value)}
               >
@@ -531,7 +531,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                       <td className="py-1 px-2">
                         <input
                           type="text"
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={premiumInside}
                           onChange={(e) => setPremiumInside(e.target.value)}
                         />
@@ -539,7 +539,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                       <td className="py-1 px-2">
                         <input
                           type="text"
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={premiumOutside}
                           onChange={(e) => setPremiumOutside(e.target.value)}
                         />
@@ -553,7 +553,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                       <td className="py-1 px-2">
                         <input
                           type="text"
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={stampDutyInside}
                           onChange={(e) => setStampDutyInside(e.target.value)}
                         />
@@ -561,7 +561,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
                       <td className="py-1 px-2">
                         <input
                           type="text"
-                          className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={stampDutyOutside}
                           onChange={(e) => setStampDutyOutside(e.target.value)}
                         />

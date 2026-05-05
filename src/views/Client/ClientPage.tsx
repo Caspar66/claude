@@ -163,7 +163,7 @@ export function ClientPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
                   activeTab === tab.key
-                    ? 'border-teal-500 text-teal-600'
+                    ? 'border-teal-500 text-teal-700'
                     : 'border-transparent text-muted-foreground hover:text-foreground'
                 }`}
               >
@@ -221,7 +221,7 @@ export function ClientPage() {
                     onClick={() => setResearchSubTab('insurance')}
                     className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
                       researchSubTab === 'insurance'
-                        ? 'border-teal-600 text-teal-600'
+                        ? 'border-teal-700 text-teal-700'
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >
@@ -232,7 +232,7 @@ export function ClientPage() {
                     onClick={() => setResearchSubTab('investment')}
                     className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
                       researchSubTab === 'investment'
-                        ? 'border-teal-600 text-teal-600'
+                        ? 'border-teal-700 text-teal-700'
                         : 'border-transparent text-muted-foreground hover:text-foreground'
                     }`}
                   >

@@ -29,7 +29,7 @@ function Sel({ label, value, options, onChange }: { label: string; value: string
     <div className="flex items-center justify-between gap-3 py-1.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <select
-        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
+        className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[200px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -44,7 +44,7 @@ function Inp({ label, value, onChange, placeholder }: { label: string; value: st
     <div className="flex items-center justify-between gap-3 py-1.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <input
-        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
+        className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[200px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
@@ -59,7 +59,7 @@ function SectionCheck({ label, code, checked, onChange }: { label: string; code:
       className="flex items-center gap-2 py-2 w-full text-left"
       onClick={() => onChange(!checked)}
     >
-      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-400 bg-white'}`}>
+      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300 bg-white'}`}>
         {checked && <Check size={10} strokeWidth={3} />}
       </div>
       <span className="text-xs font-bold text-slate-800">
@@ -200,7 +200,7 @@ export function QuoteOptionsPage({ quote, clientName, partnerName, onSave, onCan
             <label className="text-xs font-semibold text-slate-700">Quote Name</label>
             <input
               type="text"
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             />
@@ -208,7 +208,7 @@ export function QuoteOptionsPage({ quote, clientName, partnerName, onSave, onCan
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-slate-700">Life Insured</label>
             <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
               value={draft.lifeInsured}
               onChange={(e) => setDraft((d) => ({ ...d, lifeInsured: e.target.value as 'client' | 'partner' }))}
             >

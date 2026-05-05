@@ -199,7 +199,7 @@ function FiltersPanel({
           <label className="text-xs font-semibold text-slate-700 block mb-1.5">Categories</label>
           <div className="relative mb-2">
             <Search size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" placeholder="Search categories..." className="w-full pl-7 pr-2 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-600" value={catSearch} onChange={(e) => setCatSearch(e.target.value)} />
+            <input type="text" placeholder="Search categories..." className="w-full pl-7 pr-2 py-1 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-400" value={catSearch} onChange={(e) => setCatSearch(e.target.value)} />
           </div>
           <div className="space-y-0.5 max-h-[240px] overflow-y-auto border border-gray-200 rounded p-2">
             {!catSearch && (
@@ -222,7 +222,7 @@ function FiltersPanel({
 function FilterChk({ label, checked, onChange, bold }: { label: string; checked: boolean; onChange: () => void; bold?: boolean }) {
   return (
     <button className="flex items-center gap-2 py-0.5 w-full text-left" onClick={onChange}>
-      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300 bg-white'}`}>
+      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300 bg-white'}`}>
         {checked && <Check size={10} strokeWidth={3} />}
       </div>
       <span className={`text-xs ${bold ? 'font-semibold text-slate-800' : 'text-slate-700'}`}>{label}</span>
@@ -234,9 +234,9 @@ function FilterToggle({ label, value, onChange }: { label: string; value: boolea
   return (
     <div className="flex items-center justify-between">
       <span className="text-xs text-slate-600">{label}</span>
-      <div className="flex rounded border border-gray-300 overflow-hidden">
-        <button className={`px-2.5 py-0.5 text-[11px] font-medium ${!value ? 'bg-slate-600 text-white' : 'bg-white text-slate-500 hover:bg-gray-50'}`} onClick={() => onChange(false)}>NO</button>
-        <button className={`px-2.5 py-0.5 text-[11px] font-medium ${value ? 'bg-teal-600 text-white' : 'bg-white text-slate-500 hover:bg-gray-50'}`} onClick={() => onChange(true)}>YES</button>
+      <div className="flex rounded border border-slate-300 overflow-hidden">
+        <button className={`px-2.5 py-0.5 text-[11px] font-medium ${!value ? 'bg-slate-600 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} onClick={() => onChange(false)}>NO</button>
+        <button className={`px-2.5 py-0.5 text-[11px] font-medium ${value ? 'bg-teal-700 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`} onClick={() => onChange(true)}>YES</button>
       </div>
     </div>
   );
@@ -344,7 +344,7 @@ export function ProductComparisonPage({ selectedRows, existingRowId, onBack }: P
         </div>
         <div className="flex-1 flex items-center justify-center">
           <div className="flex flex-col items-center gap-3">
-            <Loader2 size={28} className="animate-spin text-teal-600" />
+            <Loader2 size={28} className="animate-spin text-teal-700" />
             <span className="text-sm text-slate-500">Fetching product features...</span>
           </div>
         </div>
@@ -384,10 +384,10 @@ export function ProductComparisonPage({ selectedRows, existingRowId, onBack }: P
         <div className="flex-1" />
         <div className="relative">
           <Search size={13} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input type="text" placeholder="Search features..." className="pl-7 pr-3 py-1 text-xs border border-gray-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-56" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+          <input type="text" placeholder="Search features..." className="pl-7 pr-3 py-1 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-56" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
         </div>
         <button
-          className={`relative p-1.5 rounded border transition-colors ${filtersOpen ? 'bg-teal-600 text-white border-teal-600' : 'bg-white text-slate-500 border-gray-300 hover:border-teal-400 hover:text-teal-600'}`}
+          className={`relative p-1.5 rounded border transition-colors ${filtersOpen ? 'bg-teal-700 text-white border-teal-700' : 'bg-white text-slate-500 border-slate-300 hover:border-teal-500 hover:text-teal-700'}`}
           onClick={() => setFiltersOpen(!filtersOpen)}
         >
           <SlidersHorizontal size={14} />
@@ -510,7 +510,7 @@ function FeatureRow({ feature, columns, colWidth, showText }: {
   feature: ParsedFeature; columns: ComparisonColumn[]; colWidth: number; showText: boolean;
 }) {
   return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50/50">
+    <tr className="border-b border-gray-100 hover:bg-slate-50/50">
       <td className="px-4 py-2 bg-white sticky left-0 z-10 border-r border-gray-200">
         <span className="text-xs text-slate-700 font-medium">{feature.name}</span>
       </td>

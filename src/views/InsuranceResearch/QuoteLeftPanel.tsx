@@ -22,7 +22,7 @@ function Sel({ label, value, options, onChange }: { label: string; value: string
     <div className="flex items-center justify-between gap-2 py-0.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <select
-        className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[140px]"
+        className="border border-slate-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[140px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -37,7 +37,7 @@ function Inp({ label, value, onChange }: { label: string; value: string; onChang
     <div className="flex items-center justify-between gap-2 py-0.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <input
-        className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[140px]"
+        className="border border-slate-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[140px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -52,7 +52,7 @@ function NumInp({ label, value, onChange }: { label: string; value: number; onCh
       <input
         type="number"
         min={0}
-        className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[140px]"
+        className="border border-slate-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[140px]"
         value={value}
         onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
       />
@@ -91,7 +91,7 @@ function SectionCard({
         <span className="text-xs font-bold text-slate-800 flex-1">{label}</span>
         {!expanded && hovered && (
           <button
-            className="text-slate-400 hover:text-teal-600 p-0.5 rounded transition-colors"
+            className="text-slate-400 hover:text-teal-700 p-0.5 rounded transition-colors"
             onClick={(e) => { e.stopPropagation(); onToggle(); }}
             title={`Edit ${label}`}
           >
@@ -135,7 +135,7 @@ function PopoutInp({ label, value, onChange }: { label: string; value: string; o
     <div className="space-y-0.5">
       <label className="text-[10px] text-blue-600 font-medium">{label}</label>
       <input
-        className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+        className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -180,14 +180,14 @@ function PopoutSel({ label, value, options, onChange }: { label: string; value: 
       <label className="text-[10px] text-slate-500">{label}</label>
       <button
         type="button"
-        className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white text-left flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-blue-500 hover:border-gray-400"
+        className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white text-left flex items-center justify-between focus:outline-none focus:ring-1 focus:ring-blue-500 hover:border-gray-400"
         onClick={() => setOpen(!open)}
       >
         <span className={`truncate ${selected.size > 1 ? 'text-blue-600 font-medium' : ''}`}>{displayText}</span>
         <ChevronDown size={12} className="text-gray-400 shrink-0 ml-1" />
       </button>
       {open && (
-        <div className="absolute left-0 right-0 top-full z-10 bg-white border border-gray-300 rounded shadow-lg mt-0.5 py-1 max-h-40 overflow-y-auto">
+        <div className="absolute left-0 right-0 top-full z-10 bg-white border border-slate-300 rounded shadow-lg mt-0.5 py-1 max-h-40 overflow-y-auto">
           {options.map((opt) => (
             <label
               key={opt}
@@ -197,7 +197,7 @@ function PopoutSel({ label, value, options, onChange }: { label: string; value: 
                 type="checkbox"
                 checked={selected.has(opt)}
                 onChange={() => toggle(opt)}
-                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
               />
               <span className="text-slate-700">{opt}</span>
             </label>
@@ -355,7 +355,7 @@ function TermLifeSectionCard({
           <ChevronRight size={14} className="text-slate-500 shrink-0" />
           <span className="text-xs font-bold text-slate-800 flex-1">Term Life and Extensions</span>
           {hovered && (
-            <button className="text-slate-400 hover:text-teal-600 p-0.5 rounded transition-colors">
+            <button className="text-slate-400 hover:text-teal-700 p-0.5 rounded transition-colors">
               <Edit3 size={12} />
             </button>
           )}
@@ -381,7 +381,7 @@ function TermLifeSectionCard({
 
       {/* TPD Extension */}
       <div
-        className="border border-gray-200 rounded-md bg-white cursor-pointer hover:bg-gray-50/50"
+        className="border border-gray-200 rounded-md bg-white cursor-pointer hover:bg-slate-50/50"
         onClick={onOpenPopout}
       >
         <div className="flex items-center gap-2 px-3 py-2">
@@ -406,7 +406,7 @@ function TermLifeSectionCard({
 
       {/* Trauma Extension */}
       <div
-        className="border border-gray-200 rounded-md bg-white cursor-pointer hover:bg-gray-50/50"
+        className="border border-gray-200 rounded-md bg-white cursor-pointer hover:bg-slate-50/50"
         onClick={onOpenPopout}
       >
         <div className="flex items-center gap-2 px-3 py-2">
@@ -617,7 +617,7 @@ function SaveQuoteInline({
       <input
         ref={inputRef}
         type="text"
-        className="w-full border border-teal-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600"
+        className="w-full border border-teal-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400"
         value={name}
         onChange={(e) => setName(e.target.value)}
         onKeyDown={(e) => {
@@ -781,14 +781,14 @@ export function QuoteLeftPanel({ form, onChange, onReset, onSaveQuotes, onUpdate
           <h3 className="text-sm font-bold text-slate-800">Quote Parameters</h3>
           <div className="flex items-center gap-1">
             <button
-              className="text-slate-400 hover:text-teal-600 p-1 rounded transition-colors"
+              className="text-slate-400 hover:text-teal-700 p-1 rounded transition-colors"
               title="View Saved Quotes"
               onClick={() => { setShowSavedList(!showSavedList); setShowSaveInline(false); }}
             >
               <FolderOpen size={14} />
             </button>
             <button
-              className="text-slate-400 hover:text-teal-600 p-1 rounded transition-colors"
+              className="text-slate-400 hover:text-teal-700 p-1 rounded transition-colors"
               title="Save Current Parameters"
               onClick={() => { setShowSaveInline(!showSaveInline); setShowSavedList(false); }}
             >

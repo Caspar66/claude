@@ -33,7 +33,7 @@ function Inp({ value, onChange, className = '' }: { value: string; onChange: (v:
   return (
     <input
       type="text"
-      className={`border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${className}`}
+      className={`border border-slate-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${className}`}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     />
@@ -43,7 +43,7 @@ function Inp({ value, onChange, className = '' }: { value: string; onChange: (v:
 function Sel({ value, onChange, options, className = '' }: { value: string; onChange: (v: string) => void; options: string[]; className?: string }) {
   return (
     <select
-      className={`border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${className}`}
+      className={`border border-slate-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white ${className}`}
       value={value}
       onChange={(e) => onChange(e.target.value)}
     >
@@ -85,7 +85,7 @@ function OccupationSearch({
     <div className="relative" ref={ref}>
       <button
         type="button"
-        className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white text-left w-60 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white text-left w-60 flex items-center gap-1.5 focus:outline-none focus:ring-2 focus:ring-blue-500"
         onClick={() => setOpen(!open)}
       >
         <Search size={12} className="text-gray-400 shrink-0" />
@@ -93,11 +93,11 @@ function OccupationSearch({
         {loading && <Loader2 size={12} className="text-blue-500 animate-spin ml-auto shrink-0" />}
       </button>
       {open && (
-        <div className="absolute z-50 mt-1 w-72 bg-white border border-gray-300 rounded shadow-lg">
+        <div className="absolute z-50 mt-1 w-72 bg-white border border-slate-300 rounded shadow-lg">
           <div className="p-1.5 border-b border-gray-200">
             <input
               type="text"
-              className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
+              className="w-full px-2 py-1 text-sm border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
               placeholder="Search occupations…"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
@@ -171,7 +171,7 @@ function LoadingsModal({
           {/* Insurer selector */}
           <div className="px-5 py-3 border-b border-gray-200 bg-gray-50 flex items-center gap-3">
             <label className="text-xs font-medium text-blue-700">Insurer</label>
-            <select className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
+            <select className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500">
               <option>Generic</option>
             </select>
           </div>
@@ -180,7 +180,7 @@ function LoadingsModal({
           <div className="px-5 py-4">
             <table className="w-full text-sm">
               <thead>
-                <tr className="border-b border-gray-300">
+                <tr className="border-b border-slate-300">
                   <th className="text-left py-2 pr-4 font-semibold text-slate-700">Cover type</th>
                   <th className="text-center py-2 px-4 font-semibold text-slate-700">Percentage</th>
                   <th className="text-center py-2 pl-4 font-semibold text-slate-700">Dollar per $1,000</th>
@@ -194,7 +194,7 @@ function LoadingsModal({
                       <div className="flex items-center justify-center gap-1">
                         <input
                           type="number"
-                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-20 border border-slate-300 rounded px-2 py-1 text-sm text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={draft[key].percentage || ''}
                           onChange={(e) => updateEntry(key, 'percentage', e.target.value)}
                           placeholder="0"
@@ -208,7 +208,7 @@ function LoadingsModal({
                         <input
                           type="number"
                           step="0.01"
-                          className="w-20 border border-gray-300 rounded px-2 py-1 text-sm text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          className="w-20 border border-slate-300 rounded px-2 py-1 text-sm text-right bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                           value={draft[key].dollarPer1000 || ''}
                           onChange={(e) => updateEntry(key, 'dollarPer1000', e.target.value)}
                           placeholder="0.0"
@@ -281,7 +281,7 @@ function PersonFields({
     ),
     employmentStatus: (
       <select
-        className="border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-60"
+        className="border border-slate-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-60"
         value={data.employmentStatus}
         onChange={(e) => update('employmentStatus', e.target.value as EmploymentStatus)}
       >
@@ -304,7 +304,7 @@ function PersonFields({
     ),
     healthDiscount: data.smoker === 'No' ? (
       <select
-        className="border border-gray-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-28"
+        className="border border-slate-300 rounded px-2.5 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white w-28"
         value={data.healthDiscount}
         onChange={(e) => update('healthDiscount', e.target.value as HealthDiscount)}
       >

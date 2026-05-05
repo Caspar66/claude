@@ -46,7 +46,7 @@ export function EditDocuments({ plan }: Props) {
 
       {/* Additional Product Documents */}
       <div className="mb-6">
-        <h3 className="text-sm font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-1.5 rounded-t">
+        <h3 className="text-sm font-semibold text-white bg-navy px-3 py-1.5 rounded-t">
           Additional Product Documents
         </h3>
         <div className="border border-t-0 border-border rounded-b">
@@ -85,7 +85,7 @@ export function EditDocuments({ plan }: Props) {
 
       {/* Upload Document */}
       <div>
-        <h3 className="text-sm font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-1.5 rounded-t">
+        <h3 className="text-sm font-semibold text-white bg-navy px-3 py-1.5 rounded-t">
           Upload Document
         </h3>
         <div className="border border-t-0 border-border rounded-b p-4 space-y-3">
@@ -110,7 +110,7 @@ export function EditDocuments({ plan }: Props) {
           <div className="flex items-center gap-3">
             <label className="text-sm font-medium w-12 flex-shrink-0">Type</label>
             <select
-              className="border border-border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-600 bg-white"
+              className="border border-border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400 bg-white"
               value={docType}
               onChange={(e) => setDocType(e.target.value)}
             >

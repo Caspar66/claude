@@ -134,7 +134,7 @@ function FeeListPage({
             <div key={label} className="mb-4 border border-border rounded overflow-hidden">
               {/* Section header */}
               <div
-                className="flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white cursor-pointer select-none"
+                className="flex items-center justify-between px-4 py-2.5 bg-navy text-white cursor-pointer select-none"
                 onClick={() => toggleSection(label)}
               >
                 <span className="text-sm font-semibold">{label}</span>
@@ -145,7 +145,7 @@ function FeeListPage({
                 <>
                   {/* Add button row */}
                   <div className="flex justify-end px-3 py-1.5 border-b border-border bg-white">
-                    <div className="flex items-center gap-1 border border-border rounded text-xs px-2 py-1 cursor-pointer hover:bg-gray-50">
+                    <div className="flex items-center gap-1 border border-border rounded text-xs px-2 py-1 cursor-pointer hover:bg-slate-50">
                       Add <ChevronDown size={12} />
                     </div>
                   </div>
@@ -172,7 +172,7 @@ function FeeListPage({
                     return (
                       <div
                         key={fee.xplanId}
-                        className="grid items-start px-4 py-2.5 border-b border-border last:border-0 hover:bg-gray-50"
+                        className="grid items-start px-4 py-2.5 border-b border-border last:border-0 hover:bg-slate-50"
                         style={{ gridTemplateColumns: isDerived ? '48px 1fr 1fr 1fr 40px' : '48px 1fr 1fr 40px' }}
                       >
                         {/* Action icons */}
@@ -371,7 +371,7 @@ function FeeEditPage({
   const showAggregatedMinMax = showMinMax && isBalanceAggregation;
   const showBasePerAccount = isBalanceAggregation;
 
-  const inp = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600';
+  const inp = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400';
   const sel = `${inp} bg-white`;
 
   const tabs: { key: FeeTab; label: string }[] = [
@@ -399,7 +399,7 @@ function FeeEditPage({
       </div>
 
       {/* Card header */}
-      <div className="mx-4 mt-4 flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white rounded-t">
+      <div className="mx-4 mt-4 flex items-center justify-between px-4 py-2.5 bg-navy text-white rounded-t">
         <span className="text-sm font-semibold">Edit Fee: {initialFee.name}</span>
         <Settings size={16} className="text-white/80" />
       </div>
@@ -567,7 +567,7 @@ function FeeEditPage({
                 {plan.investmentOptions.map((opt) => {
                   const assignedSet = fee.feeSets.find((s) => (s.investmentOptionIds ?? []).includes(opt.id))?.shortId ?? 'excluded';
                   return (
-                    <tr key={opt.id} className="border-b border-border last:border-0 hover:bg-gray-50">
+                    <tr key={opt.id} className="border-b border-border last:border-0 hover:bg-slate-50">
                       <td className="py-2 pr-4 text-blue-600">{opt.name}</td>
                       <td className="py-2 pr-4 font-mono text-muted-foreground">{opt.apir}</td>
                       {fee.feeSets.map((s) => (
@@ -618,7 +618,7 @@ function FeeEditPage({
                 {SHARE_EXCHANGES.map((ex) => {
                   const assignedSet = fee.feeSets.find((s) => (s.shareExchanges ?? []).some((e) => e.code === ex.code))?.shortId ?? 'excluded';
                   return (
-                    <tr key={ex.code} className="border-b border-border last:border-0 hover:bg-gray-50">
+                    <tr key={ex.code} className="border-b border-border last:border-0 hover:bg-slate-50">
                       <td className="py-2 pr-4">{ex.name}</td>
                       <td className="py-2 pr-4 font-mono font-semibold">{ex.code}</td>
                       {fee.feeSets.map((s) => (

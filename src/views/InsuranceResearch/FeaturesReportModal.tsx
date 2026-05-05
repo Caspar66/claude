@@ -35,7 +35,7 @@ export function FeaturesReportModal({ open, onClose, providers }: Props) {
           {/* Existing portfolio */}
           <div>
             <label className="block text-sm text-slate-500 mb-1">Existing portfolio:</label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-600">
+            <select className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-400">
               {existingOptions.map((o, i) => (
                 <option key={i} value={o}>{o}</option>
               ))}
@@ -46,7 +46,7 @@ export function FeaturesReportModal({ open, onClose, providers }: Props) {
           {/* Portfolio to compare */}
           <div>
             <label className="block text-sm text-slate-500 mb-1">Portfolio to compare:</label>
-            <select className="w-full border border-gray-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-600">
+            <select className="w-full border border-slate-300 rounded px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-teal-400">
               {compareOptions.map((o, i) => (
                 <option key={i} value={o}>{o}</option>
               ))}

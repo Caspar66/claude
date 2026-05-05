@@ -57,7 +57,7 @@ function PlanResearchModal({
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-lg p-0 overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 bg-teal-700 text-white">
+        <div className="flex items-center justify-between px-4 py-3 bg-navy text-white">
           <span className="text-sm font-semibold">Plan Research Summary</span>
           <DialogClose asChild>
             <button className="text-white/80 hover:text-white text-lg leading-none" onClick={onClose}>

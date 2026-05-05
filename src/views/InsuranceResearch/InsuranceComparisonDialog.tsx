@@ -486,7 +486,7 @@ export function InsuranceComparisonDialog({
               <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-100 border-b border-gray-200 text-xs">
                 <button
                   onClick={() => setScreen('personal')}
-                  className="flex items-center gap-1 text-teal-700 hover:underline"
+                  className="flex items-center gap-1 text-navy hover:underline"
                 >
                   <ArrowLeft size={12} />
                   Personal Details

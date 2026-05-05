@@ -109,7 +109,7 @@ export function ManualFundEntryPanel({ onAdd }: Props) {
   return (
     <div className="p-4">
       <div className="border border-border rounded overflow-hidden">
-        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">Manual Fund Entry</div>
+        <div className="px-4 py-2 bg-navy text-white text-sm font-semibold">Manual Fund Entry</div>
 
         <div className="p-4">
           {/* Header row */}

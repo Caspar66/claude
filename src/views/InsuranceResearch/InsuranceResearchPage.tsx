@@ -49,7 +49,7 @@ export function InsuranceResearchPage() {
       <div className="bg-white border-b border-border px-6 py-2.5">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-teal-700 flex items-center justify-center">
+            <div className="w-8 h-8 rounded-full bg-navy flex items-center justify-center">
               <Shield size={14} className="text-white" />
             </div>
             <div>
@@ -83,7 +83,7 @@ export function InsuranceResearchPage() {
               <div
                 className={`px-4 py-2 text-sm font-medium rounded-l ${
                   i <= activeStep
-                    ? 'bg-teal-600 text-white'
+                    ? 'bg-navy text-white'
                     : 'bg-gray-200 text-gray-500'
                 } ${i === 0 ? 'rounded-l-full' : ''} ${i === STEPS.length - 1 ? 'rounded-r-full' : ''}`}
               >
@@ -93,7 +93,7 @@ export function InsuranceResearchPage() {
                 <div
                   className={`w-0 h-0 border-t-[16px] border-t-transparent border-b-[16px] border-b-transparent border-l-[10px] ${
                     i <= activeStep
-                      ? 'border-l-teal-600'
+                      ? 'border-l-navy'
                       : 'border-l-gray-200'
                   }`}
                 />
@@ -110,7 +110,7 @@ export function InsuranceResearchPage() {
             onClick={() => setActiveTab('insurance')}
             className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'insurance'
-                ? 'border-teal-600 text-teal-600'
+                ? 'border-navy text-navy'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -121,7 +121,7 @@ export function InsuranceResearchPage() {
             onClick={() => setActiveTab('investment')}
             className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'investment'
-                ? 'border-teal-600 text-teal-600'
+                ? 'border-navy text-navy'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -132,7 +132,7 @@ export function InsuranceResearchPage() {
             onClick={() => setActiveTab('investment-commentary')}
             className={`flex items-center gap-2 py-3 text-sm font-medium border-b-2 transition-colors ${
               activeTab === 'investment-commentary'
-                ? 'border-teal-600 text-teal-600'
+                ? 'border-navy text-navy'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >

@@ -112,7 +112,7 @@ export function ProviderResultsTable({
                 }}
                 className="gap-2"
               >
-                <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${displayOptions.has(key) ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}>
+                <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${displayOptions.has(key) ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}>
                   {displayOptions.has(key) && <Check size={10} strokeWidth={3} />}
                 </div>
                 {key === 'showSuperAndNonSuper' ? (
@@ -160,7 +160,7 @@ export function ProviderResultsTable({
           <thead className="sticky top-0 bg-white z-10">
             <tr className="border-b border-gray-200">
               <th className="w-8 px-2 py-2">
-                <input type="checkbox" className="rounded border-gray-300" />
+                <input type="checkbox" className="rounded border-slate-300" />
               </th>
               {showLogos && (
                 <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 w-24">Logo</th>
@@ -193,12 +193,12 @@ export function ProviderResultsTable({
             {sorted.map((p) => (
               <tr
                 key={p.id}
-                className={`border-b border-gray-100 hover:bg-gray-50/50 transition-colors ${p.selected ? 'bg-teal-50/40' : ''}`}
+                className={`border-b border-gray-100 hover:bg-slate-50/50 transition-colors ${p.selected ? 'bg-teal-50/40' : ''}`}
               >
                 <td className="px-2 py-3">
                   <button
                     onClick={() => onToggleProvider(p.id)}
-                    className={`w-4 h-4 rounded-sm border flex items-center justify-center ${p.selected ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-300'}`}
+                    className={`w-4 h-4 rounded-sm border flex items-center justify-center ${p.selected ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}
                   >
                     {p.selected && <Check size={10} strokeWidth={3} />}
                   </button>

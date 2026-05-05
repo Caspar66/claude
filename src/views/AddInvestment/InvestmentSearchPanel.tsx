@@ -58,7 +58,7 @@ export function InvestmentSearchPanel({ selectedIds, onToggle, catalogue }: Prop
 
       {/* Results table */}
       <div className="border border-border rounded overflow-hidden">
-        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">Search Results</div>
+        <div className="px-4 py-2 bg-navy text-white text-sm font-semibold">Search Results</div>
         <div className="overflow-y-auto max-h-96">
           <table className="w-full text-sm">
             <thead className="bg-gray-50 border-b border-border sticky top-0">

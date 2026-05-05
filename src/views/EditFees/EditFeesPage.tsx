@@ -132,7 +132,7 @@ function FeeRow({ fee, amendment, onChange, calculatedAmount = 0, isEven }: FeeR
           type="checkbox"
           checked={amendment.amended}
           onChange={(e) => onChange({ amended: e.target.checked })}
-          className="rounded border-gray-300"
+          className="rounded border-slate-300"
         />
       </td>
 
@@ -143,7 +143,7 @@ function FeeRow({ fee, amendment, onChange, calculatedAmount = 0, isEven }: FeeR
             type="text"
             value={amendment.percent}
             onChange={(e) => onChange({ percent: e.target.value })}
-            className="w-full border border-border rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-teal-600"
+            className="w-full border border-border rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-teal-400"
             placeholder="0.00%"
           />
         ) : null}
@@ -155,7 +155,7 @@ function FeeRow({ fee, amendment, onChange, calculatedAmount = 0, isEven }: FeeR
           type="text"
           value={amendment.amount}
           onChange={(e) => onChange({ amount: e.target.value })}
-          className="w-full border border-border rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-teal-600"
+          className="w-full border border-border rounded px-2 py-0.5 text-sm text-right focus:outline-none focus:ring-1 focus:ring-teal-400"
           placeholder="$0.00"
         />
       </td>
@@ -291,7 +291,7 @@ export function EditFeesPage() {
       {/* Fees card */}
       <div className="m-4 border border-border rounded overflow-hidden">
         {/* Card header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-navy text-white">
           <span className="text-sm font-semibold">
             Plan Review : Edit Fees : {displayName}
           </span>

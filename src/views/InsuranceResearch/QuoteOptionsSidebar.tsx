@@ -28,7 +28,7 @@ function Sel({ label, value, options, onChange }: { label: string; value: string
     <div className="flex items-center justify-between gap-2 py-0.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <select
-        className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[140px]"
+        className="border border-slate-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[140px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -43,7 +43,7 @@ function Inp({ label, value, onChange }: { label: string; value: string; onChang
     <div className="flex items-center justify-between gap-2 py-0.5">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <input
-        className="border border-gray-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[140px]"
+        className="border border-slate-300 rounded px-1.5 py-0.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[140px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -57,7 +57,7 @@ function SectionCheck({ label, checked, onChange }: { label: string; checked: bo
       className="flex items-center gap-2 py-1.5 w-full text-left"
       onClick={() => onChange(!checked)}
     >
-      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-600 border-teal-600 text-white' : 'border-gray-400 bg-white'}`}>
+      <div className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 ${checked ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300 bg-white'}`}>
         {checked && <Check size={10} strokeWidth={3} />}
       </div>
       <span className="text-sm font-semibold text-slate-800">{label}</span>

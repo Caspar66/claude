@@ -83,13 +83,13 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
             <div className="flex">
               <button
                 onClick={() => setTab('existing')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'existing' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'existing' ? 'border-teal-700 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
               >
                 Existing
               </button>
               <button
                 onClick={() => setTab('needsAnalysis')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'needsAnalysis' ? 'border-teal-600 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'needsAnalysis' ? 'border-teal-700 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
               >
                 Needs Analysis
               </button>
@@ -105,7 +105,7 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                 </Button>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <button className="border border-gray-300 rounded px-3 py-1.5 text-xs bg-white hover:bg-gray-50 flex items-center gap-1">
+                    <button className="border border-slate-300 rounded px-3 py-1.5 text-xs bg-white hover:bg-slate-50 flex items-center gap-1">
                       Actions <ChevronDown size={12} />
                     </button>
                   </DropdownMenuTrigger>
@@ -185,7 +185,7 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                             <div className="text-xs text-slate-700 font-medium">{formatMoney(totalPa)}</div>
                             <div>
                               <select
-                                className="w-full border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-full border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-500"
                                 value={p.action}
                                 onChange={(e) => updateAction(p.id, e.target.value as ActionStatus)}
                               >

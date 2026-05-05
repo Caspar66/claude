@@ -82,7 +82,7 @@ function CodeSel({ label, value, labelMap, onChange }: {
     <div className="flex items-center justify-between gap-3 py-1">
       <label className="text-xs text-slate-600 shrink-0">{label}</label>
       <select
-        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
+        className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[200px]"
         value={sv}
         onChange={(e) => onChange(e.target.value)}
       >
@@ -106,7 +106,7 @@ function NumInp({ label, value, onChange }: {
         type="text"
         inputMode="numeric"
         required
-        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
+        className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[200px]"
         value={String(value)}
         onChange={(e) => {
           const num = parseInt(e.target.value.replace(/\D/g, ''), 10);
@@ -128,7 +128,7 @@ function DateInp({ label, value, onChange }: {
       <input
         type="date"
         required
-        className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
+        className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[200px]"
         value={value}
         onChange={(e) => onChange(e.target.value)}
       />
@@ -192,7 +192,7 @@ function MultiCodeSel<T extends string>({ label, value, labelMap, onChange, lock
       <div className="flex items-center justify-between gap-3 py-1">
         <label className="text-xs text-slate-600 shrink-0">{label}</label>
         <select
-          className="border border-gray-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-600 w-[200px]"
+          className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[200px]"
           value={sv}
           onChange={(e) => onChange(e.target.value as FieldValue<T>)}
         >
@@ -235,7 +235,7 @@ function MultiCodeSel<T extends string>({ label, value, labelMap, onChange, lock
       <div className="relative w-[200px]" ref={ref}>
         <button
           type="button"
-          className={`w-full border rounded px-2 py-1 text-xs bg-white text-left focus:outline-none focus:ring-1 focus:ring-teal-600 flex items-center justify-between ${isComparison ? 'border-teal-500 bg-teal-50 font-semibold' : 'border-gray-300'}`}
+          className={`w-full border rounded px-2 py-1 text-xs bg-white text-left focus:outline-none focus:ring-1 focus:ring-teal-400 flex items-center justify-between ${isComparison ? 'border-teal-500 bg-teal-50 font-semibold' : 'border-slate-300'}`}
           onClick={() => setOpen(!open)}
           title={display}
         >
@@ -757,7 +757,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             <label className="text-xs font-semibold text-slate-700">Quote Name</label>
             <input
               type="text"
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-60"
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
             />
@@ -765,7 +765,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-slate-700">Life Insured</label>
             <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-48"
               value={draft.lifeInsured}
               onChange={(e) => setDraft((d) => ({ ...d, lifeInsured: e.target.value as 'client' | 'partner' }))}
             >
@@ -776,7 +776,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-slate-700">Super Frequency</label>
             <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
               value={draft.superFrequency}
               onChange={(e) => setDraft((d) => ({ ...d, superFrequency: e.target.value as QuoteFrequency }))}
             >
@@ -786,7 +786,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
           <div className="flex items-center gap-2">
             <label className="text-xs font-semibold text-slate-700">Non-Super Frequency</label>
             <select
-              className="border border-gray-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500 w-36"
               value={draft.nonSuperFrequency}
               onChange={(e) => setDraft((d) => ({ ...d, nonSuperFrequency: e.target.value as QuoteFrequency }))}
             >
