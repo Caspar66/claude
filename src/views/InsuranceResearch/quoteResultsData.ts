@@ -153,7 +153,7 @@ function parsePortfolio(
   const portfolioName = asStr(p.name);
   const allNeedsMet = p.allNeedsMet === true;
   const isExistingCover = p.existingCover === true && asStr(p.portfolioType) === 'Research';
-  const revisionDate = asStr(p.revisionDate) || undefined;
+  const revisionDate = (asStr(p.revisionDate) || asStr(p.RevisionDate)).split('T')[0] || undefined;
 
   if (!allNeedsMet && !isExistingCover) {
     const links = (p.links ?? {}) as Record<string, unknown>;
@@ -176,9 +176,19 @@ function parsePortfolio(
   const products = Array.isArray(p.products)
     ? (p.products as Record<string, unknown>[]).map((pr) => {
         const code = asStr(pr.code) || asStr(pr.productCode) || asStr(pr.researchProductCode);
-        const type = asStr(pr.coverNeedCode) || asStr(pr.type) || asStr(pr.coverType);
-        if (code && type) productCodes[type] = code;
-        return asStr(pr.name);
+        if (code) {
+          const coveredNeeds = pr.coveredNeeds;
+          if (Array.isArray(coveredNeeds)) {
+            for (const need of coveredNeeds) {
+              const needCode = typeof need === 'string' ? need : asStr(need);
+              if (needCode) productCodes[needCode] = code;
+            }
+          } else {
+            const type = asStr(pr.coverNeedCode) || asStr(pr.type) || asStr(pr.coverType);
+            if (type) productCodes[type] = code;
+          }
+        }
+        return asStr(pr.name) || asStr(pr.pdsName);
       }).filter(Boolean).join(', ')
     : '';
 
