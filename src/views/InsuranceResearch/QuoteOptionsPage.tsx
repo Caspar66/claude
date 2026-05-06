@@ -63,7 +63,7 @@ function SectionCheck({ label, code, checked, onChange }: { label: string; code:
         {checked && <Check size={10} strokeWidth={3} />}
       </div>
       <span className="text-xs font-bold text-slate-800">
-        {code} – {label}
+        {label}
       </span>
     </button>
   );

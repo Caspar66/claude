@@ -279,7 +279,7 @@ function NeedCardHeader({ code, label, expanded, onToggle, onRemove, linked }: {
     <div className={`flex items-center justify-between px-4 py-2 ${linked ? 'bg-teal-50/50' : 'bg-gray-50'} border-b border-gray-200`}>
       <button className="flex items-center gap-2 text-left flex-1" onClick={onToggle}>
         {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
-        <span className="text-xs font-bold text-slate-800">{code} – {label}</span>
+        <span className="text-xs font-bold text-slate-800">{label}</span>
       </button>
       <button className="text-slate-400 hover:text-red-500" title="Remove" onClick={onRemove}>
         <Trash2 size={13} />
@@ -321,15 +321,14 @@ function NeedPicker({ existingCodes, onAdd }: {
         <Plus size={14} /> Add Need
       </Button>
       {open && (
-        <div className="absolute top-full left-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[200px]">
+        <div className="absolute top-full right-0 mt-1 bg-white border border-gray-200 rounded shadow-lg z-50 min-w-[200px]">
           {available.map((code) => (
             <button
               key={code}
               className="w-full text-left px-3 py-2 text-xs hover:bg-blue-50 text-slate-700"
               onClick={() => { onAdd(code); setOpen(false); }}
             >
-              <span className="font-semibold">{code}</span>
-              <span className="text-slate-500"> – {NEED_CODE_LABELS[code]}</span>
+              {NEED_CODE_LABELS[code]}
             </button>
           ))}
         </div>

@@ -12,8 +12,8 @@ import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS,
 import { MapProductModal } from './MapProductModal';
 
 type Tab = 'existing' | 'needsAnalysis';
-type ActionStatus = 'Not Considered' | 'Review' | 'Replace' | 'Retain';
-const ACTIONS: ActionStatus[] = ['Not Considered', 'Review', 'Replace', 'Retain'];
+type ActionStatus = 'Not Considered' | 'Review';
+const ACTIONS: ActionStatus[] = ['Not Considered', 'Review'];
 
 interface Props {
   policies: ExistingPolicy[];
