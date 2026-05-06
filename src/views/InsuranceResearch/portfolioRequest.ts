@@ -1,10 +1,35 @@
 // ── OmniLife /quote/portfolio request builder ──────────────────────────────
 // Maps ClientFormData + NeedsQuote[] + ExistingPolicy[] into the API payload.
 
-import type { ClientFormData, ExistingPolicy, ResearchPortfolio } from './insuranceData';
+import type { ClientFormData, ExistingPolicy, Loadings, ResearchPortfolio } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { serialiseNeeds } from './needsTypes';
 import type { OccupationOption } from '@/services/omnilifeApi';
+
+const LOADING_KEY_MAP: Record<keyof Loadings, string> = {
+  life: 'TRM',
+  tpd: 'TPD',
+  trauma: 'TRA',
+  incomeProtection: 'INC',
+  businessExpenses: 'BNC',
+};
+
+function buildLoadings(loadings: Loadings): Record<string, unknown> {
+  const percentage: Record<string, string> = {};
+  const dollarsPerThousand: Record<string, string> = {};
+
+  for (const [key, apiCode] of Object.entries(LOADING_KEY_MAP)) {
+    const entry = loadings[key as keyof Loadings];
+    if (entry.percentage !== 0) {
+      percentage[apiCode] = String(entry.percentage);
+    }
+    if (entry.dollarPer1000 !== 0) {
+      dollarsPerThousand[apiCode] = String(entry.dollarPer1000);
+    }
+  }
+
+  return { percentage, dollarsPerThousand, supplierOverrides: {} };
+}
 
 export interface PortfolioAdviser {
   id: string;
@@ -100,11 +125,7 @@ function buildClientForQuote(
     state: data.state,
     healthDiscount: data.healthDiscount === 'E' ? 'X' : 'I',
     occupationId: occupationIdFromLabel(data.occupationCode, occupations),
-    loadings: {
-      percentage: {},
-      dollarsPerThousand: {},
-      supplierOverrides: {},
-    },
+    loadings: buildLoadings(data.loadings),
     requiredFeatures: {},
     customOccupations: {},
     clientId: `${crypto.randomUUID()}_${quote.name}`,
