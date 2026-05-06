@@ -833,3 +833,41 @@
 <u>Security and Technical Considerations</u>
 
 * None
+
+---
+
+## 8. Client Page
+
+### 8.1 Advisers can view client information so that they can access insurance research from the client context
+
+<u>Acceptance Criteria</u>
+
+* Advisers can navigate to the Client page from the main navigation
+* The page header displays:
+  * Client avatar/icon
+  * Client name(s) with status badge (e.g. Active)
+  * Xplan ID
+  * Last Import Date
+  * More actions menu
+* The page provides the following tabs:
+  * Fact Find (placeholder)
+  * Plans (placeholder)
+  * Reviews (placeholder)
+  * Related Entities (table with filters)
+  * Research (with sub-tabs: Insurance, Investment)
+
+**Research Tab — Insurance Sub-tab:**
+* The Insurance sub-tab is active by default within the Research tab
+* Displays the full Insurance Research content (same as the standalone Insurance Research page — see section 2.1)
+* Advisers can view, create, edit, and delete insurance comparison scenarios
+* Scenario table columns, dropdown actions, and "Add" functionality are identical to the standalone Insurance Research page
+* Advisers can navigate from a scenario row into the full insurance comparison workflow (Personal Details, Quote Configuration, Quote Results, Product Comparison)
+* "Include in Plan" toggle is available on each scenario row
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None

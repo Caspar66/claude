@@ -271,7 +271,7 @@
 
 ## 8. Client Page
 
-### 8.1 Advisers can view client information so that they can access all client-related data in one place
+### 8.1 Advisers can view client information so that they can access investment research from the client context
 
 <u>Acceptance Criteria</u>
 
@@ -288,7 +288,14 @@
   * Reviews (placeholder)
   * Related Entities (table with filters)
   * Research (with sub-tabs: Insurance, Investment)
-* The Insurance sub-tab displays the full Insurance Research content (same as the standalone Insurance Research page)
+
+**Research Tab — Investment Sub-tab:**
+* The Investment sub-tab displays investment research content for the client
+* Advisers can view and manage investment scenarios and plan comparisons
+* Advisers can navigate from the Investment sub-tab into the WealthSolver Plan Research workflow (see section 6)
+* Investment scenarios are displayed in a table with columns matching the plan research interface
+* Advisers can link existing plans from the Current Situation to investment research
+* Advisers can create new investment comparisons from this context
 
 <u>Designs</u>
 
