@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronDown, ChevronRight, Plus, Trash2, Settings2 } from 'lucide-react';
+import RequiredFeaturesModal from './RequiredFeaturesModal';
+import { REQUIRED_FEATURES } from './requiredFeaturesData';
 import { Button } from '@/components/ui/button';
 import type {
   NeedsQuote, Need, NeedCode, LinkedNeedCode, QuoteFrequency,
@@ -440,6 +442,31 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
     });
   }
 
+  // ── Required Features state ───────────────────────────────────
+
+  const [featuresModal, setFeaturesModal] = useState<{ needCode: string; label: string } | null>(null);
+
+  function updateRequiredFeatures(needCode: string, selected: string[]) {
+    setDraft((d) => ({
+      ...d,
+      requiredFeatures: { ...d.requiredFeatures, [needCode]: selected },
+    }));
+  }
+
+  function featuresButton(needCode: string, label: string) {
+    if (!REQUIRED_FEATURES[needCode]?.length) return null;
+    const count = (draft.requiredFeatures[needCode] ?? []).length;
+    return (
+      <button
+        className="flex items-center gap-1.5 text-xs text-blue-700 hover:text-blue-900 font-medium mt-2"
+        onClick={() => setFeaturesModal({ needCode, label })}
+      >
+        <Settings2 size={12} />
+        Required Features{count > 0 && ` (${count})`}
+      </button>
+    );
+  }
+
   // ── Existing codes for picker ─────────────────────────────────
 
   const existingCodes = draft.needs.map((n) => getNeedCode(n));
@@ -472,6 +499,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                   <MultiCodeSel label="Owner" value={trm.owner} labelMap={OWNER_TRM_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, owner: v } })} locked={ownerLocked} />
                   <CodeSel label="Rollover" value={trm.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, rollover: v as Rollover } })} />
                   <CodeSel label="Premium Waiver" value={trm.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, premiumWaiver: v as PremiumWaiver } })} />
+                  {featuresButton('TRM', NEED_CODE_LABELS.TRM)}
                 </div>
 
                 {/* Linked needs: TPE */}
@@ -493,6 +521,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                             <CodeSel label="Life Buy Back" value={tpe.lifeBuyBack} labelMap={LIFE_BUY_BACK_TPE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, lifeBuyBack: v as LifeBuyBackTPE })} />
                             <CodeSel label="Double TPD" value={tpe.doubleTPD} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, doubleTPD: v as ThreeWay })} />
                             <CodeSel label="Premium Waiver" value={tpe.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, premiumWaiver: v as PremiumWaiver })} />
+                            {featuresButton('TPE', LINKED_NEED_LABELS.TPE)}
                           </div>
                         )}
                       </div>
@@ -515,6 +544,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                             <CodeSel label="Premium Waiver" value={tre.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, premiumWaiver: v as PremiumWaiver })} />
                             <CodeSel label="Baby Care" value={tre.babyCare} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, babyCare: v as FourWay })} />
                             <CodeSel label="Priority" value={tre.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, priority: v as Priority })} />
+                            {featuresButton('TRE', LINKED_NEED_LABELS.TRE)}
                           </div>
                         )}
                       </div>
@@ -555,6 +585,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                 <CodeSel label="Rollover" value={tps.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, rollover: v as Rollover } })} />
                 <CodeSel label="Occupation Type" value={tps.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, occupationType: v as OccupationType } })} />
                 <CodeSel label="Premium Waiver" value={tps.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, premiumWaiver: v as PremiumWaiver } })} />
+                {featuresButton('TPS', NEED_CODE_LABELS.TPS)}
               </div>
             )}
           </div>
@@ -577,6 +608,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                   <CodeSel label="Premium Waiver" value={trs.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, premiumWaiver: v as PremiumWaiver } })} />
                   <CodeSel label="Baby Care" value={trs.babyCare} labelMap={FOUR_WAY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, babyCare: v as FourWay } })} />
                   <CodeSel label="Priority" value={trs.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, priority: v as Priority } })} />
+                  {featuresButton('TRS', NEED_CODE_LABELS.TRS)}
                 </div>
 
                 {/* Linked TPR */}
@@ -596,6 +628,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                             <CodeSel label="Rollover" value={tpr.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, rollover: v as Rollover })} />
                             <CodeSel label="Occupation Type" value={tpr.occupationType} labelMap={OCCUPATION_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, occupationType: v as OccupationType })} />
                             <CodeSel label="Premium Waiver" value={tpr.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, premiumWaiver: v as PremiumWaiver })} />
+                            {featuresButton('TPR', LINKED_NEED_LABELS.TPR)}
                           </div>
                         )}
                       </div>
@@ -639,6 +672,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                 <CodeSel label="Benefit Period" value={resolveFieldValue(inc.benefitPeriod, '65' as BenefitPeriodINC)} labelMap={BENEFIT_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, benefitPeriod: v as BenefitPeriodINC } })} />
                 <CodeSel label="Replacement Ratio" value={inc.initialReplacementRatio} labelMap={REPLACEMENT_RATIO_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, initialReplacementRatio: v as ReplacementRatio } })} />
                 <CodeSel label="Priority" value={inc.priority} labelMap={PRIORITY_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, priority: v as Priority } })} />
+                {featuresButton('INC', NEED_CODE_LABELS.INC)}
               </div>
             )}
           </div>
@@ -659,6 +693,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                   <label className="text-xs text-slate-600 shrink-0">Benefit Period</label>
                   <span className="text-xs text-slate-500 w-[200px]">1 year (fixed)</span>
                 </div>
+                {featuresButton('BUS', NEED_CODE_LABELS.BUS)}
               </div>
             )}
           </div>
@@ -674,6 +709,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
               <div className="px-6 py-3 space-y-0.5">
                 <NumInp label="Sum Insured" value={nes.sumInsured} onChange={(v) => updateNeed(index, { NES: { ...nes, sumInsured: v } })} />
                 <CodeSel label="Structure" value={nes.structure} labelMap={STRUCTURE_2_LABELS} onChange={(v) => updateNeed(index, { NES: { ...nes, structure: v as Structure2 } })} />
+                {featuresButton('NES', NEED_CODE_LABELS.NES)}
               </div>
             )}
           </div>
@@ -725,6 +761,7 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                     <Plus size={12} /> Add Child
                   </button>
                 )}
+                {featuresButton('CHT', NEED_CODE_LABELS.CHT)}
               </div>
             )}
           </div>
@@ -848,6 +885,16 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
           </Button>
         </div>
       </div>
+
+      {featuresModal && (
+        <RequiredFeaturesModal
+          needCode={featuresModal.needCode}
+          label={featuresModal.label}
+          selected={draft.requiredFeatures[featuresModal.needCode] ?? []}
+          onSave={(sel) => updateRequiredFeatures(featuresModal.needCode, sel)}
+          onClose={() => setFeaturesModal(null)}
+        />
+      )}
     </div>
   );
 }

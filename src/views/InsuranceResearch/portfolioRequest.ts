@@ -5,6 +5,7 @@ import type { ClientFormData, ExistingPolicy, Loadings, ResearchPortfolio } from
 import type { NeedsQuote } from './needsTypes';
 import { serialiseNeeds } from './needsTypes';
 import type { OccupationOption } from '@/services/omnilifeApi';
+import { stripNeedPrefix } from './requiredFeaturesData';
 
 const LOADING_KEY_MAP: Record<keyof Loadings, string> = {
   life: 'TRM',
@@ -29,6 +30,15 @@ function buildLoadings(loadings: Loadings): Record<string, unknown> {
   }
 
   return { percentage, dollarsPerThousand, supplierOverrides: {} };
+}
+
+function buildRequiredFeatures(rf: Record<string, string[]> | undefined): Record<string, string[]> {
+  if (!rf) return {};
+  const result: Record<string, string[]> = {};
+  for (const [needCode, values] of Object.entries(rf)) {
+    result[needCode] = values.map((v) => stripNeedPrefix(needCode, v));
+  }
+  return result;
 }
 
 export interface PortfolioAdviser {
@@ -126,7 +136,7 @@ function buildClientForQuote(
     healthDiscount: data.healthDiscount === 'E' ? 'X' : 'I',
     occupationId: occupationIdFromLabel(data.occupationCode, occupations),
     loadings: buildLoadings(data.loadings),
-    requiredFeatures: {},
+    requiredFeatures: buildRequiredFeatures(quote.requiredFeatures),
     customOccupations: {},
     clientId: `${crypto.randomUUID()}_${quote.name}`,
     researchPortfolios,

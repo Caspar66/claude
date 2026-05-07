@@ -392,6 +392,7 @@ export interface NeedsQuote {
   compareAllCombinations: boolean;
   superFrequency: QuoteFrequency;
   nonSuperFrequency: QuoteFrequency;
+  requiredFeatures: Record<string, string[]>;
 }
 
 export function createNeedsQuote(name: string, lifeInsured: 'client' | 'partner' = 'client'): NeedsQuote {
@@ -403,5 +404,6 @@ export function createNeedsQuote(name: string, lifeInsured: 'client' | 'partner'
     compareAllCombinations: true,
     superFrequency: 'M',
     nonSuperFrequency: 'M',
+    requiredFeatures: {},
   };
 }
