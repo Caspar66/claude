@@ -47,7 +47,7 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
         }
       }
     }
-    return codes;
+    return codes.map((c) => NEED_CODE_LABELS[c] ?? LINKED_NEED_LABELS[c as keyof typeof LINKED_NEED_LABELS] ?? c);
   }
 
   return (
