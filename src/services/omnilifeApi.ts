@@ -341,6 +341,30 @@ export async function postQuotePortfolio(
   return { raw: payload };
 }
 
+// ── Product Options (Exclusion Reasons) ─────────────────────────────────────
+
+export async function postProductOptions(
+  portfolioCode: string,
+  body: Record<string, unknown>,
+): Promise<unknown> {
+  const params = new URLSearchParams({ portfolioCode });
+  const res = await fetch(`/api/product-options?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OmniLife /quote/portfolio/${portfolioCode}/productOptions returned ${res.status} ${res.statusText}${text ? ': ' + text : ''}`);
+  }
+
+  return res.json();
+}
+
 // ── Portfolio Features ──────────────────────────────────────────────────────
 
 export interface FeatureRequestEntry {

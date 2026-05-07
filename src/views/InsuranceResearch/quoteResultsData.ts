@@ -29,6 +29,7 @@ export interface QuoteResultRow {
   supplierName: string;
   supplierLogo?: string;
   supplierCode: string;
+  portfolioCode: string;
   portfolioName: string;
   products: string;
   productCodes: Record<string, string>;
@@ -83,6 +84,8 @@ export interface ExcludedProduct {
   quoteIndex: number;
   supplierName: string;
   supplierLogo?: string;
+  supplierCode: string;
+  portfolioCode: string;
   portfolioName: string;
   errors: string[];
   pdsLink?: string;
@@ -151,6 +154,7 @@ function parsePortfolio(
   const rawLogo = asStr(supplier.logo);
   const supplierLogo = rawLogo ? ensureUrl(rawLogo) : undefined;
   const portfolioName = asStr(p.name);
+  const portfolioCode = asStr(p.code) || asStr(p.portfolioCode);
   const allNeedsMet = p.allNeedsMet === true;
   const isExistingCover = p.existingCover === true && asStr(p.portfolioType) === 'Research';
   const revisionDate = (asStr(p.revisionDate) || asStr(p.RevisionDate)).split('T')[0] || undefined;
@@ -165,6 +169,8 @@ function parsePortfolio(
       quoteIndex,
       supplierName,
       supplierLogo,
+      supplierCode,
+      portfolioCode,
       portfolioName,
       errors,
       pdsLink: ensureUrl(asStr(links.pds)) || undefined,
@@ -210,6 +216,7 @@ function parsePortfolio(
     supplierName,
     supplierLogo,
     supplierCode,
+    portfolioCode,
     portfolioName,
     products,
     productCodes,
@@ -293,4 +300,72 @@ export function parsePortfolioResponse(raw: unknown): QuoteResults {
 
 export function getEmptyQuoteResults(): QuoteResults {
   return { rows: [], excluded: [], populated: false };
+}
+
+// ── Product Options (Exclusion Reasons) parser ─────────────────────────────
+
+export interface SupportedNeed {
+  needCode: string;
+  mandatory: boolean;
+  optional: boolean;
+  selected: boolean;
+  excluded: boolean;
+  ownership: string;
+  errorMessage: string;
+  researchProductCode: string;
+}
+
+export interface ProductOption {
+  code: string;
+  name: string;
+  supportedNeeds: SupportedNeed[];
+}
+
+const NEED_LABELS: Record<string, string> = {
+  TRM: 'Life',
+  TPE: 'TPD Extension to Life',
+  TRE: 'Trauma Extension to Life',
+  TPS: 'TPD Standalone',
+  TRS: 'Trauma Standalone',
+  TPR: 'TPD Extension to Trauma',
+  INC: 'Income Protection',
+  BUS: 'Business Expenses',
+  NES: 'Needle Stick',
+  CHT: 'Child Trauma',
+  FEE: 'Fee',
+};
+
+export function getNeedLabel(code: string): string {
+  return NEED_LABELS[code] ?? code;
+}
+
+export function parseProductOptionsResponse(raw: unknown): ProductOption[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((item) => {
+      const supportedNeeds: SupportedNeed[] = [];
+      const needs = item.supportedNeeds as Record<string, unknown> | undefined;
+      if (needs && typeof needs === 'object') {
+        for (const [code, val] of Object.entries(needs)) {
+          if (!val || typeof val !== 'object') continue;
+          const n = val as Record<string, unknown>;
+          supportedNeeds.push({
+            needCode: code,
+            mandatory: n.mandatory === true,
+            optional: n.optional === true,
+            selected: n.selected === true,
+            excluded: n.excluded === true,
+            ownership: asStr(n.ownership),
+            errorMessage: asStr(n.errorMessage),
+            researchProductCode: asStr(n.researchProductCode),
+          });
+        }
+      }
+      return {
+        code: asStr(item.code),
+        name: asStr(item.name),
+        supportedNeeds,
+      };
+    });
 }

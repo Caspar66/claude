@@ -207,6 +207,7 @@ export function InsuranceComparisonDialog({
   // Portfolio API state
   const [portfolioLoading, setPortfolioLoading] = useState(false);
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
+  const [lastQuoteRequestBody, setLastQuoteRequestBody] = useState<Record<string, unknown>>({});
 
   // Active quote filter (null = show all quotes)
   const [activeQuoteIndex, setActiveQuoteIndex] = useState<number | null>(null);
@@ -277,6 +278,7 @@ export function InsuranceComparisonDialog({
         policies,
         occupations,
       });
+      setLastQuoteRequestBody(body);
       const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
       console.info('[OmniLife] /quote/portfolio response:', res.raw);
       const parsed = parsePortfolioResponse(res.raw);
@@ -529,6 +531,7 @@ export function InsuranceComparisonDialog({
                   activeQuoteIndex={activeQuoteIndex}
                   activeClient={activeClient}
                   quotes={coverQuotes}
+                  quoteRequestBody={lastQuoteRequestBody}
                   onToggleSelect={handleToggleQuoteSelect}
                   onCompareProducts={handleCompareProducts}
                 />

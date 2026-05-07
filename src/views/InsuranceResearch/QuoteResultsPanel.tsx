@@ -16,6 +16,7 @@ import { computePremiumTotal, computeCumulativePremium } from './quoteResultsDat
 import type { PremiumFrequency } from './insuranceData';
 import { PREMIUM_FREQUENCY_LABELS } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
+import { ExclusionReasonsModal } from './ExclusionReasonsModal';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -61,8 +62,8 @@ function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
 
 // ── Excluded product row ─────────────────────────────────────────────────────
 
-function ExcludedRow({ item }: { item: ExcludedProduct }) {
-  const [showReasons, setShowReasons] = useState(false);
+function ExcludedRow({ item, quoteRequestBody }: { item: ExcludedProduct; quoteRequestBody: Record<string, unknown> }) {
+  const [showModal, setShowModal] = useState(false);
   return (
     <>
       <tr className="border-b border-gray-100">
@@ -79,10 +80,10 @@ function ExcludedRow({ item }: { item: ExcludedProduct }) {
         </td>
         <td className="px-4 py-2">
           <button
-            className="text-xs text-blue-600 hover:underline"
-            onClick={() => setShowReasons(!showReasons)}
+            className="text-xs text-teal-700 hover:text-teal-800 font-medium underline underline-offset-2"
+            onClick={() => setShowModal(true)}
           >
-            Reasons For Exclusion
+            Reasons for Exclusion
           </button>
         </td>
         <td className="px-4 py-2">
@@ -91,7 +92,7 @@ function ExcludedRow({ item }: { item: ExcludedProduct }) {
               href={item.pdsLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-teal-700 hover:text-teal-800 font-medium underline underline-offset-2"
             >
               PDS
             </a>
@@ -103,21 +104,19 @@ function ExcludedRow({ item }: { item: ExcludedProduct }) {
               href={item.tmdLink}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-blue-600 hover:underline"
+              className="text-xs text-teal-700 hover:text-teal-800 font-medium underline underline-offset-2"
             >
               TMD
             </a>
           )}
         </td>
       </tr>
-      {showReasons && (
-        <tr className="bg-orange-50/50">
-          <td colSpan={4} className="px-8 py-2">
-            {item.errors.map((r, i) => (
-              <div key={i} className="text-xs text-orange-800 py-0.5">{r}</div>
-            ))}
-          </td>
-        </tr>
+      {showModal && (
+        <ExclusionReasonsModal
+          product={item}
+          quoteRequestBody={quoteRequestBody}
+          onClose={() => setShowModal(false)}
+        />
       )}
     </>
   );
@@ -130,11 +129,12 @@ interface Props {
   activeQuoteIndex: number | null;
   activeClient: 'client' | 'partner';
   quotes: NeedsQuote[];
+  quoteRequestBody: Record<string, unknown>;
   onToggleSelect: (id: string) => void;
   onCompareProducts: () => void;
 }
 
-export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, onToggleSelect, onCompareProducts }: Props) {
+export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, quoteRequestBody, onToggleSelect, onCompareProducts }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('premium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -351,7 +351,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
             <table className="w-full text-sm">
               <tbody>
                 {visibleExcluded.map((ex) => (
-                  <ExcludedRow key={ex.id} item={ex} />
+                  <ExcludedRow key={ex.id} item={ex} quoteRequestBody={quoteRequestBody} />
                 ))}
               </tbody>
             </table>

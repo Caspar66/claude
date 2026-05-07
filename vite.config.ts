@@ -98,6 +98,19 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/product-options': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => {
+            const url = new URL(p, 'http://localhost');
+            const code = url.searchParams.get('portfolioCode') ?? '';
+            return `/quote/portfolio/${code}/productOptions`;
+          },
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         '/api/portfolio-features': {
           target,
           changeOrigin: true,
