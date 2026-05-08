@@ -365,7 +365,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
         <button
           type="button"
           className="inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold"
-          onClick={() => { console.log('[VIEW/COMPARE] clicked'); onViewCompareFeatures(); }}
+          onClick={() => onViewCompareFeatures()}
         >
           <ExternalLink size={12} />
           VIEW / COMPARE FEATURES
