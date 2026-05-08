@@ -367,7 +367,6 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
           size="sm"
           className="text-xs h-7 gap-1.5"
           onClick={onViewCompareFeatures}
-          disabled={!sorted.some((r) => r.selected)}
         >
           <ExternalLink size={12} />
           VIEW / COMPARE FEATURES

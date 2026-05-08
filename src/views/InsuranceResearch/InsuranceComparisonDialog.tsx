@@ -576,7 +576,11 @@ export function InsuranceComparisonDialog({
           {/* Features Comparison screen */}
           {screen === 'features' && (
             <FeaturesComparisonPage
-              selectedRows={quoteResults.rows.filter((r) => r.selected)}
+              selectedRows={
+                quoteResults.rows.filter((r) => r.selected).length > 0
+                  ? quoteResults.rows.filter((r) => r.selected)
+                  : quoteResults.rows.slice(0, 4)
+              }
               quoteRequestBody={lastQuoteRequestBody}
               activeQuoteIndex={activeQuoteIndex}
               onBack={() => setScreen(preCompareScreen)}
