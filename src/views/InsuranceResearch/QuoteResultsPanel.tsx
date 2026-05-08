@@ -363,8 +363,9 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
       {/* ── Bottom actions ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
         <button
-          className="inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-teal-500 font-semibold"
-          onClick={onViewCompareFeatures}
+          type="button"
+          className="inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold"
+          onClick={() => { console.log('[VIEW/COMPARE] clicked'); onViewCompareFeatures(); }}
         >
           <ExternalLink size={12} />
           VIEW / COMPARE FEATURES
