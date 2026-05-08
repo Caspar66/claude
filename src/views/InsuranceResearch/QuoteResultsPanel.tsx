@@ -362,15 +362,13 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
 
       {/* ── Bottom actions ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-xs h-7 gap-1.5"
+        <button
+          className="inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 hover:border-teal-500 font-semibold"
           onClick={onViewCompareFeatures}
         >
           <ExternalLink size={12} />
           VIEW / COMPARE FEATURES
-        </Button>
+        </button>
         <Button variant="outline" size="sm" className="text-xs h-7 gap-1.5">
           <Download size={12} />
           DOWNLOAD REPORT
