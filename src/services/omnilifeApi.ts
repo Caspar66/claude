@@ -365,6 +365,34 @@ export async function postProductOptions(
   return res.json();
 }
 
+// ── Quote Portfolio Features (compare) ──────────────────────────────────────
+
+export async function postQuotePortfolioFeatures(
+  codes: string[],
+  body: Record<string, unknown>,
+): Promise<unknown> {
+  const params = new URLSearchParams({
+    codes: codes.join(','),
+    coverNeedType: 'NeedType',
+    scoreWeightingType: 'Balanced',
+  });
+  const res = await fetch(`/api/quote-portfolio-features?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OmniLife /quote/portfolio/features returned ${res.status} ${res.statusText}${text ? ': ' + text : ''}`);
+  }
+
+  return res.json();
+}
+
 // ── Portfolio Features ──────────────────────────────────────────────────────
 
 export interface FeatureRequestEntry {

@@ -16,6 +16,7 @@ import { FeaturesReportModal } from './FeaturesReportModal';
 import { MapExistingPolicyModal } from './MapExistingPolicyModal';
 import type { MappedPolicy } from './MapExistingPolicyModal';
 import { ProductComparisonPage } from './ProductComparisonPage';
+import { FeaturesComparisonPage } from './FeaturesComparisonPage';
 import { OptionsModalContent } from './OptionsPanel';
 import type { OptionsTab } from './OptionsPanel';
 import {
@@ -62,7 +63,7 @@ interface Props {
   existingScenarioNames: string[];
 }
 
-type Screen = 'create' | 'personal' | 'editQuote' | 1 | 2 | 3 | 4 | 'compare' | 'options';
+type Screen = 'create' | 'personal' | 'editQuote' | 1 | 2 | 3 | 4 | 'compare' | 'features' | 'options';
 
 const DETAIL_LABELS: Record<number, string> = {
   1: 'Insurance Details',
@@ -354,6 +355,11 @@ export function InsuranceComparisonDialog({
     setScreen('compare');
   }
 
+  function handleViewCompareFeatures() {
+    setPreCompareScreen(screen);
+    setScreen('features');
+  }
+
   function handleSaveToScenario() {
     const allProviders = [...providers, ...providersMixed];
     const selected = allProviders.filter((p) => p.selected);
@@ -534,6 +540,7 @@ export function InsuranceComparisonDialog({
                   quoteRequestBody={lastQuoteRequestBody}
                   onToggleSelect={handleToggleQuoteSelect}
                   onCompareProducts={handleCompareProducts}
+                  onViewCompareFeatures={handleViewCompareFeatures}
                 />
               </div>
 
@@ -562,6 +569,16 @@ export function InsuranceComparisonDialog({
                   : quoteResults.rows.slice(0, 4)
               }
               existingRowId={mappedPolicies.length > 0 ? (quoteResults.rows.find((r) => r.selected)?.id ?? null) : null}
+              onBack={() => setScreen(preCompareScreen)}
+            />
+          )}
+
+          {/* Features Comparison screen */}
+          {screen === 'features' && (
+            <FeaturesComparisonPage
+              selectedRows={quoteResults.rows.filter((r) => r.selected)}
+              quoteRequestBody={lastQuoteRequestBody}
+              activeQuoteIndex={activeQuoteIndex}
               onBack={() => setScreen(preCompareScreen)}
             />
           )}

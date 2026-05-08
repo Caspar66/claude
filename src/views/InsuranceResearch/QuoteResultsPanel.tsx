@@ -132,9 +132,10 @@ interface Props {
   quoteRequestBody: Record<string, unknown>;
   onToggleSelect: (id: string) => void;
   onCompareProducts: () => void;
+  onViewCompareFeatures: () => void;
 }
 
-export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, quoteRequestBody, onToggleSelect, onCompareProducts }: Props) {
+export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, quoteRequestBody, onToggleSelect, onCompareProducts, onViewCompareFeatures }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('premium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -361,7 +362,13 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
 
       {/* ── Bottom actions ────────────────────────────────────────────────── */}
       <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
-        <Button variant="outline" size="sm" className="text-xs h-7 gap-1.5">
+        <Button
+          variant="outline"
+          size="sm"
+          className="text-xs h-7 gap-1.5"
+          onClick={onViewCompareFeatures}
+          disabled={!sorted.some((r) => r.selected)}
+        >
           <ExternalLink size={12} />
           VIEW / COMPARE FEATURES
         </Button>

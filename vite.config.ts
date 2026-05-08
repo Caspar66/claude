@@ -89,6 +89,21 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/quote-portfolio-features': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => {
+            const url = new URL(p, 'http://localhost');
+            const codes = url.searchParams.get('codes') ?? '';
+            url.searchParams.delete('codes');
+            const remaining = url.searchParams.toString();
+            return `/quote/portfolio/${codes}/features${remaining ? '?' + remaining : ''}`;
+          },
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         '/api/quote-portfolio': {
           target,
           changeOrigin: true,
