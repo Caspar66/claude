@@ -5,12 +5,41 @@ import { postQuotePortfolioFeatures } from '@/services/omnilifeApi';
 import type { QuoteResultRow } from './quoteResultsData';
 import { computePremiumTotal } from './quoteResultsData';
 
-// ── Types (same structure as ProductComparisonPage) ─────────────────────────
+// ── Constants ──────────────────────────────────────────────────────────────
+
+const NEED_TYPE_ORDER = ['TRM', 'TPE', 'TRE', 'TPS', 'TRS', 'TPR', 'INC', 'BUS', 'NES', 'CHT'];
+
+const NEED_TYPE_LABELS: Record<string, string> = {
+  TRM: 'Life',
+  TPE: 'TPD Extension to Life',
+  TRE: 'Trauma Extension to Life',
+  TPS: 'TPD Standalone',
+  TRS: 'Trauma Standalone',
+  TPR: 'TPD Extension to Trauma',
+  INC: 'Income Protection',
+  BUS: 'Business Expenses',
+  NES: 'Needle Stick',
+  CHT: 'Child Trauma',
+};
+
+const WEIGHTING_LABELS: Record<number, string> = {
+  1: 'Lowest',
+  2: 'Low',
+  3: 'Moderate',
+  4: 'High',
+  5: 'Highest',
+};
+
+// ── Types ──────────────────────────────────────────────────────────────────
 
 interface FeatureValue {
   text: string;
   hasFeature: boolean;
   score?: number;
+  scoreRaw?: number;
+  strengths?: string;
+  limitations?: string;
+  commentary?: string;
 }
 
 interface ParsedFeature {
@@ -28,14 +57,22 @@ interface ParsedSubHeading {
 interface ParsedHeading {
   key: string;
   name: string;
+  needType: string;
+  ipsAdjustedWeighting: number;
   subHeadings: ParsedSubHeading[];
+}
+
+interface ParsedNeedGroup {
+  needType: string;
+  label: string;
+  headings: ParsedHeading[];
 }
 
 interface ComparisonColumn {
   row: QuoteResultRow;
 }
 
-// ── Helpers ─────────────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────────────────
 
 function scoreBg(score: number): string {
   if (score >= 85) return 'bg-emerald-100 text-emerald-800';
@@ -53,12 +90,16 @@ function asStr(v: unknown): string {
   return typeof v === 'string' ? v : '';
 }
 
-// ── Parse response (same format as ProductComparisonPage) ───────────────────
+function asNum(v: unknown): number {
+  return typeof v === 'number' ? v : 0;
+}
+
+// ── Parse response ─────────────────────────────────────────────────────────
 
 function parseFeatureResponse(raw: unknown): ParsedHeading[] {
   if (!Array.isArray(raw)) return [];
 
-  const headingMap = new Map<string, { name: string; subMap: Map<string, ParsedFeature[]> }>();
+  const headingMap = new Map<string, { name: string; needType: string; ipsAdjustedWeighting: number; subMap: Map<string, ParsedFeature[]> }>();
 
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
@@ -67,6 +108,8 @@ function parseFeatureResponse(raw: unknown): ParsedHeading[] {
     const headingObj = (entry.heading ?? {}) as Record<string, unknown>;
     const headingCode = asStr(headingObj.code) || asStr(headingObj.name) || 'UNKNOWN';
     const headingName = asStr(headingObj.name) || headingCode;
+    const needType = asStr(headingObj.needType) || asStr(headingObj.coverType) || 'OTHER';
+    const ipsAdjustedWeighting = asNum(headingObj.ipsAdjustedWeighting);
 
     if (headingCode === 'PORTFOLIO_HEADING') continue;
 
@@ -80,15 +123,20 @@ function parseFeatureResponse(raw: unknown): ParsedHeading[] {
     const values: FeatureValue[] = portfolios.map((p: unknown) => {
       if (!p || typeof p !== 'object') return { text: '', hasFeature: false };
       const pf = p as Record<string, unknown>;
+      const scoreObj = (pf.score && typeof pf.score === 'object') ? pf.score as Record<string, unknown> : null;
       return {
         text: asStr(pf.text) || asStr(pf.value) || '',
         hasFeature: pf.hasFeature === true,
         score: typeof pf.weighting === 'number' && pf.weighting > 0 ? pf.weighting : undefined,
+        scoreRaw: scoreObj && typeof scoreObj.raw === 'number' ? scoreObj.raw : undefined,
+        strengths: asStr(pf.strengths) || undefined,
+        limitations: asStr(pf.limitations) || undefined,
+        commentary: asStr(pf.commentary) || undefined,
       };
     });
 
     if (!headingMap.has(headingCode)) {
-      headingMap.set(headingCode, { name: headingName, subMap: new Map() });
+      headingMap.set(headingCode, { name: headingName, needType, ipsAdjustedWeighting, subMap: new Map() });
     }
     const group = headingMap.get(headingCode)!;
     if (!group.subMap.has(subHeadingName)) {
@@ -102,17 +150,37 @@ function parseFeatureResponse(raw: unknown): ParsedHeading[] {
   }
 
   const headings: ParsedHeading[] = [];
-  for (const [code, { name, subMap }] of headingMap) {
+  for (const [code, { name, needType, ipsAdjustedWeighting, subMap }] of headingMap) {
     const subHeadings: ParsedSubHeading[] = [];
     for (const [subName, features] of subMap) {
       subHeadings.push({ key: `${code}_${subName}`, name: subName, features });
     }
-    headings.push({ key: code, name, subHeadings });
+    headings.push({ key: code, name, needType, ipsAdjustedWeighting, subHeadings });
   }
   return headings;
 }
 
-// ── Filter state ────────────────────────────────────────────────────────────
+function groupByNeedType(headings: ParsedHeading[]): ParsedNeedGroup[] {
+  const groups = new Map<string, ParsedHeading[]>();
+  for (const h of headings) {
+    if (!groups.has(h.needType)) groups.set(h.needType, []);
+    groups.get(h.needType)!.push(h);
+  }
+
+  const result: ParsedNeedGroup[] = [];
+  for (const nt of NEED_TYPE_ORDER) {
+    if (groups.has(nt)) {
+      result.push({ needType: nt, label: NEED_TYPE_LABELS[nt] ?? nt, headings: groups.get(nt)! });
+      groups.delete(nt);
+    }
+  }
+  for (const [nt, hdgs] of groups) {
+    result.push({ needType: nt, label: NEED_TYPE_LABELS[nt] ?? nt, headings: hdgs });
+  }
+  return result;
+}
+
+// ── Filter state ───────────────────────────────────────────────────────────
 
 interface ComparisonFilters {
   featureText: boolean;
@@ -121,7 +189,7 @@ interface ComparisonFilters {
   enabledCategories: Set<string>;
 }
 
-// ── Filters panel ───────────────────────────────────────────────────────────
+// ── Filters panel ──────────────────────────────────────────────────────────
 
 function FiltersPanel({
   open, filters, allKeys, categoryNames, onChange, onClose, onReset,
@@ -213,7 +281,7 @@ function FilterToggle({ label, value, onChange }: { label: string; value: boolea
   );
 }
 
-// ── Main component ──────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────
 
 interface Props {
   selectedRows: QuoteResultRow[];
@@ -224,7 +292,8 @@ interface Props {
 
 export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQuoteIndex, onBack }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+  const [collapsedNeedTypes, setCollapsedNeedTypes] = useState<Set<string>>(new Set());
+  const [collapsedHeadings, setCollapsedHeadings] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [headings, setHeadings] = useState<ParsedHeading[]>([]);
   const [loading, setLoading] = useState(true);
@@ -241,7 +310,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
   }, [headings]);
 
   const [filters, setFilters] = useState<ComparisonFilters>({
-    featureText: false,
+    featureText: true,
     differencesOnly: false,
     featureScore: true,
     enabledCategories: new Set<string>(),
@@ -282,19 +351,27 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
     return () => { cancelled = true; };
   }, [selectedRows, quoteRequestBody, activeQuoteIndex]);
 
-  function toggleCategory(key: string) {
-    setCollapsedCategories((prev) => {
+  function toggleNeedType(nt: string) {
+    setCollapsedNeedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(nt)) next.delete(nt); else next.add(nt);
+      return next;
+    });
+  }
+
+  function toggleHeading(key: string) {
+    setCollapsedHeadings((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key); else next.add(key);
       return next;
     });
   }
 
-  const filteredHeadings = useMemo(() => {
-    let result = headings.filter((h) => filters.enabledCategories.has(h.key));
+  const filteredGroups = useMemo(() => {
+    let filtered = headings.filter((h) => filters.enabledCategories.has(h.key));
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      result = result.map((h) => {
+      filtered = filtered.map((h) => {
         if (h.name.toLowerCase().includes(term)) return h;
         const filteredSubs = h.subHeadings.map((sub) => {
           if (sub.name.toLowerCase().includes(term)) return sub;
@@ -304,9 +381,10 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
         return filteredSubs.length > 0 ? { ...h, subHeadings: filteredSubs } : null;
       }).filter(Boolean) as ParsedHeading[];
     }
-    return result;
+    return groupByNeedType(filtered);
   }, [headings, filters.enabledCategories, searchTerm]);
 
+  const totalHeadings = filteredGroups.reduce((sum, g) => sum + g.headings.length, 0);
   const colWidth = Math.max(180, Math.min(260, Math.floor(800 / columns.length)));
 
   if (loading) {
@@ -392,18 +470,20 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
             </tr>
           </thead>
           <tbody>
-            {filteredHeadings.map((heading) => (
-              <HeadingGroup
-                key={heading.key}
-                heading={heading}
+            {filteredGroups.map((group) => (
+              <NeedTypeGroup
+                key={group.needType}
+                group={group}
                 columns={columns}
-                collapsed={collapsedCategories.has(heading.key)}
-                onToggle={() => toggleCategory(heading.key)}
+                collapsedNeedType={collapsedNeedTypes.has(group.needType)}
+                collapsedHeadings={collapsedHeadings}
+                onToggleNeedType={() => toggleNeedType(group.needType)}
+                onToggleHeading={toggleHeading}
                 colWidth={colWidth}
-                showText={filters.featureText}
+                showDetails={filters.featureText}
               />
             ))}
-            {filteredHeadings.length === 0 && (
+            {filteredGroups.length === 0 && (
               <tr><td colSpan={columns.length + 1} className="px-6 py-8 text-center text-muted-foreground">No features match your search or filter.</td></tr>
             )}
           </tbody>
@@ -413,13 +493,13 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
       {/* Bottom bar */}
       <div className="flex items-center justify-between px-4 py-2.5 border-t border-gray-200 bg-gray-50">
         <span className="text-xs text-slate-500">
-          Comparing {columns.length} product{columns.length !== 1 ? 's' : ''} across {filteredHeadings.length} categor{filteredHeadings.length === 1 ? 'y' : 'ies'}
+          Comparing {columns.length} product{columns.length !== 1 ? 's' : ''} across {totalHeadings} feature{totalHeadings === 1 ? '' : 's'} in {filteredGroups.length} cover{filteredGroups.length === 1 ? '' : 's'}
         </span>
         <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5" onClick={() => {
           const w = window.open('', '_blank');
           if (!w) return;
           const html = tableRef.current?.querySelector('table')?.outerHTML ?? '';
-          w.document.write(`<!DOCTYPE html><html><head><title>Feature Comparison</title><style>body{font-family:sans-serif;margin:20px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:6px 10px;border:1px solid #e5e7eb}th{background:#f1f5f9;font-weight:600;text-align:left}@media print{body{margin:10px}}</style></head><body><h1>Insurance Feature Comparison Report</h1>${html}<script>window.print();setTimeout(()=>window.close(),1000)</script></body></html>`);
+          w.document.write(`<!DOCTYPE html><html><head><title>Feature Comparison</title><style>body{font-family:sans-serif;margin:20px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:6px 10px;border:1px solid #e5e7eb;vertical-align:top}th{background:#f1f5f9;font-weight:600;text-align:left}@media print{body{margin:10px}}</style></head><body><h1>Insurance Feature Comparison Report</h1>${html}<script>window.print();setTimeout(()=>window.close(),1000)</script></body></html>`);
           w.document.close();
         }}>
           <Download size={12} /> Download Comparison Report
@@ -433,78 +513,139 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
         categoryNames={categoryNames}
         onChange={setFilters}
         onClose={() => setFiltersOpen(false)}
-        onReset={() => setFilters({ featureText: false, differencesOnly: false, featureScore: true, enabledCategories: new Set(allCategoryKeys) })}
+        onReset={() => setFilters({ featureText: true, differencesOnly: false, featureScore: true, enabledCategories: new Set(allCategoryKeys) })}
       />
     </div>
   );
 }
 
-// ── Heading group (collapsible) ─────────────────────────────────────────────
+// ── Need type group (top-level header) ─────────────────────────────────────
 
-function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showText }: {
-  heading: ParsedHeading; columns: ComparisonColumn[]; collapsed: boolean; onToggle: () => void; colWidth: number; showText: boolean;
+function NeedTypeGroup({ group, columns, collapsedNeedType, collapsedHeadings, onToggleNeedType, onToggleHeading, colWidth, showDetails }: {
+  group: ParsedNeedGroup; columns: ComparisonColumn[]; collapsedNeedType: boolean; collapsedHeadings: Set<string>;
+  onToggleNeedType: () => void; onToggleHeading: (key: string) => void; colWidth: number; showDetails: boolean;
 }) {
   return (
     <>
-      <tr className="bg-slate-100 border-y border-gray-200">
-        <td className="px-4 py-2 bg-slate-100 sticky left-0 z-10 cursor-pointer select-none" colSpan={columns.length + 1} onClick={onToggle}>
+      <tr className="bg-indigo-900 border-y border-indigo-800">
+        <td className="px-4 py-2.5 bg-indigo-900 sticky left-0 z-10 cursor-pointer select-none" colSpan={columns.length + 1} onClick={onToggleNeedType}>
           <div className="flex items-center gap-2">
-            {collapsed ? <ChevronRight size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
-            <span className="text-xs font-bold text-slate-700 uppercase tracking-wide">{heading.name}</span>
+            {collapsedNeedType ? <ChevronRight size={14} className="text-white/70" /> : <ChevronDown size={14} className="text-white/70" />}
+            <span className="text-xs font-bold text-white uppercase tracking-wide">{group.label}</span>
+            <span className="text-[10px] text-white/60 ml-1">({group.headings.length} feature{group.headings.length === 1 ? '' : 's'})</span>
           </div>
         </td>
       </tr>
-      {!collapsed && heading.subHeadings.map((sub) => (
-        <SubHeadingRows key={sub.key} sub={sub} columns={columns} colWidth={colWidth} showText={showText} showSubHeader={heading.subHeadings.length > 1 || sub.name !== 'General'} />
+      {!collapsedNeedType && group.headings.map((heading) => (
+        <HeadingGroup
+          key={heading.key}
+          heading={heading}
+          columns={columns}
+          collapsed={collapsedHeadings.has(heading.key)}
+          onToggle={() => onToggleHeading(heading.key)}
+          colWidth={colWidth}
+          showDetails={showDetails}
+        />
       ))}
     </>
   );
 }
 
-function SubHeadingRows({ sub, columns, colWidth, showText, showSubHeader }: {
-  sub: ParsedSubHeading; columns: ComparisonColumn[]; colWidth: number; showText: boolean; showSubHeader: boolean;
+// ── Heading group (collapsible, with weighting) ───────────────────────────
+
+function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDetails }: {
+  heading: ParsedHeading; columns: ComparisonColumn[]; collapsed: boolean; onToggle: () => void; colWidth: number; showDetails: boolean;
+}) {
+  const weightLabel = heading.ipsAdjustedWeighting > 0 ? WEIGHTING_LABELS[heading.ipsAdjustedWeighting] : null;
+  return (
+    <>
+      <tr className="bg-slate-100 border-y border-gray-200">
+        <td className="px-6 py-2 bg-slate-100 sticky left-0 z-10 cursor-pointer select-none" colSpan={columns.length + 1} onClick={onToggle}>
+          <div className="flex items-center gap-2">
+            {collapsed ? <ChevronRight size={13} className="text-slate-500" /> : <ChevronDown size={13} className="text-slate-500" />}
+            <span className="text-xs font-bold text-slate-700">{heading.name}</span>
+            {weightLabel && (
+              <span className="text-[10px] text-slate-500 italic ml-1">Weighting: {weightLabel}</span>
+            )}
+          </div>
+        </td>
+      </tr>
+      {!collapsed && heading.subHeadings.map((sub) => (
+        <SubHeadingRows key={sub.key} sub={sub} columns={columns} colWidth={colWidth} showDetails={showDetails} showSubHeader={heading.subHeadings.length > 1 || sub.name !== 'General'} />
+      ))}
+    </>
+  );
+}
+
+// ── Sub-heading rows ──────────────────────────────────────────────────────
+
+function SubHeadingRows({ sub, columns, colWidth, showDetails, showSubHeader }: {
+  sub: ParsedSubHeading; columns: ComparisonColumn[]; colWidth: number; showDetails: boolean; showSubHeader: boolean;
 }) {
   return (
     <>
       {showSubHeader && (
         <tr className="bg-gray-50 border-b border-gray-200">
-          <td className="px-6 py-1.5 bg-gray-50 sticky left-0 z-10" colSpan={columns.length + 1}>
+          <td className="px-8 py-1.5 bg-gray-50 sticky left-0 z-10" colSpan={columns.length + 1}>
             <span className="text-[11px] font-semibold text-slate-600">{sub.name}</span>
           </td>
         </tr>
       )}
       {sub.features.map((feature) => (
-        <FeatureRow key={feature.key} feature={feature} columns={columns} colWidth={colWidth} showText={showText} />
+        <FeatureRow key={feature.key} feature={feature} columns={columns} colWidth={colWidth} showDetails={showDetails} />
       ))}
     </>
   );
 }
 
-function FeatureRow({ feature, columns, colWidth, showText }: {
-  feature: ParsedFeature; columns: ComparisonColumn[]; colWidth: number; showText: boolean;
+// ── Feature row (with score, strengths, limitations, commentary, text) ────
+
+function FeatureRow({ feature, columns, colWidth, showDetails }: {
+  feature: ParsedFeature; columns: ComparisonColumn[]; colWidth: number; showDetails: boolean;
 }) {
   return (
-    <tr className="border-b border-gray-100 hover:bg-slate-50/50">
-      <td className="px-4 py-2 bg-white sticky left-0 z-10 border-r border-gray-200">
+    <tr className="border-b border-gray-100 hover:bg-slate-50/50 align-top">
+      <td className="px-4 py-2 bg-white sticky left-0 z-10 border-r border-gray-200 align-top">
         <span className="text-xs text-slate-700 font-medium">{feature.name}</span>
       </td>
       {feature.values.map((val, idx) => {
         const col = columns[idx];
         if (!col) return null;
+        const hasContent = val.scoreRaw != null || val.strengths || val.limitations || val.commentary || val.text || val.hasFeature;
         return (
-          <td key={col.row.id} className={`px-3 py-2 text-center border-r border-gray-100 ${val.hasFeature ? 'bg-emerald-50/30' : ''}`} style={{ minWidth: colWidth }}>
-            {val.score != null && val.score > 0 && (
-              <span className={`inline-flex items-center justify-center px-1.5 py-0.5 rounded text-[10px] font-bold mb-0.5 ${scoreBg(val.score * 20)}`}>
-                {val.score.toFixed(1)}
-              </span>
+          <td key={col.row.id} className={`px-3 py-2 border-r border-gray-100 align-top ${val.hasFeature ? 'bg-emerald-50/30' : ''}`} style={{ minWidth: colWidth }}>
+            {val.scoreRaw != null && (
+              <div className="mb-1">
+                <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold ${scoreBg(val.scoreRaw)}`}>
+                  {val.scoreRaw}
+                </span>
+              </div>
             )}
-            {showText && val.text && (
-              <div className="text-[10px] text-slate-600 leading-tight mt-0.5 max-w-[200px] mx-auto">{val.text}</div>
+            {showDetails && val.strengths && (
+              <div className="mt-1">
+                <div className="text-[10px] font-semibold text-emerald-700">Strengths</div>
+                <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.strengths}</div>
+              </div>
             )}
-            {!showText && val.text && (
-              <div className="text-[11px] text-slate-700 leading-tight max-w-[200px] mx-auto">{val.text}</div>
+            {showDetails && val.limitations && (
+              <div className="mt-1">
+                <div className="text-[10px] font-semibold text-amber-700">Limitations</div>
+                <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.limitations}</div>
+              </div>
             )}
-            {!val.text && !val.hasFeature && (
+            {showDetails && val.commentary && (
+              <div className="mt-1">
+                <div className="text-[10px] font-semibold text-blue-700">Commentary</div>
+                <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.commentary}</div>
+              </div>
+            )}
+            {showDetails && val.text && (
+              <div className="mt-1">
+                <div className="text-[10px] font-semibold text-slate-500">Feature Text</div>
+                <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.text}</div>
+              </div>
+            )}
+            {!hasContent && (
               <span className="text-xs text-slate-400">—</span>
             )}
           </td>
