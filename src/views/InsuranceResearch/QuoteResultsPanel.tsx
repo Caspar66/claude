@@ -141,6 +141,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [excludedCollapsed, setExcludedCollapsed] = useState(true);
+  const projectionYears = (quoteRequestBody?.settings as Record<string, unknown> | undefined)?.projectionYears as string | number | undefined;
   const [showGraphs, setShowGraphs] = useState(false);
   const [showOccRating, setShowOccRating] = useState(false);
 
@@ -293,7 +294,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
               <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
                 <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('cumulativePremium')}>
                   <ArrowUpDown size={11} />
-                  Cumulative Premiums
+                  {projectionYears ? `${projectionYears}y ` : ''}Cumulative Premiums
                 </button>
               </th>
               <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">
