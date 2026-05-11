@@ -326,7 +326,6 @@ interface Props {
 export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQuoteIndex, onBack }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [collapsedNeedTypes, setCollapsedNeedTypes] = useState<Set<string>>(new Set());
-  const [collapsedHeadings, setCollapsedHeadings] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [headings, setHeadings] = useState<ParsedHeading[]>([]);
   const [pdsDateValues, setPdsDateValues] = useState<string[]>([]);
@@ -398,13 +397,6 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
     });
   }
 
-  function toggleHeading(key: string) {
-    setCollapsedHeadings((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key); else next.add(key);
-      return next;
-    });
-  }
 
   const filteredGroups = useMemo(() => {
     let filtered = headings.filter((h) => filters.enabledCategories.has(h.key));
@@ -461,7 +453,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
   }
 
   return (
-    <div className="flex flex-col h-full bg-white relative">
+    <div className="flex flex-col flex-1 min-h-0 bg-white relative">
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-200 bg-gray-50">
         <button className="flex items-center gap-1 text-sm text-teal-700 hover:underline font-medium" onClick={onBack}>
@@ -520,9 +512,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
                 group={group}
                 columns={columns}
                 collapsedNeedType={collapsedNeedTypes.has(group.needType)}
-                collapsedHeadings={collapsedHeadings}
                 onToggleNeedType={() => toggleNeedType(group.needType)}
-                onToggleHeading={toggleHeading}
                 colWidth={colWidth}
                 showDetails={filters.featureText}
                 showScore={filters.featureScore}
@@ -582,9 +572,9 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
 
 // ── Need type group (top-level header) ─────────────────────────────────────
 
-function NeedTypeGroup({ group, columns, collapsedNeedType, collapsedHeadings, onToggleNeedType, onToggleHeading, colWidth, showDetails, showScore }: {
-  group: ParsedNeedGroup; columns: ComparisonColumn[]; collapsedNeedType: boolean; collapsedHeadings: Set<string>;
-  onToggleNeedType: () => void; onToggleHeading: (key: string) => void; colWidth: number; showDetails: boolean; showScore: boolean;
+function NeedTypeGroup({ group, columns, collapsedNeedType, onToggleNeedType, colWidth, showDetails, showScore }: {
+  group: ParsedNeedGroup; columns: ComparisonColumn[]; collapsedNeedType: boolean;
+  onToggleNeedType: () => void; colWidth: number; showDetails: boolean; showScore: boolean;
 }) {
   return (
     <>
@@ -602,8 +592,6 @@ function NeedTypeGroup({ group, columns, collapsedNeedType, collapsedHeadings, o
           key={heading.key}
           heading={heading}
           columns={columns}
-          collapsed={collapsedHeadings.has(heading.key)}
-          onToggle={() => onToggleHeading(heading.key)}
           colWidth={colWidth}
           showDetails={showDetails}
           showScore={showScore}
@@ -627,23 +615,20 @@ function headingScores(heading: ParsedHeading, colCount: number): (number | unde
   return scores;
 }
 
-function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDetails, showScore }: {
-  heading: ParsedHeading; columns: ComparisonColumn[]; collapsed: boolean; onToggle: () => void; colWidth: number; showDetails: boolean; showScore: boolean;
+function HeadingGroup({ heading, columns, colWidth, showDetails, showScore }: {
+  heading: ParsedHeading; columns: ComparisonColumn[]; colWidth: number; showDetails: boolean; showScore: boolean;
 }) {
   const weightLabel = heading.ipsAdjustedWeighting > 0 ? WEIGHTING_LABELS[heading.ipsAdjustedWeighting] : null;
   const scores = showScore ? headingScores(heading, columns.length) : [];
   return (
     <>
       <tr className="bg-slate-50 border-y border-gray-200">
-        <td className="px-4 py-1.5 bg-slate-50 sticky left-0 z-10 cursor-pointer select-none min-w-[280px]" onClick={onToggle}>
-          <div className="flex items-center gap-1.5">
-            {collapsed ? <ChevronRight size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
-            <div>
-              <div className="text-xs font-bold text-slate-700 leading-snug">{heading.name}</div>
-              {weightLabel && (
-                <div className="text-[10px] text-slate-400 italic leading-tight">Weighting: {weightLabel}</div>
-              )}
-            </div>
+        <td className="px-4 py-1.5 bg-slate-50 sticky left-0 z-10 min-w-[280px]">
+          <div>
+            <div className="text-xs font-bold text-slate-700 leading-snug">{heading.name}</div>
+            {weightLabel && (
+              <div className="text-[10px] text-slate-400 italic leading-tight">Weighting: {weightLabel}</div>
+            )}
           </div>
         </td>
         {columns.map((col, idx) => (
@@ -656,7 +641,7 @@ function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDet
           </td>
         ))}
       </tr>
-      {!collapsed && showDetails && heading.features.map((feature) => (
+      {showDetails && heading.features.map((feature) => (
         <FeatureRow key={feature.key} feature={feature} columns={columns} colWidth={colWidth} />
       ))}
     </>
