@@ -574,18 +574,18 @@ export function InsuranceComparisonDialog({
           )}
 
           {/* Features Comparison screen */}
-          {screen === 'features' && (
-            <FeaturesComparisonPage
-              selectedRows={
-                quoteResults.rows.filter((r) => r.selected).length > 0
-                  ? quoteResults.rows.filter((r) => r.selected)
-                  : quoteResults.rows.slice(0, 4)
-              }
-              quoteRequestBody={lastQuoteRequestBody}
-              activeQuoteIndex={activeQuoteIndex}
-              onBack={() => setScreen(preCompareScreen)}
-            />
-          )}
+          {screen === 'features' && activeQuoteIndex !== null && (() => {
+            const quoteRows = quoteResults.rows.filter((r) => r.quoteIndex === activeQuoteIndex);
+            const selected = quoteRows.filter((r) => r.selected);
+            return (
+              <FeaturesComparisonPage
+                selectedRows={selected.length > 0 ? selected : quoteRows.slice(0, 4)}
+                quoteRequestBody={lastQuoteRequestBody}
+                activeQuoteIndex={activeQuoteIndex}
+                onBack={() => setScreen(preCompareScreen)}
+              />
+            );
+          })()}
 
           {/* Options screen */}
           {screen === 'options' && (

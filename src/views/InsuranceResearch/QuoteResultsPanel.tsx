@@ -365,7 +365,9 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
       <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
         <button
           type="button"
-          className="inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded bg-teal-700 hover:bg-teal-800 text-white font-semibold"
+          className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded font-semibold ${activeQuoteIndex === null ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-teal-700 hover:bg-teal-800 text-white'}`}
+          disabled={activeQuoteIndex === null}
+          title={activeQuoteIndex === null ? 'Select a specific quote to compare features' : undefined}
           onClick={() => onViewCompareFeatures()}
         >
           <ExternalLink size={12} />
