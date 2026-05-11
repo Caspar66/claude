@@ -551,7 +551,8 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
             clone.querySelectorAll('[class*="sticky"]').forEach((el) => {
               (el as HTMLElement).style.position = 'static';
             });
-            await html2pdf().set({
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            await (html2pdf() as any).set({
               margin: [8, 6, 8, 6],
               filename: 'Feature-Comparison-Report.pdf',
               html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
