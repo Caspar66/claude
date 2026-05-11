@@ -393,9 +393,21 @@ export function InsuranceComparisonDialog({
       console.info('[OmniLife] /quote/portfolio requote response:', res.raw);
       const parsed = parsePortfolioResponse(res.raw);
       setQuoteResults((prev) => {
+        const oldRows = prev.rows.filter((r) => r.quoteIndex === quoteIdx);
+        const recMap = new Map<string, 'rec' | 'alt'>();
+        const selMap = new Map<string, boolean>();
+        for (const r of oldRows) {
+          if (r.recommendation) recMap.set(r.portfolioCode, r.recommendation);
+          if (r.selected) selMap.set(r.portfolioCode, true);
+        }
         const kept = prev.rows.filter((r) => r.quoteIndex !== quoteIdx);
         const keptExcl = prev.excluded.filter((e) => e.quoteIndex !== quoteIdx);
-        const newRows = parsed.rows.map((r) => ({ ...r, quoteIndex: quoteIdx }));
+        const newRows = parsed.rows.map((r) => ({
+          ...r,
+          quoteIndex: quoteIdx,
+          recommendation: recMap.get(r.portfolioCode) ?? null,
+          selected: selMap.get(r.portfolioCode) ?? false,
+        }));
         const newExcl = parsed.excluded.map((e) => ({ ...e, quoteIndex: quoteIdx }));
         return { rows: [...kept, ...newRows], excluded: [...keptExcl, ...newExcl], populated: true };
       });

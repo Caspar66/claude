@@ -166,7 +166,7 @@ function parsePortfolio(
       ? (p.errors as unknown[]).map((e) => (typeof e === 'string' ? e : asStr((e as Record<string, unknown>)?.message ?? e)))
       : [];
     return {
-      id: `ex-${globalIdx}`,
+      id: `ex-${crypto.randomUUID()}`,
       quoteIndex,
       supplierName,
       supplierLogo,
@@ -212,7 +212,7 @@ function parsePortfolio(
   const combinedObj = (score.combined ?? {}) as Record<string, unknown>;
 
   return {
-    id: `qr-${globalIdx}`,
+    id: `qr-${crypto.randomUUID()}`,
     quoteIndex,
     supplierName,
     supplierLogo,
