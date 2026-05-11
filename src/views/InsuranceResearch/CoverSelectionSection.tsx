@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, Settings, Plus, Trash2, SquarePen } from 'lucide-react';
+import { ChevronUp, ChevronDown, Settings, Plus, Trash2, SquarePen, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { NeedsQuote, TrmFields, TrsFields } from './needsTypes';
 import { getNeedCode, NEED_CODE_LABELS, LINKED_NEED_LABELS } from './needsTypes';
@@ -15,6 +15,18 @@ interface Props {
 
 export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQuote, onEditQuote, onChangeQuotes }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+
+  function copyQuote(id: string) {
+    const source = quotes.find((q) => q.id === id);
+    if (!source) return;
+    const clone: NeedsQuote = JSON.parse(JSON.stringify(source));
+    clone.id = crypto.randomUUID();
+    clone.name = `${source.name} (Copy)`;
+    const idx = quotes.findIndex((q) => q.id === id);
+    const next = [...quotes];
+    next.splice(idx + 1, 0, clone);
+    onChangeQuotes(next);
+  }
 
   function removeQuote(id: string) {
     onChangeQuotes(quotes.filter((q) => q.id !== id));
@@ -82,7 +94,7 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
             </div>
           ) : (
             <div>
-              <div className="grid grid-cols-[40px_1fr_1fr_1fr_80px] gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-700">
+              <div className="grid grid-cols-[52px_1fr_1fr_1fr_80px] gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-700">
                 <div />
                 <div>Quote Name</div>
                 <div>Life Insured</div>
@@ -90,7 +102,7 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
                 <div />
               </div>
               {quotes.map((q) => (
-                <div key={q.id} className="grid grid-cols-[40px_1fr_1fr_1fr_80px] gap-2 px-3 py-2 border-b border-gray-100 items-center">
+                <div key={q.id} className="grid grid-cols-[52px_1fr_1fr_1fr_80px] gap-2 px-3 py-2 border-b border-gray-100 items-center">
                   <div className="flex items-center gap-1">
                     <button
                       className="text-blue-500 hover:text-blue-700"
@@ -98,6 +110,13 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
                       onClick={() => onEditQuote(q.id)}
                     >
                       <SquarePen size={12} />
+                    </button>
+                    <button
+                      className="text-slate-400 hover:text-teal-600"
+                      title="Copy quote"
+                      onClick={() => copyQuote(q.id)}
+                    >
+                      <Copy size={12} />
                     </button>
                     <button
                       className="text-slate-400 hover:text-red-500"
