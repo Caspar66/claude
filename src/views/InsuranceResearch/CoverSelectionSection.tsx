@@ -11,9 +11,10 @@ interface Props {
   onAddQuote: () => void;
   onEditQuote: (quoteId: string) => void;
   onChangeQuotes: (quotes: NeedsQuote[]) => void;
+  quoteGeneratedDates?: Record<string, string>;
 }
 
-export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQuote, onEditQuote, onChangeQuotes }: Props) {
+export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQuote, onEditQuote, onChangeQuotes, quoteGeneratedDates }: Props) {
   const [collapsed, setCollapsed] = useState(false);
 
   function copyQuote(id: string) {
@@ -94,15 +95,16 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
             </div>
           ) : (
             <div>
-              <div className="grid grid-cols-[52px_1fr_1fr_1fr_80px] gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-700">
+              <div className="grid grid-cols-[52px_1fr_1fr_1fr_90px_80px] gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-700">
                 <div />
                 <div>Quote Name</div>
                 <div>Life Insured</div>
                 <div>Covers</div>
+                <div>Quoted</div>
                 <div />
               </div>
               {quotes.map((q) => (
-                <div key={q.id} className="grid grid-cols-[52px_1fr_1fr_1fr_80px] gap-2 px-3 py-2 border-b border-gray-100 items-center">
+                <div key={q.id} className="grid grid-cols-[52px_1fr_1fr_1fr_90px_80px] gap-2 px-3 py-2 border-b border-gray-100 items-center">
                   <div className="flex items-center gap-1">
                     <button
                       className="text-blue-500 hover:text-blue-700"
@@ -138,6 +140,9 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
                   <div className="text-xs text-slate-700">{lifeInsuredLabel(q.lifeInsured)}</div>
                   <div className="text-xs text-slate-600">
                     {enabledCovers(q).join(', ') || 'None'}
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    {quoteGeneratedDates?.[q.id] || '—'}
                   </div>
                   <div>
                     <Button

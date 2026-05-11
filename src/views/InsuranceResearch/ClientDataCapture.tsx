@@ -21,12 +21,15 @@ interface Props {
   onPartnerChange: (data: ClientFormData) => void;
   onLaunchNeedsAnalysis: () => void;
   onGetQuotes: () => void;
+  onNext?: () => void;
+  hasQuoteResults?: boolean;
   policies: ExistingPolicy[];
   onChangePolicies: (policies: ExistingPolicy[]) => void;
   quotes: NeedsQuote[];
   onChangeQuotes: (quotes: NeedsQuote[]) => void;
   getQuotesDisabled?: boolean;
   getQuotesLabel?: string;
+  quoteGeneratedDates?: Record<string, string>;
 }
 
 function Inp({ value, onChange, className = '' }: { value: string; onChange: (v: string) => void; className?: string }) {
@@ -356,12 +359,15 @@ export function ClientDataCapture({
   onPartnerChange,
   onLaunchNeedsAnalysis,
   onGetQuotes,
+  onNext,
+  hasQuoteResults,
   policies,
   onChangePolicies,
   quotes: coverQuotes,
   onChangeQuotes,
   getQuotesDisabled,
   getQuotesLabel,
+  quoteGeneratedDates,
 }: Props) {
   const showPartner = partnerData !== null;
   const { options: occupations, loading: occupationsLoading, error: occupationsError } = useOccupations();
@@ -520,6 +526,7 @@ export function ClientDataCapture({
         onAddQuote={handleAddQuote}
         onEditQuote={(id) => setEditingQuoteId(id)}
         onChangeQuotes={handleChangeQuotes}
+        quoteGeneratedDates={quoteGeneratedDates}
       />
 
       {/* Action buttons */}
@@ -535,6 +542,17 @@ export function ClientDataCapture({
         >
           {getQuotesLabel ?? 'Get Quotes'}
         </Button>
+        {onNext && (
+          <Button
+            variant="outline"
+            className="border-slate-800 text-slate-800 hover:bg-slate-100 px-6 disabled:opacity-40 disabled:cursor-not-allowed"
+            onClick={onNext}
+            disabled={!hasQuoteResults}
+            title={!hasQuoteResults ? 'Run Get Quotes first to view results' : undefined}
+          >
+            Next
+          </Button>
+        )}
       </div>
 
       {/* Occupation Ratings Modal */}

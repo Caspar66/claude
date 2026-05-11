@@ -513,12 +513,15 @@ export function InsuranceComparisonDialog({
                 onPartnerChange={setPartnerData}
                 onLaunchNeedsAnalysis={() => {}}
                 onGetQuotes={() => handleGetQuotes()}
+                onNext={() => setScreen(1)}
+                hasQuoteResults={quoteResults.populated}
                 policies={policies}
                 onChangePolicies={setPolicies}
                 quotes={coverQuotes}
                 onChangeQuotes={setCoverQuotes}
                 getQuotesDisabled={portfolioLoading}
                 getQuotesLabel={portfolioLoading ? 'Fetching quotes…' : undefined}
+                quoteGeneratedDates={quoteGeneratedDates}
               />
             </>
           )}
