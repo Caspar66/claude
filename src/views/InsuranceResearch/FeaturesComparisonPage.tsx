@@ -30,6 +30,8 @@ const WEIGHTING_LABELS: Record<number, string> = {
   5: 'Highest',
 };
 
+const EXCLUDED_HEADING_NAMES = ['Product Name', 'Date of PDS or SPDS', 'Product cover types'];
+
 // ── Types ──────────────────────────────────────────────────────────────────
 
 interface FeatureValue {
@@ -90,10 +92,17 @@ function asNum(v: unknown): number {
 
 // ── Parse response ─────────────────────────────────────────────────────────
 
-function parseFeatureResponse(raw: unknown): ParsedHeading[] {
-  if (!Array.isArray(raw)) return [];
+interface ParseResult {
+  headings: ParsedHeading[];
+  pdsDateValues: string[];
+}
+
+function parseFeatureResponse(raw: unknown): ParseResult {
+  if (!Array.isArray(raw)) return { headings: [], pdsDateValues: [] };
 
   const headingMap = new Map<string, { name: string; needType: string; ipsAdjustedWeighting: number; features: ParsedFeature[] }>();
+  let pdsDateValues: string[] = [];
+  let pdsDateCaptured = false;
 
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
@@ -106,6 +115,15 @@ function parseFeatureResponse(raw: unknown): ParsedHeading[] {
     const ipsAdjustedWeighting = asNum(headingObj.ipsAdjustedWeighting);
 
     if (headingCode === 'PORTFOLIO_HEADING') continue;
+
+    if (headingCode === 'ALL_PDS_DATE' && !pdsDateCaptured) {
+      const portfolios = Array.isArray(entry.features) ? entry.features : [];
+      pdsDateValues = portfolios.map((p: unknown) => {
+        if (!p || typeof p !== 'object') return '';
+        return asStr((p as Record<string, unknown>).text);
+      });
+      pdsDateCaptured = true;
+    }
 
     const featureObj = (entry.feature ?? {}) as Record<string, unknown>;
     const featureName = asStr(featureObj.name) || asStr(featureObj.code) || asStr(entry.name) || headingName;
@@ -139,9 +157,10 @@ function parseFeatureResponse(raw: unknown): ParsedHeading[] {
 
   const headings: ParsedHeading[] = [];
   for (const [, { name, needType, ipsAdjustedWeighting, features }] of headingMap) {
+    if (EXCLUDED_HEADING_NAMES.includes(name)) continue;
     headings.push({ key: `${needType}_${name}`, name, needType, ipsAdjustedWeighting, features });
   }
-  return headings;
+  return { headings, pdsDateValues };
 }
 
 function groupByNeedType(headings: ParsedHeading[]): ParsedNeedGroup[] {
@@ -171,6 +190,30 @@ interface ComparisonFilters {
   differencesOnly: boolean;
   featureScore: boolean;
   enabledCategories: Set<string>;
+}
+
+// ── Insurer logo ───────────────────────────────────────────────────────────
+
+function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
+  const [loadFailed, setLoadFailed] = useState(false);
+
+  if (logo && !loadFailed) {
+    return (
+      <img
+        src={logo}
+        alt={name}
+        className="w-8 h-8 object-contain bg-white border border-gray-200 rounded"
+        onError={() => setLoadFailed(true)}
+      />
+    );
+  }
+
+  const initials = name.replace(/[^A-Z]/g, '').slice(0, 3) || name.slice(0, 3).toUpperCase();
+  return (
+    <div className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-slate-100" aria-label={name}>
+      <span className="font-bold text-[10px] text-slate-600">{initials}</span>
+    </div>
+  );
 }
 
 // ── Filters panel ──────────────────────────────────────────────────────────
@@ -280,6 +323,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
   const [collapsedHeadings, setCollapsedHeadings] = useState<Set<string>>(new Set());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [headings, setHeadings] = useState<ParsedHeading[]>([]);
+  const [pdsDateValues, setPdsDateValues] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
@@ -322,8 +366,9 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
       .then((raw) => {
         if (cancelled) return;
         const parsed = parseFeatureResponse(raw);
-        setHeadings(parsed);
-        setFilters((prev) => ({ ...prev, enabledCategories: new Set(parsed.map((h) => h.key)) }));
+        setHeadings(parsed.headings);
+        setPdsDateValues(parsed.pdsDateValues);
+        setFilters((prev) => ({ ...prev, enabledCategories: new Set(parsed.headings.map((h) => h.key)) }));
         setLoading(false);
       })
       .catch((err: Error) => {
@@ -430,19 +475,23 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
       {/* Table */}
       <div className="flex-1 overflow-auto" ref={tableRef}>
         <table className="w-full text-sm border-collapse">
-          <thead className="sticky top-0 z-10">
+          <thead className="sticky top-0 z-20">
             <tr className="bg-white border-b-2 border-gray-200">
-              <th className="text-left px-4 py-3 bg-gray-50 border-r border-gray-200 min-w-[220px] sticky left-0 z-20">
+              <th className="text-left px-4 py-3 bg-gray-50 border-r border-gray-200 min-w-[220px] sticky left-0 z-30">
                 <span className="text-xs font-semibold text-slate-600">Comparison Parameter</span>
               </th>
-              {columns.map((col) => (
+              {columns.map((col, colIdx) => (
                 <th key={col.row.id} className="px-3 py-3 text-center border-r border-gray-200 bg-white" style={{ minWidth: colWidth, maxWidth: colWidth + 40 }}>
                   <div className="flex flex-col items-center gap-1">
+                    <InsurerLogo name={col.row.supplierName} logo={col.row.supplierLogo} />
                     <span className="text-sm font-bold text-slate-800">{col.row.supplierName}</span>
                     <span className="text-[10px] text-slate-500 leading-tight line-clamp-2 max-w-[180px]">{col.row.products}</span>
                     <span className="text-xs font-semibold text-slate-800">{fmt(computePremiumTotal(col.row, 'Y', 'Y'))} p.a.</span>
                     {filters.featureScore && (
                       <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold ${scoreBg(col.row.featureScore)}`}>Feature: {col.row.featureScore}</span>
+                    )}
+                    {pdsDateValues[colIdx] && (
+                      <span className="text-[10px] text-slate-400 leading-tight">{pdsDateValues[colIdx]}</span>
                     )}
                   </div>
                 </th>
@@ -461,6 +510,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
                 onToggleHeading={toggleHeading}
                 colWidth={colWidth}
                 showDetails={filters.featureText}
+                showScore={filters.featureScore}
               />
             ))}
             {filteredGroups.length === 0 && (
@@ -501,9 +551,9 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
 
 // ── Need type group (top-level header) ─────────────────────────────────────
 
-function NeedTypeGroup({ group, columns, collapsedNeedType, collapsedHeadings, onToggleNeedType, onToggleHeading, colWidth, showDetails }: {
+function NeedTypeGroup({ group, columns, collapsedNeedType, collapsedHeadings, onToggleNeedType, onToggleHeading, colWidth, showDetails, showScore }: {
   group: ParsedNeedGroup; columns: ComparisonColumn[]; collapsedNeedType: boolean; collapsedHeadings: Set<string>;
-  onToggleNeedType: () => void; onToggleHeading: (key: string) => void; colWidth: number; showDetails: boolean;
+  onToggleNeedType: () => void; onToggleHeading: (key: string) => void; colWidth: number; showDetails: boolean; showScore: boolean;
 }) {
   return (
     <>
@@ -525,30 +575,55 @@ function NeedTypeGroup({ group, columns, collapsedNeedType, collapsedHeadings, o
           onToggle={() => onToggleHeading(heading.key)}
           colWidth={colWidth}
           showDetails={showDetails}
+          showScore={showScore}
         />
       ))}
     </>
   );
 }
 
-// ── Heading group (collapsible, with weighting) ───────────────────────────
+// ── Heading group (collapsible, with weighting + scores in columns) ───────
 
-function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDetails }: {
-  heading: ParsedHeading; columns: ComparisonColumn[]; collapsed: boolean; onToggle: () => void; colWidth: number; showDetails: boolean;
+function headingScores(heading: ParsedHeading, colCount: number): (number | undefined)[] {
+  const scores: (number | undefined)[] = new Array(colCount).fill(undefined);
+  for (const feature of heading.features) {
+    for (let i = 0; i < feature.values.length && i < colCount; i++) {
+      if (feature.values[i].scoreRaw != null && scores[i] === undefined) {
+        scores[i] = feature.values[i].scoreRaw;
+      }
+    }
+  }
+  return scores;
+}
+
+function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDetails, showScore }: {
+  heading: ParsedHeading; columns: ComparisonColumn[]; collapsed: boolean; onToggle: () => void; colWidth: number; showDetails: boolean; showScore: boolean;
 }) {
   const weightLabel = heading.ipsAdjustedWeighting > 0 ? WEIGHTING_LABELS[heading.ipsAdjustedWeighting] : null;
+  const scores = showScore ? headingScores(heading, columns.length) : [];
   return (
     <>
       <tr className="bg-slate-100 border-y border-gray-200">
-        <td className="px-6 py-2 bg-slate-100 sticky left-0 z-10 cursor-pointer select-none" colSpan={columns.length + 1} onClick={onToggle}>
+        <td className="px-6 py-2 bg-slate-100 sticky left-0 z-10 cursor-pointer select-none" onClick={onToggle}>
           <div className="flex items-center gap-2">
             {collapsed ? <ChevronRight size={13} className="text-slate-500" /> : <ChevronDown size={13} className="text-slate-500" />}
-            <span className="text-xs font-bold text-slate-700">{heading.name}</span>
-            {weightLabel && (
-              <span className="text-[10px] text-slate-500 italic ml-1">Weighting: {weightLabel}</span>
-            )}
+            <div>
+              <div className="text-xs font-bold text-slate-700">{heading.name}</div>
+              {weightLabel && (
+                <div className="text-[10px] text-slate-500 italic">Weighting: {weightLabel}</div>
+              )}
+            </div>
           </div>
         </td>
+        {columns.map((col, idx) => (
+          <td key={col.row.id} className="px-3 py-2 bg-slate-100 text-center" style={{ minWidth: colWidth }}>
+            {showScore && scores[idx] != null && (
+              <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold ${scoreBg(scores[idx]!)}`}>
+                {scores[idx]}
+              </span>
+            )}
+          </td>
+        ))}
       </tr>
       {!collapsed && heading.features.map((feature) => (
         <FeatureRow key={feature.key} feature={feature} columns={columns} colWidth={colWidth} showDetails={showDetails} />
@@ -557,7 +632,7 @@ function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDet
   );
 }
 
-// ── Feature row (with score, strengths, limitations, commentary, text) ────
+// ── Feature row (strengths, limitations, commentary, text) ────────────────
 
 function FeatureRow({ feature, columns, colWidth, showDetails }: {
   feature: ParsedFeature; columns: ComparisonColumn[]; colWidth: number; showDetails: boolean;
@@ -570,18 +645,11 @@ function FeatureRow({ feature, columns, colWidth, showDetails }: {
       {feature.values.map((val, idx) => {
         const col = columns[idx];
         if (!col) return null;
-        const hasContent = val.scoreRaw != null || val.strengths || val.limitations || val.commentary || val.text || val.hasFeature;
+        const hasContent = val.strengths || val.limitations || val.commentary || val.text || val.hasFeature;
         return (
           <td key={col.row.id} className={`px-3 py-2 border-r border-gray-100 align-top ${val.hasFeature ? 'bg-emerald-50/30' : ''}`} style={{ minWidth: colWidth }}>
-            {val.scoreRaw != null && (
-              <div className="mb-1">
-                <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold ${scoreBg(val.scoreRaw)}`}>
-                  {val.scoreRaw}
-                </span>
-              </div>
-            )}
             {showDetails && val.strengths && (
-              <div className="mt-1">
+              <div className="mt-0.5">
                 <div className="text-[10px] font-semibold text-emerald-700">Strengths</div>
                 <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.strengths}</div>
               </div>
