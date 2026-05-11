@@ -619,7 +619,10 @@ function HeadingGroup({ heading, columns, colWidth, showDetails, showScore }: {
   heading: ParsedHeading; columns: ComparisonColumn[]; colWidth: number; showDetails: boolean; showScore: boolean;
 }) {
   const weightLabel = heading.ipsAdjustedWeighting > 0 ? WEIGHTING_LABELS[heading.ipsAdjustedWeighting] : null;
-  const scores = showScore ? headingScores(heading, columns.length) : [];
+  const scores = headingScores(heading, columns.length);
+
+  if (!showDetails && scores.every((s) => s === undefined)) return null;
+
   return (
     <>
       <tr className="bg-slate-50 border-y border-gray-200">
