@@ -48,18 +48,12 @@ interface ParsedFeature {
   values: FeatureValue[];
 }
 
-interface ParsedSubHeading {
-  key: string;
-  name: string;
-  features: ParsedFeature[];
-}
-
 interface ParsedHeading {
   key: string;
   name: string;
   needType: string;
   ipsAdjustedWeighting: number;
-  subHeadings: ParsedSubHeading[];
+  features: ParsedFeature[];
 }
 
 interface ParsedNeedGroup {
@@ -99,7 +93,7 @@ function asNum(v: unknown): number {
 function parseFeatureResponse(raw: unknown): ParsedHeading[] {
   if (!Array.isArray(raw)) return [];
 
-  const headingMap = new Map<string, { name: string; needType: string; ipsAdjustedWeighting: number; subMap: Map<string, ParsedFeature[]> }>();
+  const headingMap = new Map<string, { name: string; needType: string; ipsAdjustedWeighting: number; features: ParsedFeature[] }>();
 
   for (const item of raw) {
     if (!item || typeof item !== 'object') continue;
@@ -112,9 +106,6 @@ function parseFeatureResponse(raw: unknown): ParsedHeading[] {
     const ipsAdjustedWeighting = asNum(headingObj.ipsAdjustedWeighting);
 
     if (headingCode === 'PORTFOLIO_HEADING') continue;
-
-    const subHeadingObj = (entry.subHeading ?? {}) as Record<string, unknown>;
-    const subHeadingName = asStr(subHeadingObj.name) || asStr(subHeadingObj.code) || 'General';
 
     const featureObj = (entry.feature ?? {}) as Record<string, unknown>;
     const featureName = asStr(featureObj.name) || asStr(featureObj.code) || asStr(entry.name) || headingName;
@@ -135,27 +126,20 @@ function parseFeatureResponse(raw: unknown): ParsedHeading[] {
       };
     });
 
-    if (!headingMap.has(headingCode)) {
-      headingMap.set(headingCode, { name: headingName, needType, ipsAdjustedWeighting, subMap: new Map() });
+    const mapKey = `${needType}::${headingCode}`;
+    if (!headingMap.has(mapKey)) {
+      headingMap.set(mapKey, { name: headingName, needType, ipsAdjustedWeighting, features: [] });
     }
-    const group = headingMap.get(headingCode)!;
-    if (!group.subMap.has(subHeadingName)) {
-      group.subMap.set(subHeadingName, []);
-    }
-    group.subMap.get(subHeadingName)!.push({
-      key: `${headingCode}_${subHeadingName}_${featureName}`,
+    headingMap.get(mapKey)!.features.push({
+      key: `${needType}_${headingCode}_${featureName}`,
       name: featureName,
       values,
     });
   }
 
   const headings: ParsedHeading[] = [];
-  for (const [code, { name, needType, ipsAdjustedWeighting, subMap }] of headingMap) {
-    const subHeadings: ParsedSubHeading[] = [];
-    for (const [subName, features] of subMap) {
-      subHeadings.push({ key: `${code}_${subName}`, name: subName, features });
-    }
-    headings.push({ key: code, name, needType, ipsAdjustedWeighting, subHeadings });
+  for (const [, { name, needType, ipsAdjustedWeighting, features }] of headingMap) {
+    headings.push({ key: `${needType}_${name}`, name, needType, ipsAdjustedWeighting, features });
   }
   return headings;
 }
@@ -373,12 +357,8 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
       const term = searchTerm.toLowerCase();
       filtered = filtered.map((h) => {
         if (h.name.toLowerCase().includes(term)) return h;
-        const filteredSubs = h.subHeadings.map((sub) => {
-          if (sub.name.toLowerCase().includes(term)) return sub;
-          const filteredFeatures = sub.features.filter((f) => f.name.toLowerCase().includes(term));
-          return filteredFeatures.length > 0 ? { ...sub, features: filteredFeatures } : null;
-        }).filter(Boolean) as ParsedSubHeading[];
-        return filteredSubs.length > 0 ? { ...h, subHeadings: filteredSubs } : null;
+        const matchedFeatures = h.features.filter((f) => f.name.toLowerCase().includes(term));
+        return matchedFeatures.length > 0 ? { ...h, features: matchedFeatures } : null;
       }).filter(Boolean) as ParsedHeading[];
     }
     return groupByNeedType(filtered);
@@ -570,28 +550,7 @@ function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDet
           </div>
         </td>
       </tr>
-      {!collapsed && heading.subHeadings.map((sub) => (
-        <SubHeadingRows key={sub.key} sub={sub} columns={columns} colWidth={colWidth} showDetails={showDetails} showSubHeader={heading.subHeadings.length > 1 || sub.name !== 'General'} />
-      ))}
-    </>
-  );
-}
-
-// ── Sub-heading rows ──────────────────────────────────────────────────────
-
-function SubHeadingRows({ sub, columns, colWidth, showDetails, showSubHeader }: {
-  sub: ParsedSubHeading; columns: ComparisonColumn[]; colWidth: number; showDetails: boolean; showSubHeader: boolean;
-}) {
-  return (
-    <>
-      {showSubHeader && (
-        <tr className="bg-gray-50 border-b border-gray-200">
-          <td className="px-8 py-1.5 bg-gray-50 sticky left-0 z-10" colSpan={columns.length + 1}>
-            <span className="text-[11px] font-semibold text-slate-600">{sub.name}</span>
-          </td>
-        </tr>
-      )}
-      {sub.features.map((feature) => (
+      {!collapsed && heading.features.map((feature) => (
         <FeatureRow key={feature.key} feature={feature} columns={columns} colWidth={colWidth} showDetails={showDetails} />
       ))}
     </>
