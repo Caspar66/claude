@@ -332,6 +332,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
   const [pdsDateValues, setPdsDateValues] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [pdfExporting, setPdfExporting] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
 
   const columns: ComparisonColumn[] = selectedRows.map((row) => ({ row }));
@@ -539,14 +540,29 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
         <span className="text-xs text-slate-500">
           Comparing {columns.length} product{columns.length !== 1 ? 's' : ''} across {totalHeadings} feature{totalHeadings === 1 ? '' : 's'} in {filteredGroups.length} cover{filteredGroups.length === 1 ? '' : 's'}
         </span>
-        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5" onClick={() => {
-          const w = window.open('', '_blank');
-          if (!w) return;
-          const html = tableRef.current?.querySelector('table')?.outerHTML ?? '';
-          w.document.write(`<!DOCTYPE html><html><head><title>Feature Comparison</title><style>body{font-family:sans-serif;margin:20px}table{width:100%;border-collapse:collapse;font-size:12px}th,td{padding:6px 10px;border:1px solid #e5e7eb;vertical-align:top}th{background:#f1f5f9;font-weight:600;text-align:left}@media print{body{margin:10px}}</style></head><body><h1>Insurance Feature Comparison Report</h1>${html}<script>window.print();setTimeout(()=>window.close(),1000)</script></body></html>`);
-          w.document.close();
+        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5" disabled={pdfExporting} onClick={async () => {
+          const table = tableRef.current?.querySelector('table');
+          if (!table) return;
+          setPdfExporting(true);
+          try {
+            const html2pdf = (await import('html2pdf.js')).default;
+            const clone = table.cloneNode(true) as HTMLElement;
+            clone.style.fontSize = '10px';
+            clone.querySelectorAll('[class*="sticky"]').forEach((el) => {
+              (el as HTMLElement).style.position = 'static';
+            });
+            await html2pdf().set({
+              margin: [8, 6, 8, 6],
+              filename: 'Feature-Comparison-Report.pdf',
+              html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
+              jsPDF: { unit: 'mm', format: 'a3', orientation: 'landscape' },
+              pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+            }).from(clone).save();
+          } finally {
+            setPdfExporting(false);
+          }
         }}>
-          <Download size={12} /> Download Comparison Report
+          <Download size={12} /> {pdfExporting ? 'Exporting...' : 'Download PDF Report'}
         </Button>
       </div>
 
@@ -639,8 +655,8 @@ function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDet
           </td>
         ))}
       </tr>
-      {!collapsed && heading.features.map((feature) => (
-        <FeatureRow key={feature.key} feature={feature} columns={columns} colWidth={colWidth} showDetails={showDetails} />
+      {!collapsed && showDetails && heading.features.map((feature) => (
+        <FeatureRow key={feature.key} feature={feature} columns={columns} colWidth={colWidth} />
       ))}
     </>
   );
@@ -648,8 +664,8 @@ function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDet
 
 // ── Feature row (strengths, limitations, commentary, text) ────────────────
 
-function FeatureRow({ feature, columns, colWidth, showDetails }: {
-  feature: ParsedFeature; columns: ComparisonColumn[]; colWidth: number; showDetails: boolean;
+function FeatureRow({ feature, columns, colWidth }: {
+  feature: ParsedFeature; columns: ComparisonColumn[]; colWidth: number;
 }) {
   return (
     <tr className="border-b border-gray-100 hover:bg-slate-50/50 align-top">
@@ -662,25 +678,25 @@ function FeatureRow({ feature, columns, colWidth, showDetails }: {
         const hasContent = val.strengths || val.limitations || val.commentary || val.text || val.hasFeature;
         return (
           <td key={col.row.id} className={`px-3 py-2 border-r border-gray-100 align-top ${val.hasFeature ? 'bg-emerald-50/30' : ''}`} style={{ minWidth: colWidth }}>
-            {showDetails && val.strengths && (
+            {val.strengths && (
               <div className="mt-0.5">
                 <div className="text-[10px] font-semibold text-emerald-700">Strengths</div>
                 <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.strengths}</div>
               </div>
             )}
-            {showDetails && val.limitations && (
+            {val.limitations && (
               <div className="mt-1">
                 <div className="text-[10px] font-semibold text-amber-700">Limitations</div>
                 <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.limitations}</div>
               </div>
             )}
-            {showDetails && val.commentary && (
+            {val.commentary && (
               <div className="mt-1">
                 <div className="text-[10px] font-semibold text-blue-700">Commentary</div>
                 <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.commentary}</div>
               </div>
             )}
-            {showDetails && val.text && (
+            {val.text && (
               <div className="mt-1">
                 <div className="text-[10px] font-semibold text-slate-500">Feature Text</div>
                 <div className="text-[10px] text-slate-600 whitespace-pre-line leading-relaxed">{val.text}</div>
