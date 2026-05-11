@@ -492,18 +492,20 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
               {columns.map((col, colIdx) => (
                 <th key={col.row.id} className="px-3 py-3 text-center border-r border-gray-200 bg-white relative" style={{ minWidth: colWidth, maxWidth: colWidth + 40 }}>
                   {col.row.existingCover && (
-                    <span className="absolute top-1 right-1 bg-amber-400 text-amber-900 text-[9px] font-bold px-1.5 py-0.5 rounded">EXISTING</span>
+                    <span className="absolute top-1 right-1 bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full">EXISTING</span>
                   )}
                   <div className="flex flex-col items-center gap-1">
-                    <InsurerLogo name={col.row.supplierName} logo={col.row.supplierLogo} />
-                    <span className="text-sm font-bold text-slate-800">{col.row.supplierName}</span>
+                    <div className="flex items-center gap-1.5">
+                      <InsurerLogo name={col.row.supplierName} logo={col.row.supplierLogo} />
+                      <span className="text-sm font-bold text-slate-800">{col.row.supplierName}</span>
+                    </div>
                     <span className="text-[10px] text-slate-500 leading-tight line-clamp-2 max-w-[180px]">{col.row.products}</span>
                     <span className="text-xs font-semibold text-slate-800">{fmt(computePremiumTotal(col.row, premiumFreq, premiumFreq))} {freqSuffix}</span>
                     {filters.featureScore && (
                       <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold ${scoreBg(col.row.featureScore)}`}>Feature: {col.row.featureScore}</span>
                     )}
                     {pdsDateValues[colIdx] && (
-                      <span className="text-[10px] text-slate-400 leading-tight">{pdsDateValues[colIdx]}</span>
+                      <span className="text-[10px] text-slate-400 leading-tight">Date of PDS or SPDS: {pdsDateValues[colIdx]}</span>
                     )}
                   </div>
                 </th>
