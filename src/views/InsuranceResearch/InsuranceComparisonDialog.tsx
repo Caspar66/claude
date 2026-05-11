@@ -313,6 +313,51 @@ export function InsuranceComparisonDialog({
     await handleGetQuotes(updatedQuotes);
   }
 
+  async function handleNext() {
+    const unquoted = coverQuotes.filter((q) => !quoteGeneratedDates[q.id]);
+    if (unquoted.length === 0) {
+      setScreen(1);
+      return;
+    }
+    setPortfolioLoading(true);
+    setPortfolioError(null);
+    try {
+      const body = buildPortfolioRequest({
+        clientData,
+        partnerData: showPartner ? partnerData : null,
+        quotes: unquoted,
+        policies,
+        occupations,
+      });
+      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
+      console.info('[OmniLife] /quote/portfolio (unquoted) response:', res.raw);
+      const parsed = parsePortfolioResponse(res.raw);
+
+      const indexMap = unquoted.map((q) => coverQuotes.indexOf(q));
+      setQuoteResults((prev) => {
+        const newRows = parsed.rows.map((r) => ({ ...r, quoteIndex: indexMap[r.quoteIndex] ?? r.quoteIndex }));
+        const newExcl = parsed.excluded.map((e) => ({ ...e, quoteIndex: indexMap[e.quoteIndex] ?? e.quoteIndex }));
+        return {
+          rows: [...prev.rows, ...newRows],
+          excluded: [...prev.excluded, ...newExcl],
+          populated: true,
+        };
+      });
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      const dates: Record<string, string> = {};
+      for (const q of unquoted) dates[q.id] = dateStr;
+      setQuoteGeneratedDates((prev) => ({ ...prev, ...dates }));
+      setScreen(1);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setPortfolioError(msg);
+      setScreen(1);
+    } finally {
+      setPortfolioLoading(false);
+    }
+  }
+
   function handleSetRecommendation(id: string, value: 'rec' | 'alt' | null) {
     setQuoteResults((prev) => ({
       ...prev,
@@ -513,8 +558,8 @@ export function InsuranceComparisonDialog({
                 onPartnerChange={setPartnerData}
                 onLaunchNeedsAnalysis={() => {}}
                 onGetQuotes={() => handleGetQuotes()}
-                onNext={() => setScreen(1)}
-                hasQuoteResults={quoteResults.populated}
+                onNext={handleNext}
+                hasQuoteResults={coverQuotes.length > 0}
                 policies={policies}
                 onChangePolicies={setPolicies}
                 quotes={coverQuotes}
