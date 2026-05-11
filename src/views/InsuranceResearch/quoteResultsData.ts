@@ -43,6 +43,7 @@ export interface QuoteResultRow {
   valueScore: number;
   selected: boolean;
   existingCover: boolean;
+  recommendation: 'rec' | 'alt' | null;
 }
 
 // ── Premium computation helpers ─────────────────────────────────────────────
@@ -230,6 +231,7 @@ function parsePortfolio(
     valueScore: asNum(combinedObj.raw),
     selected: false,
     existingCover: isExistingCover,
+    recommendation: null,
   };
 }
 

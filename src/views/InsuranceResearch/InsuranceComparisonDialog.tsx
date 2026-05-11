@@ -213,6 +213,10 @@ export function InsuranceComparisonDialog({
   // Active quote filter (null = show all quotes)
   const [activeQuoteIndex, setActiveQuoteIndex] = useState<number | null>(null);
 
+  // Per-quote generated dates (keyed by quote id)
+  const [quoteGeneratedDates, setQuoteGeneratedDates] = useState<Record<string, string>>({});
+  const [requotingQuoteId, setRequotingQuoteId] = useState<string | null>(null);
+
   // Editing a quote from the results page
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
@@ -253,6 +257,8 @@ export function InsuranceComparisonDialog({
     setPortfolioError(null);
     setActiveQuoteIndex(null);
     setEditingQuoteId(null);
+    setQuoteGeneratedDates({});
+    setRequotingQuoteId(null);
   }
 
   function handleClose() {
@@ -284,6 +290,11 @@ export function InsuranceComparisonDialog({
       console.info('[OmniLife] /quote/portfolio response:', res.raw);
       const parsed = parsePortfolioResponse(res.raw);
       setQuoteResults(parsed);
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      const dates: Record<string, string> = {};
+      for (const q of quotes) dates[q.id] = dateStr;
+      setQuoteGeneratedDates((prev) => ({ ...prev, ...dates }));
       setScreen(1);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -300,6 +311,58 @@ export function InsuranceComparisonDialog({
     setEditingQuoteId(null);
     setScreen(1);
     await handleGetQuotes(updatedQuotes);
+  }
+
+  function handleSetRecommendation(id: string, value: 'rec' | 'alt' | null) {
+    setQuoteResults((prev) => ({
+      ...prev,
+      rows: prev.rows.map((r) => (r.id === id ? { ...r, recommendation: value } : r)),
+    }));
+  }
+
+  async function handleRequote(quoteId: string) {
+    const quoteIdx = coverQuotes.findIndex((q) => q.id === quoteId);
+    if (quoteIdx === -1) return;
+    const quote = coverQuotes[quoteIdx];
+
+    setRequotingQuoteId(quoteId);
+    try {
+      const data = quote.lifeInsured === 'partner' && showPartner ? partnerData : clientData;
+      const body = buildPortfolioRequest({
+        clientData: data,
+        partnerData: null,
+        quotes: [quote],
+        policies,
+        occupations,
+      });
+      setLastQuoteRequestBody((prev) => {
+        const next = { ...prev };
+        if (Array.isArray(next.clients)) {
+          const clients = [...(next.clients as unknown[])];
+          clients[quoteIdx] = (body.clients as unknown[])[0];
+          next.clients = clients;
+        }
+        return next;
+      });
+      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
+      console.info('[OmniLife] /quote/portfolio requote response:', res.raw);
+      const parsed = parsePortfolioResponse(res.raw);
+      setQuoteResults((prev) => {
+        const kept = prev.rows.filter((r) => r.quoteIndex !== quoteIdx);
+        const keptExcl = prev.excluded.filter((e) => e.quoteIndex !== quoteIdx);
+        const newRows = parsed.rows.map((r) => ({ ...r, quoteIndex: quoteIdx }));
+        const newExcl = parsed.excluded.map((e) => ({ ...e, quoteIndex: quoteIdx }));
+        return { rows: [...kept, ...newRows], excluded: [...keptExcl, ...newExcl], populated: true };
+      });
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      setQuoteGeneratedDates((prev) => ({ ...prev, [quoteId]: dateStr }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setPortfolioError(msg);
+    } finally {
+      setRequotingQuoteId(null);
+    }
   }
 
   function toggleDisplayOption(opt: DisplayOption) {
@@ -531,6 +594,9 @@ export function InsuranceComparisonDialog({
                     setEditingQuoteId(id);
                     setScreen('editQuote');
                   }}
+                  quoteGeneratedDates={quoteGeneratedDates}
+                  onRequote={handleRequote}
+                  requotingQuoteId={requotingQuoteId}
                 />
                 <QuoteResultsPanel
                   results={quoteResults}
@@ -539,6 +605,7 @@ export function InsuranceComparisonDialog({
                   quotes={coverQuotes}
                   quoteRequestBody={lastQuoteRequestBody}
                   onToggleSelect={handleToggleQuoteSelect}
+                  onSetRecommendation={handleSetRecommendation}
                   onCompareProducts={handleCompareProducts}
                   onViewCompareFeatures={handleViewCompareFeatures}
                 />

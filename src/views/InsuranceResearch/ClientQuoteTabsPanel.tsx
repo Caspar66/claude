@@ -1,4 +1,4 @@
-import { SquarePen } from 'lucide-react';
+import { SquarePen, RefreshCw } from 'lucide-react';
 import type { NeedsQuote, Need, TrmFields, TrsFields, QuoteFrequency } from './needsTypes';
 import { getNeedCode, NEED_CODE_LABELS, LINKED_NEED_LABELS } from './needsTypes';
 import type { ClientFormData } from './insuranceData';
@@ -15,6 +15,9 @@ interface Props {
   activeQuoteIndex: number | null;
   onSelectQuote: (index: number | null) => void;
   onEditQuote?: (id: string) => void;
+  quoteGeneratedDates?: Record<string, string>;
+  onRequote?: (quoteId: string) => void;
+  requotingQuoteId?: string | null;
 }
 
 function needDescription(need: Need): string {
@@ -67,6 +70,9 @@ export function ClientQuoteTabsPanel({
   activeQuoteIndex,
   onSelectQuote,
   onEditQuote,
+  quoteGeneratedDates,
+  onRequote,
+  requotingQuoteId,
 }: Props) {
   const filteredQuotes = quotes
     .map((q, idx) => ({ quote: q, originalIndex: idx }))
@@ -156,6 +162,25 @@ export function ClientQuoteTabsPanel({
                   <span>Super: <span className="font-medium text-slate-700">{FREQ_LABEL[q.superFrequency]}</span></span>
                   <span>Non-Super: <span className="font-medium text-slate-700">{FREQ_LABEL[q.nonSuperFrequency]}</span></span>
                 </div>
+
+                {/* Quote generated date + Requote */}
+                {quoteGeneratedDates?.[q.id] && (
+                  <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex items-center justify-between">
+                    <span className="text-[10px] text-slate-400 italic">
+                      Quote Generated on {quoteGeneratedDates[q.id]}
+                    </span>
+                    {onRequote && (
+                      <button
+                        className="text-[10px] font-medium text-indigo-700 border border-indigo-300 rounded px-2 py-0.5 hover:bg-indigo-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                        onClick={() => onRequote(q.id)}
+                        disabled={requotingQuoteId === q.id}
+                      >
+                        {requotingQuoteId === q.id && <RefreshCw size={9} className="animate-spin" />}
+                        Requote
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           );
