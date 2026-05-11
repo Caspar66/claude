@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { postQuotePortfolioFeatures } from '@/services/omnilifeApi';
 import type { QuoteResultRow } from './quoteResultsData';
 import { computePremiumTotal } from './quoteResultsData';
+import type { PremiumFrequency } from './insuranceData';
+import { PREMIUM_FREQUENCY_LABELS } from './insuranceData';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
@@ -89,6 +91,10 @@ function asStr(v: unknown): string {
 function asNum(v: unknown): number {
   return typeof v === 'number' ? v : 0;
 }
+
+const FREQ_SHORT_LABELS: Record<string, string> = {
+  Y: 'p.a.', H: 'p.h.y.', Q: 'p.q.', M: 'p.m.', F: 'p.f.', W: 'p.w.',
+};
 
 // ── Parse response ─────────────────────────────────────────────────────────
 
@@ -329,6 +335,9 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
   const tableRef = useRef<HTMLDivElement>(null);
 
   const columns: ComparisonColumn[] = selectedRows.map((row) => ({ row }));
+  const settingsFreq = ((quoteRequestBody?.settings as Record<string, unknown> | undefined)?.frequency as string) || 'M';
+  const premiumFreq = (settingsFreq as PremiumFrequency) || 'M';
+  const freqSuffix = FREQ_SHORT_LABELS[premiumFreq] ?? PREMIUM_FREQUENCY_LABELS[premiumFreq] ?? 'p.a.';
 
   const allCategoryKeys = useMemo(() => headings.map((h) => h.key), [headings]);
   const categoryNames = useMemo(() => {
@@ -477,16 +486,19 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
         <table className="w-full text-sm border-collapse">
           <thead className="sticky top-0 z-20">
             <tr className="bg-white border-b-2 border-gray-200">
-              <th className="text-left px-4 py-3 bg-gray-50 border-r border-gray-200 min-w-[220px] sticky left-0 z-30">
+              <th className="text-left px-4 py-3 bg-gray-50 border-r border-gray-200 min-w-[280px] sticky left-0 z-30">
                 <span className="text-xs font-semibold text-slate-600">Comparison Parameter</span>
               </th>
               {columns.map((col, colIdx) => (
-                <th key={col.row.id} className="px-3 py-3 text-center border-r border-gray-200 bg-white" style={{ minWidth: colWidth, maxWidth: colWidth + 40 }}>
+                <th key={col.row.id} className="px-3 py-3 text-center border-r border-gray-200 bg-white relative" style={{ minWidth: colWidth, maxWidth: colWidth + 40 }}>
+                  {col.row.existingCover && (
+                    <span className="absolute top-1 right-1 bg-amber-400 text-amber-900 text-[9px] font-bold px-1.5 py-0.5 rounded">EXISTING</span>
+                  )}
                   <div className="flex flex-col items-center gap-1">
                     <InsurerLogo name={col.row.supplierName} logo={col.row.supplierLogo} />
                     <span className="text-sm font-bold text-slate-800">{col.row.supplierName}</span>
                     <span className="text-[10px] text-slate-500 leading-tight line-clamp-2 max-w-[180px]">{col.row.products}</span>
-                    <span className="text-xs font-semibold text-slate-800">{fmt(computePremiumTotal(col.row, 'Y', 'Y'))} p.a.</span>
+                    <span className="text-xs font-semibold text-slate-800">{fmt(computePremiumTotal(col.row, premiumFreq, premiumFreq))} {freqSuffix}</span>
                     {filters.featureScore && (
                       <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold ${scoreBg(col.row.featureScore)}`}>Feature: {col.row.featureScore}</span>
                     )}
@@ -603,20 +615,20 @@ function HeadingGroup({ heading, columns, collapsed, onToggle, colWidth, showDet
   const scores = showScore ? headingScores(heading, columns.length) : [];
   return (
     <>
-      <tr className="bg-slate-100 border-y border-gray-200">
-        <td className="px-6 py-2 bg-slate-100 sticky left-0 z-10 cursor-pointer select-none" onClick={onToggle}>
-          <div className="flex items-center gap-2">
-            {collapsed ? <ChevronRight size={13} className="text-slate-500" /> : <ChevronDown size={13} className="text-slate-500" />}
+      <tr className="bg-slate-50 border-y border-gray-200">
+        <td className="px-4 py-1.5 bg-slate-50 sticky left-0 z-10 cursor-pointer select-none min-w-[280px]" onClick={onToggle}>
+          <div className="flex items-center gap-1.5">
+            {collapsed ? <ChevronRight size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
             <div>
-              <div className="text-xs font-bold text-slate-700">{heading.name}</div>
+              <div className="text-xs font-bold text-slate-700 leading-snug">{heading.name}</div>
               {weightLabel && (
-                <div className="text-[10px] text-slate-500 italic">Weighting: {weightLabel}</div>
+                <div className="text-[10px] text-slate-400 italic leading-tight">Weighting: {weightLabel}</div>
               )}
             </div>
           </div>
         </td>
         {columns.map((col, idx) => (
-          <td key={col.row.id} className="px-3 py-2 bg-slate-100 text-center" style={{ minWidth: colWidth }}>
+          <td key={col.row.id} className="px-3 py-1.5 bg-slate-50 text-center" style={{ minWidth: colWidth }}>
             {showScore && scores[idx] != null && (
               <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-xs font-bold ${scoreBg(scores[idx]!)}`}>
                 {scores[idx]}
@@ -639,7 +651,7 @@ function FeatureRow({ feature, columns, colWidth, showDetails }: {
 }) {
   return (
     <tr className="border-b border-gray-100 hover:bg-slate-50/50 align-top">
-      <td className="px-4 py-2 bg-white sticky left-0 z-10 border-r border-gray-200 align-top">
+      <td className="px-4 py-2 bg-white sticky left-0 z-10 border-r border-gray-200 align-top min-w-[280px]">
         <span className="text-xs text-slate-700 font-medium">{feature.name}</span>
       </td>
       {feature.values.map((val, idx) => {
