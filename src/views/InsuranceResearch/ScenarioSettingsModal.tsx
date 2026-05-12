@@ -18,6 +18,7 @@ export interface ScenarioSettings {
   projectionYears: string;
   indexationRate: number;
   aplSource: 'adviser' | 'user';
+  minimumCommission: boolean;
   commissionBySupplier: Record<string, string>;
   campaignBySupplier: Record<string, string[]>;
 }
@@ -27,6 +28,7 @@ export function getDefaultScenarioSettings(): ScenarioSettings {
     projectionYears: '15',
     indexationRate: 0,
     aplSource: 'adviser',
+    minimumCommission: false,
     commissionBySupplier: {},
     campaignBySupplier: {},
   };
@@ -182,6 +184,21 @@ function GlobalOptionsPanel({ draft, onChange }: { draft: ScenarioSettings; onCh
           <option value="user">User</option>
         </select>
       </div>
+
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <label className="text-xs font-semibold text-slate-700 block">Minimum Commission Preference</label>
+          <span className="text-[10px] text-slate-400">Use minimum (0%) commission for all providers</span>
+        </div>
+        <select
+          className="border border-slate-300 rounded px-2 py-1.5 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-[120px]"
+          value={draft.minimumCommission ? 'yes' : 'no'}
+          onChange={(e) => onChange({ ...draft, minimumCommission: e.target.value === 'yes' })}
+        >
+          <option value="no">No</option>
+          <option value="yes">Yes</option>
+        </select>
+      </div>
     </div>
   );
 }
@@ -196,9 +213,21 @@ interface CommRow {
   defaultCode: string;
 }
 
+function findMinimumCommissionCode(choices: CommissionChoice[], minimumCode?: string): string | undefined {
+  if (minimumCode) {
+    const match = choices.find((c) => c.code === minimumCode);
+    if (match) return match.code;
+  }
+  const zeroOption = choices.find(
+    (c) => c.upfrontPercentage === 0 && c.ongoingPercentage === 0,
+  );
+  return zeroOption?.code;
+}
+
 function CommissionsPanel({ draft, onChange }: { draft: ScenarioSettings; onChange: (d: ScenarioSettings) => void }) {
   const { suppliers, loading, error } = useSuppliers();
   const [initialised, setInitialised] = useState(false);
+  const isMinimum = draft.minimumCommission;
 
   useEffect(() => {
     if (initialised || suppliers.length === 0) return;
@@ -213,6 +242,25 @@ function CommissionsPanel({ draft, onChange }: { draft: ScenarioSettings; onChan
     setInitialised(true);
   }, [suppliers, initialised, draft, onChange]);
 
+  useEffect(() => {
+    if (!isMinimum || suppliers.length === 0) return;
+    const updated: Record<string, string> = { ...draft.commissionBySupplier };
+    let changed = false;
+    for (const s of suppliers) {
+      const choices = s.commissionOptions && s.commissionOptions.length > 0
+        ? s.commissionOptions
+        : s.defaultCommissionCode
+          ? [{ code: s.defaultCommissionCode, name: s.defaultCommissionCode }]
+          : [];
+      const minCode = findMinimumCommissionCode(choices, s.minimumCommissionCode);
+      if (minCode && updated[s.code] !== minCode) {
+        updated[s.code] = minCode;
+        changed = true;
+      }
+    }
+    if (changed) onChange({ ...draft, commissionBySupplier: updated });
+  }, [isMinimum, suppliers]);
+
   const rows: CommRow[] = suppliers.map((s) => {
     const choices = s.commissionOptions && s.commissionOptions.length > 0
       ? s.commissionOptions
@@ -223,6 +271,7 @@ function CommissionsPanel({ draft, onChange }: { draft: ScenarioSettings; onChan
   });
 
   function updateCommission(supplierCode: string, commCode: string) {
+    if (isMinimum) return;
     onChange({ ...draft, commissionBySupplier: { ...draft.commissionBySupplier, [supplierCode]: commCode } });
   }
 
@@ -244,6 +293,12 @@ function CommissionsPanel({ draft, onChange }: { draft: ScenarioSettings; onChan
 
   return (
     <div>
+      {isMinimum && (
+        <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
+          Minimum Commission Preference is enabled — all providers set to minimum (0%) commission.
+        </div>
+      )}
+
       {/* Header row */}
       <div className="grid grid-cols-[140px_1fr_100px_100px] gap-2 px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-600">
         <div>Provider</div>
@@ -255,12 +310,9 @@ function CommissionsPanel({ draft, onChange }: { draft: ScenarioSettings; onChan
       {/* Supplier rows */}
       {rows.map((row) => {
         const selectedCode = draft.commissionBySupplier[row.code] ?? row.defaultCode;
-        const selected = row.choices.find((c) => c.code === selectedCode);
-        const initial = selected?.upfrontPercentage;
-        const renewal = selected?.ongoingPercentage;
 
         return (
-          <div key={row.code} className="grid grid-cols-[140px_1fr_100px_100px] gap-2 px-4 py-2.5 border-b border-gray-100 items-center">
+          <div key={row.code} className={`grid grid-cols-[140px_1fr_100px_100px] gap-2 px-4 py-2.5 border-b border-gray-100 items-center ${isMinimum ? 'opacity-60' : ''}`}>
             <div className="flex items-center gap-2">
               {row.logo ? (
                 <img src={row.logo} alt={row.name} className="w-8 h-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
@@ -271,9 +323,10 @@ function CommissionsPanel({ draft, onChange }: { draft: ScenarioSettings; onChan
             </div>
             <div>
               <select
-                className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-full max-w-[280px]"
+                className={`border border-slate-300 rounded px-2 py-1 text-xs w-full max-w-[280px] focus:outline-none focus:ring-1 focus:ring-teal-400 ${isMinimum ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
                 value={selectedCode}
                 onChange={(e) => updateCommission(row.code, e.target.value)}
+                disabled={isMinimum}
               >
                 {row.choices.map((c) => (
                   <option key={c.code} value={c.code}>{formatCommissionLabel(c)}</option>
