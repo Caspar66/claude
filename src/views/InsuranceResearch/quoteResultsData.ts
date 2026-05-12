@@ -23,6 +23,11 @@ export interface ProjectionEntry {
 
 // ── Included portfolio (allNeedsMet: true) ──────────────────────────────────
 
+export interface PremiumLineItem {
+  label: string;
+  amount: number;
+}
+
 export interface QuoteResultRow {
   id: string;
   quoteIndex: number;
@@ -44,6 +49,12 @@ export interface QuoteResultRow {
   selected: boolean;
   existingCover: boolean;
   recommendation: 'rec' | 'alt' | null;
+  commissionLabel?: string;
+  tpdOccClass?: string;
+  pdsLink?: string;
+  tmdLink?: string;
+  policyFee?: number;
+  premiumLineItems: PremiumLineItem[];
 }
 
 // ── Premium computation helpers ─────────────────────────────────────────────
@@ -211,6 +222,26 @@ function parsePortfolio(
   const featureObj = (score.feature ?? {}) as Record<string, unknown>;
   const combinedObj = (score.combined ?? {}) as Record<string, unknown>;
 
+  const commission = (p.commission ?? {}) as Record<string, unknown>;
+  const commissionLabel = asStr(commission.label) || asStr(commission.name) || asStr(commission.description) || undefined;
+  const tpdOccClass = asStr(p.tpdOccupationClass) || asStr((p.occupationClass ?? {}) as Record<string, unknown>).toString() || undefined;
+  const links = (p.links ?? {}) as Record<string, unknown>;
+  const pdsLink = ensureUrl(asStr(links.pds)) || undefined;
+  const tmdLink = ensureUrl(asStr(links.tmd)) || undefined;
+  const policyFee = typeof pt.policyFee === 'number' ? pt.policyFee : undefined;
+
+  const premiumLineItems: PremiumLineItem[] = [];
+  if (Array.isArray(p.products)) {
+    for (const pr of p.products as Record<string, unknown>[]) {
+      const prName = asStr(pr.name) || asStr(pr.pdsName);
+      const prPt = (pr.premiumTotal ?? {}) as Record<string, unknown>;
+      const prNonSuper = asFreqMap(prPt.premiumOutsideSuper);
+      const prSuper = asFreqMap(prPt.premiumInsideSuper);
+      const amount = Object.values(prNonSuper)[0] ?? Object.values(prSuper)[0] ?? 0;
+      if (prName) premiumLineItems.push({ label: prName, amount: amount as number });
+    }
+  }
+
   return {
     id: `qr-${crypto.randomUUID()}`,
     quoteIndex,
@@ -232,6 +263,12 @@ function parsePortfolio(
     selected: false,
     existingCover: isExistingCover,
     recommendation: null,
+    commissionLabel,
+    tpdOccClass: tpdOccClass === '[object Object]' ? undefined : tpdOccClass,
+    pdsLink,
+    tmdLink,
+    policyFee,
+    premiumLineItems,
   };
 }
 

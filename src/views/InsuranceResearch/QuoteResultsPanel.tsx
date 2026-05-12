@@ -9,12 +9,12 @@ import {
   BarChart3,
   ExternalLink,
   FileText,
+  X,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { QuoteResults, QuoteResultRow, ExcludedProduct } from './quoteResultsData';
 import { computePremiumTotal, computeCumulativePremium } from './quoteResultsData';
 import type { PremiumFrequency } from './insuranceData';
-import { PREMIUM_FREQUENCY_LABELS } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { ExclusionReasonsModal } from './ExclusionReasonsModal';
 
@@ -30,23 +30,28 @@ function scoreColor(score: number): string {
   return 'bg-red-100 text-red-700';
 }
 
-type SortField = 'premium' | 'cumulativePremium' | 'featureScore' | 'valueScore';
+type SortField = 'insurer' | 'products' | 'premium' | 'cumulativePremium' | 'featureScore' | 'valueScore';
 
-function freqLabel(code: PremiumFrequency): string {
-  return PREMIUM_FREQUENCY_LABELS[code];
+const FREQ_SHORT: Record<string, string> = {
+  Y: 'pa', H: 'phy', Q: 'pq', M: 'pm', F: 'pf', W: 'pw',
+};
+
+function freqShort(code: PremiumFrequency): string {
+  return FREQ_SHORT[code] ?? code;
 }
 
 // ── Insurer logo ─────────────────────────────────────────────────────────────
 
-function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
+function InsurerLogo({ name, logo, size = 'md' }: { name: string; logo?: string; size?: 'sm' | 'md' | 'lg' }) {
   const [loadFailed, setLoadFailed] = useState(false);
+  const px = size === 'lg' ? 'w-14 h-14' : size === 'sm' ? 'w-8 h-8' : 'w-10 h-10';
 
   if (logo && !loadFailed) {
     return (
       <img
         src={logo}
         alt={name}
-        className="w-10 h-10 object-contain bg-white border border-gray-200 rounded"
+        className={`${px} object-contain bg-white border border-gray-200 rounded`}
         onError={() => setLoadFailed(true)}
       />
     );
@@ -54,8 +59,118 @@ function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
 
   const initials = name.replace(/[^A-Z]/g, '').slice(0, 3) || name.slice(0, 3).toUpperCase();
   return (
-    <div className="w-10 h-10 flex items-center justify-center rounded border border-gray-200 bg-slate-100" aria-label={name}>
-      <span className="font-bold text-xs text-slate-600">{initials}</span>
+    <div className={`${px} flex items-center justify-center rounded border border-gray-200 bg-slate-100`} aria-label={name}>
+      <span className={`font-bold ${size === 'lg' ? 'text-sm' : 'text-xs'} text-slate-600`}>{initials}</span>
+    </div>
+  );
+}
+
+// ── Additional Information panel ─────────────────────────────────────────────
+
+function AdditionalInfoPanel({
+  row,
+  superFreq,
+  nonSuperFreq,
+  onClose,
+}: {
+  row: QuoteResultRow;
+  superFreq: PremiumFrequency;
+  nonSuperFreq: PremiumFrequency;
+  onClose: () => void;
+}) {
+  const totalPremium = computePremiumTotal(row, superFreq, nonSuperFreq);
+  const superPrem = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
+  const nonSuperPrem = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
+  const sameFreq = superFreq === nonSuperFreq;
+  const freqLabel = sameFreq ? freqShort(superFreq) : 'pa';
+
+  return (
+    <div className="w-[320px] border-l border-gray-200 bg-white flex flex-col shrink-0 overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-900 text-white">
+        <span className="text-xs font-bold truncate">Additional Information : {row.supplierName}</span>
+        <button className="text-white/70 hover:text-white shrink-0 ml-2" onClick={onClose}><X size={14} /></button>
+      </div>
+
+      <div className="flex-1 overflow-auto">
+        {/* Supplier + product header */}
+        <div className="px-4 py-3 border-b border-gray-200">
+          <div className="flex items-center gap-3">
+            <InsurerLogo name={row.supplierName} logo={row.supplierLogo} size="lg" />
+            <div className="min-w-0">
+              <div className="text-sm font-bold text-slate-800">{row.portfolioName}</div>
+              <div className="text-[11px] text-slate-500 leading-tight">{row.products}</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Details */}
+        <div className="px-4 py-3 space-y-2.5 border-b border-gray-200 text-xs">
+          {row.commissionLabel && (
+            <div className="flex items-start gap-2">
+              <span className="text-slate-500 shrink-0 w-28">Commission</span>
+              <span className="text-slate-800 font-medium">{row.commissionLabel}</span>
+            </div>
+          )}
+          {row.pdsLink && (
+            <div className="flex items-start gap-2">
+              <span className="text-slate-500 shrink-0 w-28">Product Summary</span>
+              <a href={row.pdsLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PDS</a>
+            </div>
+          )}
+          {row.tpdOccClass && (
+            <div className="flex items-start gap-2">
+              <span className="text-slate-500 shrink-0 w-28">TPD Occ Class</span>
+              <span className="text-blue-600 font-medium">{row.tpdOccClass}</span>
+            </div>
+          )}
+        </div>
+
+        {/* Summary tab area */}
+        <div className="px-4 py-3">
+          <div className="flex items-center gap-3 border-b border-gray-200 mb-3">
+            <span className="text-xs font-semibold text-slate-800 pb-1.5 border-b-2 border-indigo-600">Summary</span>
+          </div>
+
+          {/* Premium breakdown */}
+          {nonSuperPrem > 0 && (
+            <>
+              <div className="text-xs font-bold text-slate-700 mb-1.5">Non-super</div>
+              {row.premiumLineItems.map((item, i) => (
+                <div key={i} className="flex items-center justify-between text-xs py-0.5">
+                  <span className="text-slate-600">{item.label}</span>
+                  <span className="text-slate-800">{fmt(item.amount)}</span>
+                </div>
+              ))}
+              {row.policyFee != null && row.policyFee > 0 && (
+                <div className="flex items-center justify-between text-xs py-0.5">
+                  <span className="text-slate-600">Policy Fee</span>
+                  <span className="text-slate-800">{fmt(row.policyFee)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between text-xs py-1 mt-1 border-t border-gray-100">
+                <span className="text-slate-700 font-medium">Monthly Sub Total</span>
+                <span className="text-slate-800 font-medium">{fmt(nonSuperPrem)}</span>
+              </div>
+            </>
+          )}
+          {superPrem > 0 && (
+            <>
+              <div className="text-xs font-bold text-slate-700 mt-3 mb-1.5">Super</div>
+              <div className="flex items-center justify-between text-xs py-0.5">
+                <span className="text-slate-600">Super Premium</span>
+                <span className="text-slate-800">{fmt(superPrem)}</span>
+              </div>
+            </>
+          )}
+
+          {/* Total */}
+          <div className="flex items-center justify-between px-2 py-2 mt-2 bg-indigo-900 text-white rounded text-xs font-bold">
+            <span>Total {freqLabel.toUpperCase()} Premium</span>
+            <span>{fmt(totalPremium)}</span>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -145,6 +260,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
   const projectionYears = (quoteRequestBody?.settings as Record<string, unknown> | undefined)?.projectionYears as string | number | undefined;
   const [showGraphs, setShowGraphs] = useState(false);
   const [showOccRating, setShowOccRating] = useState(false);
+  const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
@@ -168,9 +284,11 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
     };
   }
 
-  function getSortValue(row: QuoteResultRow, field: SortField): number {
+  function getSortValue(row: QuoteResultRow, field: SortField): number | string {
     const { superFreq, nonSuperFreq } = getRowFreqs(row);
     switch (field) {
+      case 'insurer': return row.supplierName.toLowerCase();
+      case 'products': return (row.portfolioName + ' ' + row.products).toLowerCase();
       case 'premium': return computePremiumTotal(row, superFreq, nonSuperFreq);
       case 'cumulativePremium': return computeCumulativePremium(row, superFreq, nonSuperFreq);
       case 'featureScore': return row.featureScore;
@@ -196,27 +314,32 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
   const filtered = visibleRows.filter((r) => {
     if (!searchTerm) return true;
     const term = searchTerm.toLowerCase();
-    return r.supplierName.toLowerCase().includes(term) || r.products.toLowerCase().includes(term);
+    return r.supplierName.toLowerCase().includes(term) || r.products.toLowerCase().includes(term) || r.portfolioName.toLowerCase().includes(term);
   });
 
   // Sort — existing cover rows always at the bottom
   const quoteRows = filtered.filter((r) => !r.existingCover);
   const existingRows = filtered.filter((r) => r.existingCover);
 
-  quoteRows.sort((a, b) => {
-    const aVal = getSortValue(a, sortField);
-    const bVal = getSortValue(b, sortField);
-    return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-  });
-  existingRows.sort((a, b) => {
-    const aVal = getSortValue(a, sortField);
-    const bVal = getSortValue(b, sortField);
-    return sortDir === 'asc' ? aVal - bVal : bVal - aVal;
-  });
+  function sortRows(rows: QuoteResultRow[]) {
+    rows.sort((a, b) => {
+      const aVal = getSortValue(a, sortField);
+      const bVal = getSortValue(b, sortField);
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+      }
+      return sortDir === 'asc' ? (aVal as number) - (bVal as number) : (bVal as number) - (aVal as number);
+    });
+  }
+  sortRows(quoteRows);
+  sortRows(existingRows);
 
   const sorted = [...quoteRows, ...existingRows];
 
   const selectAll = sorted.length > 0 && sorted.every((r) => r.selected);
+
+  const selectedRow = selectedRowId ? sorted.find((r) => r.id === selectedRowId) ?? null : null;
+  const selectedRowFreqs = selectedRow ? getRowFreqs(selectedRow) : null;
 
   // ── Empty state ──────────────────────────────────────────────────────────
   if (!results.populated) {
@@ -236,159 +359,183 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
 
   // ── Populated state ──────────────────────────────────────────────────────
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-white">
-      {/* ── Toolbar ──────────────────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200 bg-gray-50 flex-wrap">
-        <button
-          className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showGraphs ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-          onClick={() => setShowGraphs(!showGraphs)}
-        >
-          All GRAPHS
-        </button>
-        <button
-          className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showOccRating ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-          onClick={() => setShowOccRating(!showOccRating)}
-        >
-          Occupation Rating
-        </button>
-
-        <div className="flex-1" />
-
-        {/* Search */}
-        <div className="relative">
-          <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search by product or insurer"
-            className="pl-7 pr-3 py-1 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-52"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-      </div>
-
-      {/* ── Main table ───────────────────────────────────────────────────── */}
-      <div className="flex-1 overflow-auto">
-        <table className="w-full text-sm">
-          <thead className="sticky top-0 bg-white z-10">
-            <tr className="border-b border-gray-200">
-              <th className="w-8 px-2 py-2">
-                <button
-                  onClick={() => {
-                    const target = !selectAll;
-                    sorted.forEach((r) => { if (r.selected !== target) onToggleSelect(r.id); });
-                  }}
-                  className={`w-4 h-4 rounded-sm border flex items-center justify-center ${selectAll ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}
-                >
-                  {selectAll && <Check size={10} strokeWidth={3} />}
-                </button>
-              </th>
-              <th className="w-6 px-1 py-2" />
-              <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Insurer</th>
-              <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600">Products</th>
-              <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
-                <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('premium')}>
-                  <ArrowUpDown size={11} />
-                  Premiums
-                </button>
-              </th>
-              <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
-                <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('cumulativePremium')}>
-                  <ArrowUpDown size={11} />
-                  {projectionYears ? `${projectionYears}y ` : ''}Cumulative Premiums
-                </button>
-              </th>
-              <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">
-                <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('featureScore')}>
-                  <ArrowUpDown size={11} />
-                  Feature Score
-                </button>
-              </th>
-              <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">
-                <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('valueScore')}>
-                  <ArrowUpDown size={11} />
-                  Value Score
-                </button>
-              </th>
-              <th className="px-2 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">Rec</th>
-            </tr>
-          </thead>
-          <tbody>
-            {sorted.map((row) => {
-              const quote = quotes[row.quoteIndex];
-              return (
-                <ResultRow
-                  key={row.id}
-                  row={row}
-                  expanded={expandedRows.has(row.id)}
-                  superFreq={(quote?.superFrequency ?? 'M') as PremiumFrequency}
-                  nonSuperFreq={(quote?.nonSuperFrequency ?? 'M') as PremiumFrequency}
-                  onToggleSelect={() => onToggleSelect(row.id)}
-                  onToggleExpand={() => toggleExpand(row.id)}
-                  onSetRecommendation={(v) => onSetRecommendation(row.id, v)}
-                />
-              );
-            })}
-            {sorted.length === 0 && (
-              <tr>
-                <td colSpan={99} className="px-6 py-8 text-center text-muted-foreground">
-                  No results match your search.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Excluded products section ────────────────────────────────────── */}
-      {visibleExcluded.length > 0 && (
-        <div className="border-t border-gray-200">
+    <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+        {/* ── Toolbar ──────────────────────────────────────────────────────── */}
+        <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200 bg-gray-50 flex-wrap">
           <button
-            className="flex items-center gap-2 w-full px-6 py-2.5 bg-orange-50 hover:bg-orange-100 transition-colors text-left"
-            onClick={() => setExcludedCollapsed(!excludedCollapsed)}
+            className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showGraphs ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+            onClick={() => setShowGraphs(!showGraphs)}
           >
-            {excludedCollapsed ? <ChevronRight size={14} className="text-orange-600" /> : <ChevronDown size={14} className="text-orange-600" />}
-            <span className="text-xs font-bold text-orange-800">
-              EXCLUDED PRODUCTS ({visibleExcluded.length})
-            </span>
+            All GRAPHS
           </button>
-          {!excludedCollapsed && (
-            <table className="w-full text-sm">
-              <tbody>
-                {visibleExcluded.map((ex) => (
-                  <ExcludedRow key={ex.id} item={ex} quoteRequestBody={quoteRequestBody} />
-                ))}
-              </tbody>
-            </table>
-          )}
-        </div>
-      )}
+          <button
+            className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showOccRating ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+            onClick={() => setShowOccRating(!showOccRating)}
+          >
+            Occupation Rating
+          </button>
 
-      {/* ── Bottom actions ────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
-        <button
-          type="button"
-          className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded font-semibold ${activeQuoteIndex === null ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-teal-700 hover:bg-teal-800 text-white'}`}
-          disabled={activeQuoteIndex === null}
-          title={activeQuoteIndex === null ? 'Select a specific quote to compare features' : undefined}
-          onClick={() => onViewCompareFeatures()}
-        >
-          <ExternalLink size={12} />
-          VIEW / COMPARE FEATURES
-        </button>
-        <Button variant="outline" size="sm" className="text-xs h-7 gap-1.5">
-          <Download size={12} />
-          DOWNLOAD REPORT
-        </Button>
-        <Button
-          size="sm"
-          className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5"
-          onClick={onCompareProducts}
-        >
-          <FileText size={12} />
-          Compare Products
-        </Button>
+          <div className="flex-1" />
+
+          {/* Search */}
+          <div className="relative">
+            <Search size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search by product or insurer"
+              className="pl-7 pr-3 py-1 text-xs border border-slate-300 rounded bg-white focus:outline-none focus:ring-1 focus:ring-teal-400 w-52"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+        </div>
+
+        {/* ── Main table ───────────────────────────────────────────────────── */}
+        <div className="flex-1 overflow-auto">
+          <table className="w-full text-sm">
+            <thead className="sticky top-0 bg-white z-10">
+              <tr className="border-b border-gray-200">
+                <th className="w-8 px-2 py-2">
+                  <button
+                    onClick={() => {
+                      const target = !selectAll;
+                      sorted.forEach((r) => { if (r.selected !== target) onToggleSelect(r.id); });
+                    }}
+                    className={`w-4 h-4 rounded-sm border flex items-center justify-center ${selectAll ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}
+                  >
+                    {selectAll && <Check size={10} strokeWidth={3} />}
+                  </button>
+                </th>
+                <th className="w-6 px-1 py-2" />
+                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('insurer')}>
+                    <ArrowUpDown size={11} />
+                    Insurer
+                  </button>
+                </th>
+                <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('products')}>
+                    <ArrowUpDown size={11} />
+                    Products
+                  </button>
+                </th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('premium')}>
+                    <ArrowUpDown size={11} />
+                    Premiums
+                  </button>
+                </th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('cumulativePremium')}>
+                    <ArrowUpDown size={11} />
+                    {projectionYears ? `${projectionYears}y ` : ''}Cumulative Premiums
+                  </button>
+                </th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('featureScore')}>
+                    <ArrowUpDown size={11} />
+                    Feature Score
+                  </button>
+                </th>
+                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">
+                  <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('valueScore')}>
+                    <ArrowUpDown size={11} />
+                    Value Score
+                  </button>
+                </th>
+                <th className="px-2 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">Rec</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sorted.map((row) => {
+                const quote = quotes[row.quoteIndex];
+                return (
+                  <ResultRow
+                    key={row.id}
+                    row={row}
+                    expanded={expandedRows.has(row.id)}
+                    isActive={selectedRowId === row.id}
+                    superFreq={(quote?.superFrequency ?? 'M') as PremiumFrequency}
+                    nonSuperFreq={(quote?.nonSuperFrequency ?? 'M') as PremiumFrequency}
+                    onToggleSelect={() => onToggleSelect(row.id)}
+                    onToggleExpand={() => toggleExpand(row.id)}
+                    onSetRecommendation={(v) => onSetRecommendation(row.id, v)}
+                    onSelectRow={() => setSelectedRowId(selectedRowId === row.id ? null : row.id)}
+                  />
+                );
+              })}
+              {sorted.length === 0 && (
+                <tr>
+                  <td colSpan={99} className="px-6 py-8 text-center text-muted-foreground">
+                    No results match your search.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        {/* ── Excluded products section ────────────────────────────────────── */}
+        {visibleExcluded.length > 0 && (
+          <div className="border-t border-gray-200">
+            <button
+              className="flex items-center gap-2 w-full px-6 py-2.5 bg-orange-50 hover:bg-orange-100 transition-colors text-left"
+              onClick={() => setExcludedCollapsed(!excludedCollapsed)}
+            >
+              {excludedCollapsed ? <ChevronRight size={14} className="text-orange-600" /> : <ChevronDown size={14} className="text-orange-600" />}
+              <span className="text-xs font-bold text-orange-800">
+                EXCLUDED PRODUCTS ({visibleExcluded.length})
+              </span>
+            </button>
+            {!excludedCollapsed && (
+              <table className="w-full text-sm">
+                <tbody>
+                  {visibleExcluded.map((ex) => (
+                    <ExcludedRow key={ex.id} item={ex} quoteRequestBody={quoteRequestBody} />
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        )}
+
+        {/* ── Bottom actions ────────────────────────────────────────────────── */}
+        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded font-semibold ${activeQuoteIndex === null ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-teal-700 hover:bg-teal-800 text-white'}`}
+            disabled={activeQuoteIndex === null}
+            title={activeQuoteIndex === null ? 'Select a specific quote to compare features' : undefined}
+            onClick={() => onViewCompareFeatures()}
+          >
+            <ExternalLink size={12} />
+            VIEW / COMPARE FEATURES
+          </button>
+          <Button variant="outline" size="sm" className="text-xs h-7 gap-1.5">
+            <Download size={12} />
+            DOWNLOAD REPORT
+          </Button>
+          <Button
+            size="sm"
+            className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5"
+            onClick={onCompareProducts}
+          >
+            <FileText size={12} />
+            Compare Products
+          </Button>
+        </div>
       </div>
+
+      {/* ── Additional Information panel ────────────────────────────────── */}
+      {selectedRow && selectedRowFreqs && (
+        <AdditionalInfoPanel
+          row={selectedRow}
+          superFreq={selectedRowFreqs.superFreq}
+          nonSuperFreq={selectedRowFreqs.nonSuperFreq}
+          onClose={() => setSelectedRowId(null)}
+        />
+      )}
     </div>
   );
 }
@@ -398,19 +545,23 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
 function ResultRow({
   row,
   expanded,
+  isActive,
   superFreq,
   nonSuperFreq,
   onToggleSelect,
   onToggleExpand,
   onSetRecommendation,
+  onSelectRow,
 }: {
   row: QuoteResultRow;
   expanded: boolean;
+  isActive: boolean;
   superFreq: PremiumFrequency;
   nonSuperFreq: PremiumFrequency;
   onToggleSelect: () => void;
   onToggleExpand: () => void;
   onSetRecommendation: (value: 'rec' | 'alt' | null) => void;
+  onSelectRow: () => void;
 }) {
   const totalPremium = computePremiumTotal(row, superFreq, nonSuperFreq);
   const cumulativePremium = computeCumulativePremium(row, superFreq, nonSuperFreq);
@@ -420,9 +571,12 @@ function ResultRow({
 
   return (
     <>
-      <tr className={`border-b border-gray-100 hover:bg-slate-50/50 transition-colors ${row.selected ? 'bg-teal-50/40' : ''}`}>
+      <tr
+        className={`border-b border-gray-100 hover:bg-slate-50/50 transition-colors cursor-pointer ${isActive ? 'bg-indigo-50/60 border-l-2 border-l-indigo-500' : row.selected ? 'bg-teal-50/40' : ''}`}
+        onClick={onSelectRow}
+      >
         {/* Checkbox */}
-        <td className="px-2 py-2.5">
+        <td className="px-2 py-2.5" onClick={(e) => e.stopPropagation()}>
           <button
             onClick={onToggleSelect}
             className={`w-4 h-4 rounded-sm border flex items-center justify-center ${row.selected ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}
@@ -432,51 +586,49 @@ function ResultRow({
         </td>
 
         {/* Expand toggle */}
-        <td className="px-1 py-2.5">
-          <button onClick={onToggleExpand} className="text-slate-400 hover:text-slate-700">
+        <td className="px-1 py-2.5" onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}>
+          <button className="text-slate-400 hover:text-slate-700">
             {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
         </td>
 
-        {/* Insurer — supplier logo + name + portfolio name */}
+        {/* Insurer — logo only */}
         <td className="px-3 py-2.5">
-          <div className="flex items-center gap-2">
-            <InsurerLogo name={row.supplierName} logo={row.supplierLogo} />
-            <div className="flex flex-col">
-              <div className="flex items-center gap-1.5">
-                <span className="font-bold text-sm text-slate-800">{row.supplierName}</span>
-                {row.existingCover && (
-                  <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
-                    EXISTING
-                  </span>
-                )}
-              </div>
-              {row.portfolioName && (
-                <span className="text-[10px] text-slate-500 leading-tight">{row.portfolioName}</span>
-              )}
-            </div>
-          </div>
+          <InsurerLogo name={row.supplierName} logo={row.supplierLogo} />
         </td>
 
-        {/* Products */}
-        <td className="px-3 py-2.5 max-w-[260px]">
-          <span className="text-xs text-slate-700 leading-tight line-clamp-2">{row.products}</span>
+        {/* Products — supplier name + portfolio + product names */}
+        <td className="px-3 py-2.5 max-w-[280px]">
+          <div className="flex flex-col">
+            <div className="flex items-center gap-1.5">
+              <span className="font-bold text-sm text-slate-800">{row.supplierName}</span>
+              {row.existingCover && (
+                <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
+                  EXISTING
+                </span>
+              )}
+            </div>
+            {row.portfolioName && (
+              <span className="text-[10px] text-teal-700 font-medium leading-tight">{row.portfolioName}</span>
+            )}
+            <span className="text-[10px] text-slate-500 leading-tight line-clamp-2">{row.products}</span>
+          </div>
         </td>
 
         {/* Premiums */}
         <td className="px-3 py-2.5 text-right">
           <div className="font-semibold text-slate-800">{fmt(totalPremium)}</div>
           <div className="text-[10px] text-slate-400">
-            {sameFreq ? freqLabel(superFreq) : 'Annualised'}
+            {sameFreq ? freqShort(superFreq) : 'Annualised'}
           </div>
           {superPrem !== 0 && (
             <div className="text-[10px] text-slate-500 mt-0.5">
-              Super ({freqLabel(superFreq)}) {fmt(superPrem)}
+              Super ({freqShort(superFreq)}) {fmt(superPrem)}
             </div>
           )}
           {nonSuperPrem !== 0 && (
             <div className="text-[10px] text-slate-500">
-              Non Super ({freqLabel(nonSuperFreq)}) {fmt(nonSuperPrem)}
+              Non Super ({freqShort(nonSuperFreq)}) {fmt(nonSuperPrem)}
             </div>
           )}
         </td>
@@ -505,7 +657,7 @@ function ResultRow({
         </td>
 
         {/* Rec / Alt */}
-        <td className="px-2 py-2.5 text-center">
+        <td className="px-2 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-1 justify-center">
             <button
               className={`px-2 py-0.5 text-[11px] font-medium rounded border transition-colors ${
