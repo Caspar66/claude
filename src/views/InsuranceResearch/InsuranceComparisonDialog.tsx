@@ -55,6 +55,8 @@ import { postQuotePortfolio } from '@/services/omnilifeApi';
 import { useOccupations } from '@/hooks/useOccupations';
 import { ScenarioSettingsModal, getDefaultScenarioSettings } from './ScenarioSettingsModal';
 import type { ScenarioSettings } from './ScenarioSettingsModal';
+import { NeedsAnalysisPage, getDefaultNeedsAnalysis } from './NeedsAnalysisPage';
+import type { NeedsAnalysisData } from './NeedsAnalysisPage';
 
 interface Props {
   open: boolean;
@@ -65,7 +67,7 @@ interface Props {
   existingScenarioNames: string[];
 }
 
-type Screen = 'create' | 'personal' | 'editQuote' | 1 | 2 | 3 | 4 | 'compare' | 'features' | 'options';
+type Screen = 'create' | 'personal' | 'editQuote' | 'needsAnalysis' | 1 | 2 | 3 | 4 | 'compare' | 'features' | 'options';
 
 const DETAIL_LABELS: Record<number, string> = {
   1: 'Insurance Details',
@@ -226,6 +228,9 @@ export function InsuranceComparisonDialog({
   const [scenarioSettings, setScenarioSettings] = useState<ScenarioSettings>(getDefaultScenarioSettings());
   const [scenarioSettingsOpen, setScenarioSettingsOpen] = useState(false);
 
+  // Needs analysis
+  const [needsAnalysis, setNeedsAnalysis] = useState<NeedsAnalysisData>(getDefaultNeedsAnalysis());
+
   const { options: occupations } = useOccupations();
 
   const showPartner = caseType === 'Client & Partner';
@@ -267,6 +272,7 @@ export function InsuranceComparisonDialog({
     setRequotingQuoteId(null);
     setScenarioSettings(getDefaultScenarioSettings());
     setScenarioSettingsOpen(false);
+    setNeedsAnalysis(getDefaultNeedsAnalysis());
   }
 
   function handleClose() {
@@ -579,7 +585,7 @@ export function InsuranceComparisonDialog({
                 partnerData={showPartner ? partnerData : null}
                 onClientChange={setClientData}
                 onPartnerChange={setPartnerData}
-                onLaunchNeedsAnalysis={() => {}}
+                onLaunchNeedsAnalysis={() => setScreen('needsAnalysis')}
                 onGetQuotes={() => handleGetQuotes()}
                 onNext={handleNext}
                 hasQuoteResults={coverQuotes.length > 0}
@@ -599,6 +605,17 @@ export function InsuranceComparisonDialog({
                 onClose={() => setScenarioSettingsOpen(false)}
               />
             </>
+          )}
+
+          {/* Needs Analysis screen */}
+          {screen === 'needsAnalysis' && (
+            <NeedsAnalysisPage
+              data={needsAnalysis}
+              onChange={setNeedsAnalysis}
+              clientName={`${clientData.firstName} ${clientData.lastName}`.trim()}
+              partnerName={showPartner ? `${partnerData.firstName} ${partnerData.lastName}`.trim() : null}
+              onBack={() => setScreen('personal')}
+            />
           )}
 
           {/* Edit Quote from results (NeedsEditor) */}
