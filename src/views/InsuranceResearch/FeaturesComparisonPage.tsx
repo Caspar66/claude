@@ -56,6 +56,7 @@ interface ParsedHeading {
   key: string;
   name: string;
   needType: string;
+  category: string;
   ipsAdjustedWeighting: number;
   features: ParsedFeature[];
 }
@@ -106,7 +107,7 @@ interface ParseResult {
 function parseFeatureResponse(raw: unknown): ParseResult {
   if (!Array.isArray(raw)) return { headings: [], pdsDateValues: [] };
 
-  const headingMap = new Map<string, { name: string; needType: string; ipsAdjustedWeighting: number; features: ParsedFeature[] }>();
+  const headingMap = new Map<string, { name: string; needType: string; category: string; ipsAdjustedWeighting: number; features: ParsedFeature[] }>();
   let pdsDateValues: string[] = [];
   let pdsDateCaptured = false;
 
@@ -118,6 +119,7 @@ function parseFeatureResponse(raw: unknown): ParseResult {
     const headingCode = asStr(headingObj.code) || asStr(headingObj.name) || 'UNKNOWN';
     const headingName = asStr(headingObj.name) || headingCode;
     const needType = asStr(headingObj.needType) || asStr(headingObj.coverType) || 'OTHER';
+    const category = asStr(headingObj.category) || 'Other';
     const ipsAdjustedWeighting = asNum(headingObj.ipsAdjustedWeighting);
 
     if (headingCode === 'PORTFOLIO_HEADING') continue;
@@ -152,7 +154,7 @@ function parseFeatureResponse(raw: unknown): ParseResult {
 
     const mapKey = `${needType}::${headingCode}`;
     if (!headingMap.has(mapKey)) {
-      headingMap.set(mapKey, { name: headingName, needType, ipsAdjustedWeighting, features: [] });
+      headingMap.set(mapKey, { name: headingName, needType, category, ipsAdjustedWeighting, features: [] });
     }
     headingMap.get(mapKey)!.features.push({
       key: `${needType}_${headingCode}_${featureName}`,
@@ -162,9 +164,9 @@ function parseFeatureResponse(raw: unknown): ParseResult {
   }
 
   const headings: ParsedHeading[] = [];
-  for (const [, { name, needType, ipsAdjustedWeighting, features }] of headingMap) {
+  for (const [, { name, needType, category, ipsAdjustedWeighting, features }] of headingMap) {
     if (EXCLUDED_HEADING_NAMES.includes(name)) continue;
-    headings.push({ key: `${needType}_${name}`, name, needType, ipsAdjustedWeighting, features });
+    headings.push({ key: `${needType}_${name}`, name, needType, category, ipsAdjustedWeighting, features });
   }
   return { headings, pdsDateValues };
 }
@@ -195,6 +197,9 @@ interface ComparisonFilters {
   featureText: boolean;
   differencesOnly: boolean;
   featureScore: boolean;
+  showProfileFeatures: boolean;
+  showBenefitFeatures: boolean;
+  showDefinitionFeatures: boolean;
   enabledCategories: Set<string>;
 }
 
@@ -225,10 +230,10 @@ function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
 // ── Filters panel ──────────────────────────────────────────────────────────
 
 function FiltersPanel({
-  open, filters, allKeys, categoryNames, onChange, onClose, onReset,
+  open, filters, allKeys, categoryNames, onChange, onClose, onDone, onReset,
 }: {
   open: boolean; filters: ComparisonFilters; allKeys: string[]; categoryNames: Record<string, string>;
-  onChange: (f: ComparisonFilters) => void; onClose: () => void; onReset: () => void;
+  onChange: (f: ComparisonFilters) => void; onClose: () => void; onDone: () => void; onReset: () => void;
 }) {
   const [catSearch, setCatSearch] = useState('');
   const ref = useRef<HTMLDivElement>(null);
@@ -267,6 +272,12 @@ function FiltersPanel({
           <FilterToggle label="Differences Only" value={filters.differencesOnly} onChange={(v) => onChange({ ...filters, differencesOnly: v })} />
           <FilterToggle label="Feature Score" value={filters.featureScore} onChange={(v) => onChange({ ...filters, featureScore: v })} />
         </div>
+        <div className="space-y-2 pt-1 border-t border-gray-200">
+          <label className="text-xs font-semibold text-slate-700 block">Feature Types</label>
+          <FilterChk label="Show profile features" checked={filters.showProfileFeatures} onChange={() => onChange({ ...filters, showProfileFeatures: !filters.showProfileFeatures })} />
+          <FilterChk label="Show benefit features" checked={filters.showBenefitFeatures} onChange={() => onChange({ ...filters, showBenefitFeatures: !filters.showBenefitFeatures })} />
+          <FilterChk label="Show definition features" checked={filters.showDefinitionFeatures} onChange={() => onChange({ ...filters, showDefinitionFeatures: !filters.showDefinitionFeatures })} />
+        </div>
         <div>
           <label className="text-xs font-semibold text-slate-700 block mb-1.5">Categories</label>
           <div className="relative mb-2">
@@ -285,7 +296,7 @@ function FiltersPanel({
       </div>
       <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
         <Button variant="outline" size="sm" className="text-xs h-7" onClick={onReset}>Reset</Button>
-        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={onClose}>Done</Button>
+        <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7" onClick={onDone}>Done</Button>
       </div>
     </div>
   );
@@ -350,8 +361,12 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
     featureText: true,
     differencesOnly: false,
     featureScore: true,
+    showProfileFeatures: true,
+    showBenefitFeatures: true,
+    showDefinitionFeatures: true,
     enabledCategories: new Set<string>(),
   });
+  const [apiExcludeSimilarities, setApiExcludeSimilarities] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -371,7 +386,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
     setLoading(true);
     setError(null);
 
-    postQuotePortfolioFeatures(codes, body)
+    postQuotePortfolioFeatures(codes, body, { excludeSimilarities: apiExcludeSimilarities })
       .then((raw) => {
         if (cancelled) return;
         const parsed = parseFeatureResponse(raw);
@@ -387,7 +402,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
       });
 
     return () => { cancelled = true; };
-  }, [selectedRows, quoteRequestBody, activeQuoteIndex]);
+  }, [selectedRows, quoteRequestBody, activeQuoteIndex, apiExcludeSimilarities]);
 
   function toggleNeedType(nt: string) {
     setCollapsedNeedTypes((prev) => {
@@ -399,7 +414,16 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
 
 
   const filteredGroups = useMemo(() => {
-    let filtered = headings.filter((h) => filters.enabledCategories.has(h.key));
+    const allowedCategories = new Set<string>();
+    if (filters.showProfileFeatures) allowedCategories.add('Profile');
+    if (filters.showBenefitFeatures) allowedCategories.add('Benefit');
+    if (filters.showDefinitionFeatures) allowedCategories.add('Definition');
+
+    let filtered = headings.filter((h) => {
+      if (!filters.enabledCategories.has(h.key)) return false;
+      if (h.category && allowedCategories.size > 0 && !allowedCategories.has(h.category)) return false;
+      return true;
+    });
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
       filtered = filtered.map((h) => {
@@ -409,7 +433,7 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
       }).filter(Boolean) as ParsedHeading[];
     }
     return groupByNeedType(filtered);
-  }, [headings, filters.enabledCategories, searchTerm]);
+  }, [headings, filters.enabledCategories, filters.showProfileFeatures, filters.showBenefitFeatures, filters.showDefinitionFeatures, searchTerm]);
 
   const totalHeadings = filteredGroups.reduce((sum, g) => sum + g.headings.length, 0);
   const colWidth = Math.max(180, Math.min(260, Math.floor(800 / columns.length)));
@@ -564,7 +588,13 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
         categoryNames={categoryNames}
         onChange={setFilters}
         onClose={() => setFiltersOpen(false)}
-        onReset={() => setFilters({ featureText: true, differencesOnly: false, featureScore: true, enabledCategories: new Set(allCategoryKeys) })}
+        onDone={() => {
+          setFiltersOpen(false);
+          if (filters.differencesOnly !== apiExcludeSimilarities) {
+            setApiExcludeSimilarities(filters.differencesOnly);
+          }
+        }}
+        onReset={() => setFilters({ featureText: true, differencesOnly: false, featureScore: true, showProfileFeatures: true, showBenefitFeatures: true, showDefinitionFeatures: true, enabledCategories: new Set(allCategoryKeys) })}
       />
     </div>
   );

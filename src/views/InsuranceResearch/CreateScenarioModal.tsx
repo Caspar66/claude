@@ -76,7 +76,7 @@ export function CreateScenarioModal({ open, onSave, onCancel, existingNames }: P
 
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              Case
+              For
             </label>
             <select
               className="w-32 border border-slate-300 rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"

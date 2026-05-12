@@ -383,12 +383,14 @@ export async function postProductOptions(
 export async function postQuotePortfolioFeatures(
   codes: string[],
   body: Record<string, unknown>,
+  options?: { excludeSimilarities?: boolean },
 ): Promise<unknown> {
   const params = new URLSearchParams({
     codes: codes.join(','),
     coverNeedType: 'NeedType',
     scoreWeightingType: 'Balanced',
   });
+  if (options?.excludeSimilarities) params.set('excludeSimilarities', 'true');
   const res = await fetch(`/api/quote-portfolio-features?${params.toString()}`, {
     method: 'POST',
     headers: {
