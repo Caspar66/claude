@@ -160,11 +160,18 @@ export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, 
   const indexationRate = (scenarioSettings?.indexationRate ?? 0) / 100;
   const useQuoteDefaultAPL = scenarioSettings?.aplSource === 'user';
 
+  const campaignOptions: Record<string, string[]> = {};
+  if (scenarioSettings?.campaignBySupplier) {
+    for (const [supplier, codes] of Object.entries(scenarioSettings.campaignBySupplier)) {
+      if (codes.length > 0) campaignOptions[supplier] = codes;
+    }
+  }
+
   return {
     clients,
     settings: {
       commissionOptions,
-      campaignOptions: { AMG: [''] },
+      campaignOptions,
       frequency: 'M',
       superFrequency: 'M',
       priceWeighting: 0,

@@ -251,6 +251,11 @@ export interface CommissionChoice {
   ongoingPercentage?: number;
 }
 
+export interface CampaignOption {
+  code: string;
+  name: string;
+}
+
 export interface Supplier {
   code: string;
   name: string;
@@ -264,6 +269,7 @@ export interface Supplier {
   minimumCommissionCode?: string;
   commissionText?: string;
   commissionOptions?: CommissionChoice[];
+  campaignOptions?: CampaignOption[];
   products: SupplierProduct[];
 }
 
@@ -308,6 +314,13 @@ function normaliseSupplier(raw: Record<string, unknown>): Supplier | null {
     minimumCommissionCode: typeof raw.minimumCommissionCode === 'string' ? raw.minimumCommissionCode : undefined,
     commissionText: typeof raw.commissionText === 'string' ? raw.commissionText : undefined,
     commissionOptions,
+    campaignOptions: Array.isArray(raw.campaignOptions)
+      ? (raw.campaignOptions as Record<string, unknown>[])
+          .map((c) => ({
+            code: typeof c.code === 'string' ? c.code : '',
+            name: typeof c.name === 'string' ? c.name : '',
+          }))
+      : undefined,
     products,
   };
 }

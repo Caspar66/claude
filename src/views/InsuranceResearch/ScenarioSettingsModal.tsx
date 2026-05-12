@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Check } from 'lucide-react';
 import { useSuppliers } from '@/hooks/useSuppliers';
-import type { CommissionChoice } from '@/services/omnilifeApi';
+import type { CommissionChoice, CampaignOption } from '@/services/omnilifeApi';
 
 function formatCommissionLabel(c: CommissionChoice): string {
   const name = c.name || c.code;
@@ -18,6 +19,7 @@ export interface ScenarioSettings {
   indexationRate: number;
   aplSource: 'adviser' | 'user';
   commissionBySupplier: Record<string, string>;
+  campaignBySupplier: Record<string, string[]>;
 }
 
 export function getDefaultScenarioSettings(): ScenarioSettings {
@@ -26,10 +28,11 @@ export function getDefaultScenarioSettings(): ScenarioSettings {
     indexationRate: 0,
     aplSource: 'adviser',
     commissionBySupplier: {},
+    campaignBySupplier: {},
   };
 }
 
-type SettingsTab = 'global' | 'commissions';
+type SettingsTab = 'global' | 'commissions' | 'campaigns';
 
 interface Props {
   open: boolean;
@@ -43,7 +46,11 @@ export function ScenarioSettingsModal({ open, settings, onSave, onClose }: Props
   const [draft, setDraft] = useState<ScenarioSettings>({ ...settings });
 
   useEffect(() => {
-    if (open) setDraft({ ...settings, commissionBySupplier: { ...settings.commissionBySupplier } });
+    if (open) {
+      const campaignCopy: Record<string, string[]> = {};
+      for (const [k, v] of Object.entries(settings.campaignBySupplier)) campaignCopy[k] = [...v];
+      setDraft({ ...settings, commissionBySupplier: { ...settings.commissionBySupplier }, campaignBySupplier: campaignCopy });
+    }
   }, [open, settings]);
 
   function handleSave() {
@@ -83,6 +90,16 @@ export function ScenarioSettingsModal({ open, settings, onSave, onClose }: Props
             >
               Commissions
             </button>
+            <button
+              className={`px-3 py-2 text-xs font-medium rounded-t transition-colors ${
+                tab === 'campaigns'
+                  ? 'bg-white text-teal-700 border border-gray-200 border-b-white -mb-px z-10'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-gray-100'
+              }`}
+              onClick={() => setTab('campaigns')}
+            >
+              Campaigns
+            </button>
           </div>
 
           {/* Content */}
@@ -92,6 +109,9 @@ export function ScenarioSettingsModal({ open, settings, onSave, onClose }: Props
             )}
             {tab === 'commissions' && (
               <CommissionsPanel draft={draft} onChange={setDraft} />
+            )}
+            {tab === 'campaigns' && (
+              <CampaignsPanel draft={draft} onChange={setDraft} />
             )}
           </div>
 
@@ -296,6 +316,125 @@ function CommissionRates({ choices, selectedCode, field }: {
           <span className="font-medium">{value.toFixed(2)}%</span>
         </div>
       ))}
+    </div>
+  );
+}
+
+// ── Campaigns tab ─────────────────────────────────────────────────────────
+
+const MAX_CAMPAIGNS = 4;
+
+interface CampaignRow {
+  code: string;
+  name: string;
+  logo?: string;
+  options: CampaignOption[];
+  defaultCode: string;
+}
+
+function CampaignsPanel({ draft, onChange }: { draft: ScenarioSettings; onChange: (d: ScenarioSettings) => void }) {
+  const { suppliers, loading, error } = useSuppliers();
+  const [initialised, setInitialised] = useState(false);
+
+  useEffect(() => {
+    if (initialised || suppliers.length === 0) return;
+    const hasExisting = Object.keys(draft.campaignBySupplier).length > 0;
+    if (!hasExisting) {
+      const seed: Record<string, string[]> = {};
+      for (const s of suppliers) {
+        if (s.defaultCampaignCode) seed[s.code] = [s.defaultCampaignCode];
+        else seed[s.code] = [''];
+      }
+      onChange({ ...draft, campaignBySupplier: seed });
+    }
+    setInitialised(true);
+  }, [suppliers, initialised, draft, onChange]);
+
+  const rows: CampaignRow[] = suppliers.map((s) => {
+    const options = s.campaignOptions && s.campaignOptions.length > 0
+      ? s.campaignOptions
+      : [{ code: '', name: 'None' }];
+    return { code: s.code, name: s.name, logo: s.logo, options, defaultCode: s.defaultCampaignCode ?? '' };
+  });
+
+  function toggleCampaign(supplierCode: string, campaignCode: string) {
+    const current = draft.campaignBySupplier[supplierCode] ?? [];
+    const has = current.includes(campaignCode);
+    let updated: string[];
+    if (has) {
+      updated = current.filter((c) => c !== campaignCode);
+    } else {
+      if (current.length >= MAX_CAMPAIGNS) return;
+      updated = [...current, campaignCode];
+    }
+    onChange({ ...draft, campaignBySupplier: { ...draft.campaignBySupplier, [supplierCode]: updated } });
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 gap-2 text-xs text-slate-400">
+        <Loader2 size={14} className="animate-spin" /> Loading campaign options…
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="px-4 py-3 text-xs text-amber-700 bg-amber-50">
+        Could not load suppliers — {error}
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-[160px_1fr] gap-2 px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-600">
+        <div>Provider</div>
+        <div>Campaigns (max {MAX_CAMPAIGNS})</div>
+      </div>
+
+      {rows.map((row) => {
+        const selected = draft.campaignBySupplier[row.code] ?? [];
+        return (
+          <div key={row.code} className="grid grid-cols-[160px_1fr] gap-2 px-4 py-2.5 border-b border-gray-100 items-start">
+            <div className="flex items-center gap-2 pt-0.5">
+              {row.logo ? (
+                <img src={row.logo} alt={row.name} className="w-8 h-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              ) : (
+                <span className="text-xs font-bold text-slate-700">{row.name.slice(0, 4)}</span>
+              )}
+              <span className="text-xs font-medium text-slate-700 truncate">{row.name}</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {row.options.map((opt) => {
+                const isSelected = selected.includes(opt.code);
+                const atLimit = selected.length >= MAX_CAMPAIGNS && !isSelected;
+                return (
+                  <button
+                    key={opt.code}
+                    className={`flex items-center gap-1 px-2 py-1 rounded text-xs border transition-colors ${
+                      isSelected
+                        ? 'bg-teal-50 border-teal-400 text-teal-800'
+                        : atLimit
+                          ? 'bg-gray-50 border-gray-200 text-gray-300 cursor-not-allowed'
+                          : 'bg-white border-slate-300 text-slate-600 hover:border-teal-300 hover:bg-teal-50/50'
+                    }`}
+                    onClick={() => !atLimit && toggleCampaign(row.code, opt.code)}
+                    disabled={atLimit}
+                    title={atLimit ? `Maximum ${MAX_CAMPAIGNS} campaigns per provider` : undefined}
+                  >
+                    {isSelected && <Check size={10} className="text-teal-600" />}
+                    {opt.name || opt.code || 'None'}
+                  </button>
+                );
+              })}
+              {selected.length > 0 && (
+                <span className="text-[10px] text-slate-400 self-center ml-1">{selected.length}/{MAX_CAMPAIGNS}</span>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
