@@ -53,6 +53,8 @@ import { NeedsEditor } from './NeedsEditor';
 import { buildPortfolioRequest, PORTFOLIO_QUERY_PARAMS } from './portfolioRequest';
 import { postQuotePortfolio } from '@/services/omnilifeApi';
 import { useOccupations } from '@/hooks/useOccupations';
+import { ScenarioSettingsModal, getDefaultScenarioSettings } from './ScenarioSettingsModal';
+import type { ScenarioSettings } from './ScenarioSettingsModal';
 
 interface Props {
   open: boolean;
@@ -220,6 +222,10 @@ export function InsuranceComparisonDialog({
   // Editing a quote from the results page
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
+  // Scenario settings
+  const [scenarioSettings, setScenarioSettings] = useState<ScenarioSettings>(getDefaultScenarioSettings());
+  const [scenarioSettingsOpen, setScenarioSettingsOpen] = useState(false);
+
   const { options: occupations } = useOccupations();
 
   const showPartner = caseType === 'Client & Partner';
@@ -259,6 +265,8 @@ export function InsuranceComparisonDialog({
     setEditingQuoteId(null);
     setQuoteGeneratedDates({});
     setRequotingQuoteId(null);
+    setScenarioSettings(getDefaultScenarioSettings());
+    setScenarioSettingsOpen(false);
   }
 
   function handleClose() {
@@ -284,6 +292,7 @@ export function InsuranceComparisonDialog({
         quotes,
         policies,
         occupations,
+        scenarioSettings,
       });
       setLastQuoteRequestBody(body);
       const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
@@ -328,6 +337,7 @@ export function InsuranceComparisonDialog({
         quotes: unquoted,
         policies,
         occupations,
+        scenarioSettings,
       });
       const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
       console.info('[OmniLife] /quote/portfolio (unquoted) response:', res.raw);
@@ -379,6 +389,7 @@ export function InsuranceComparisonDialog({
         quotes: [quote],
         policies,
         occupations,
+        scenarioSettings,
       });
       setLastQuoteRequestBody((prev) => {
         const next = { ...prev };
@@ -579,6 +590,13 @@ export function InsuranceComparisonDialog({
                 getQuotesDisabled={portfolioLoading}
                 getQuotesLabel={portfolioLoading ? 'Fetching quotes…' : undefined}
                 quoteGeneratedDates={quoteGeneratedDates}
+                onOpenScenarioSettings={() => setScenarioSettingsOpen(true)}
+              />
+              <ScenarioSettingsModal
+                open={scenarioSettingsOpen}
+                settings={scenarioSettings}
+                onSave={setScenarioSettings}
+                onClose={() => setScenarioSettingsOpen(false)}
               />
             </>
           )}

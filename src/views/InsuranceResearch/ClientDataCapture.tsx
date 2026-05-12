@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { Edit3, Info, Calendar, Loader2, Search, X } from 'lucide-react';
+import { Edit3, Info, Calendar, Loader2, Search, X, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { useOccupations } from '@/hooks/useOccupations';
@@ -30,6 +30,7 @@ interface Props {
   getQuotesDisabled?: boolean;
   getQuotesLabel?: string;
   quoteGeneratedDates?: Record<string, string>;
+  onOpenScenarioSettings?: () => void;
 }
 
 function Inp({ value, onChange, className = '' }: { value: string; onChange: (v: string) => void; className?: string }) {
@@ -368,6 +369,7 @@ export function ClientDataCapture({
   getQuotesDisabled,
   getQuotesLabel,
   quoteGeneratedDates,
+  onOpenScenarioSettings,
 }: Props) {
   const showPartner = partnerData !== null;
   const { options: occupations, loading: occupationsLoading, error: occupationsError } = useOccupations();
@@ -467,8 +469,16 @@ export function ClientDataCapture({
       {/* Section header */}
       <div className="flex items-center justify-between px-5 py-2.5 bg-blue-700 text-white">
         <h2 className="text-sm font-bold">Personal Details</h2>
-        <div className="flex items-center gap-2 text-white/80">
-          <button className="hover:text-white" title="Settings"><Info size={14} /></button>
+        <div className="flex items-center gap-2">
+          {onOpenScenarioSettings && (
+            <button
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-medium bg-blue-600 hover:bg-blue-500 text-white transition-colors"
+              onClick={onOpenScenarioSettings}
+            >
+              <Settings size={12} />
+              Scenario Settings
+            </button>
+          )}
         </div>
       </div>
 

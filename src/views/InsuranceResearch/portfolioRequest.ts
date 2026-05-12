@@ -6,6 +6,7 @@ import type { NeedsQuote } from './needsTypes';
 import { serialiseNeeds } from './needsTypes';
 import type { OccupationOption } from '@/services/omnilifeApi';
 import { stripNeedPrefix } from './requiredFeaturesData';
+import type { ScenarioSettings } from './ScenarioSettingsModal';
 
 const LOADING_KEY_MAP: Record<keyof Loadings, string> = {
   life: 'TRM',
@@ -60,6 +61,7 @@ export interface BuildPortfolioArgs {
   quotes: NeedsQuote[];
   policies: ExistingPolicy[];
   occupations: OccupationOption[];
+  scenarioSettings?: ScenarioSettings;
   adviser?: PortfolioAdviser;
   tags?: PortfolioTags;
 }
@@ -145,7 +147,7 @@ function buildClientForQuote(
 }
 
 export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, unknown> {
-  const { clientData, partnerData, quotes, policies, occupations, adviser, tags } = args;
+  const { clientData, partnerData, quotes, policies, occupations, scenarioSettings, adviser, tags } = args;
   const clients: Record<string, unknown>[] = [];
 
   for (const quote of quotes) {
@@ -153,10 +155,15 @@ export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, 
     clients.push(buildClientForQuote(quote, data, policies, occupations));
   }
 
+  const commissionOptions: Record<string, string> = scenarioSettings?.commissionBySupplier ?? {};
+  const projectionYears = scenarioSettings?.projectionYears ?? '15';
+  const indexationRate = scenarioSettings?.indexationRate ?? 0;
+  const useQuoteDefaultAPL = scenarioSettings?.aplSource === 'user';
+
   return {
     clients,
     settings: {
-      commissionOptions: {},
+      commissionOptions,
       campaignOptions: { AMG: [''] },
       frequency: 'M',
       superFrequency: 'M',
@@ -166,9 +173,9 @@ export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, 
       scoreWeightingFeatureType: 'Balanced',
       scoreModeType: 'AllScores',
       priceWeightingNeedOverride: null,
-      indexationRate: 0,
-      useQuoteDefaultAPL: false,
-      projectionYears: '15',
+      indexationRate,
+      useQuoteDefaultAPL,
+      projectionYears,
     },
     adviser: adviser ?? DEFAULT_ADVISER,
     tags: tags ?? DEFAULT_TAGS,
