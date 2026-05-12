@@ -157,7 +157,7 @@ export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, 
 
   const commissionOptions: Record<string, string> = scenarioSettings?.commissionBySupplier ?? {};
   const projectionYears = scenarioSettings?.projectionYears ?? '15';
-  const indexationRate = scenarioSettings?.indexationRate ?? 0;
+  const indexationRate = (scenarioSettings?.indexationRate ?? 0) / 100;
   const useQuoteDefaultAPL = scenarioSettings?.aplSource === 'user';
 
   return {
