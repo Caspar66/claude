@@ -555,15 +555,6 @@ export function InsuranceComparisonDialog({
               <button className="hover:underline">HELP</button>
             </div>
             <div className="flex items-center gap-2">
-              {typeof screen === 'number' && screen >= 1 && (
-                <Button
-                  size="sm"
-                  className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7"
-                  onClick={handleSaveToScenario}
-                >
-                  Save to Scenario
-                </Button>
-              )}
               <span className="text-lg font-light tracking-wide">
                 {scenarioName}
               </span>
@@ -694,6 +685,13 @@ export function InsuranceComparisonDialog({
                   <span className="text-red-600 ml-2">Quote error: {portfolioError}</span>
                 )}
                 <div className="flex-1" />
+                <Button
+                  size="sm"
+                  className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7"
+                  onClick={handleSaveToScenario}
+                >
+                  Save to Scenario
+                </Button>
               </div>
 
               {/* Main content: tabbed client/quote panel + results table */}

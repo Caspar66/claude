@@ -614,6 +614,29 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
             Occupation Rating
           </button>
 
+          <button
+            type="button"
+            className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded border font-semibold transition-colors ${activeQuoteIndex === null ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+            disabled={activeQuoteIndex === null}
+            title={activeQuoteIndex === null ? 'Select a specific quote to compare features' : undefined}
+            onClick={() => onViewCompareFeatures()}
+          >
+            <ExternalLink size={12} />
+            VIEW / COMPARE FEATURES
+          </button>
+          <Button variant="outline" size="sm" className="text-xs h-7 gap-1.5">
+            <Download size={12} />
+            DOWNLOAD REPORT
+          </Button>
+          <Button
+            size="sm"
+            className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5"
+            onClick={onCompareProducts}
+          >
+            <FileText size={12} />
+            Compare Products
+          </Button>
+
           <div className="flex-1" />
 
           {/* Search */}
@@ -736,31 +759,6 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
           </div>
         )}
 
-        {/* ── Bottom actions ────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-end gap-2 px-4 py-2.5 border-t border-gray-200 bg-gray-50">
-          <button
-            type="button"
-            className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded font-semibold ${activeQuoteIndex === null ? 'bg-slate-300 text-slate-500 cursor-not-allowed' : 'bg-teal-700 hover:bg-teal-800 text-white'}`}
-            disabled={activeQuoteIndex === null}
-            title={activeQuoteIndex === null ? 'Select a specific quote to compare features' : undefined}
-            onClick={() => onViewCompareFeatures()}
-          >
-            <ExternalLink size={12} />
-            VIEW / COMPARE FEATURES
-          </button>
-          <Button variant="outline" size="sm" className="text-xs h-7 gap-1.5">
-            <Download size={12} />
-            DOWNLOAD REPORT
-          </Button>
-          <Button
-            size="sm"
-            className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5"
-            onClick={onCompareProducts}
-          >
-            <FileText size={12} />
-            Compare Products
-          </Button>
-        </div>
       </div>
 
       {/* ── Additional Information panel ────────────────────────────────── */}
