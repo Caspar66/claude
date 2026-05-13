@@ -354,6 +354,38 @@ export async function postQuotePortfolio(
   return { raw: payload };
 }
 
+// ── Quote Validation ───────────────────────────────────────────────────────
+
+export interface QuoteValidationResponse {
+  validation: string;
+  omniumPremiumTotal: number;
+  supplierPremiumTotal: number;
+}
+
+export async function postQuoteValidation(
+  portfolioCode: string,
+  body: Record<string, unknown>,
+  superFrequency: string,
+  frequency: string,
+): Promise<QuoteValidationResponse> {
+  const params = new URLSearchParams({ superFrequency, frequency });
+  const res = await fetch(`/api/quote-portfolio/${portfolioCode}/quoteValidation?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OmniLife /quoteValidation returned ${res.status} ${res.statusText}${text ? ': ' + text : ''}`);
+  }
+
+  return res.json();
+}
+
 // ── Product Options (Exclusion Reasons) ─────────────────────────────────────
 
 export async function postProductOptions(

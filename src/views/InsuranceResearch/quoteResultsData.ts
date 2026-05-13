@@ -72,6 +72,7 @@ export interface QuoteResultRow {
   premiumBreakdown: PremiumBreakdownItem[];
   topFeatures: FeatureItem[];
   bottomFeatures: FeatureItem[];
+  validationAvailable: boolean;
 }
 
 // ── Premium computation helpers ─────────────────────────────────────────────
@@ -251,6 +252,7 @@ function parsePortfolio(
   const links = (p.links ?? {}) as Record<string, unknown>;
   const pdsLink = ensureUrl(asStr(links.pds)) || undefined;
   const tmdLink = ensureUrl(asStr(links.tmd)) || undefined;
+  const validationAvailable = links.validation === true;
   const policyFee = typeof pt.policyFee === 'number' ? pt.policyFee : undefined;
 
   function parseFeatures(raw: unknown): FeatureItem[] {
@@ -336,6 +338,7 @@ function parsePortfolio(
     premiumBreakdown,
     topFeatures,
     bottomFeatures,
+    validationAvailable,
   };
 }
 

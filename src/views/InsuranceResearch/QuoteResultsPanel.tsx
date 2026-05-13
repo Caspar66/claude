@@ -14,6 +14,7 @@ import {
 import { Button } from '@/components/ui/button';
 import type { QuoteResults, QuoteResultRow, ExcludedProduct, PremiumBreakdownItem } from './quoteResultsData';
 import { computePremiumTotal, computeCumulativePremium, FREQ_ANNUAL_MULTIPLIER } from './quoteResultsData';
+import { postQuoteValidation } from '@/services/omnilifeApi';
 import type { PremiumFrequency } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { ExclusionReasonsModal } from './ExclusionReasonsModal';
@@ -75,10 +76,12 @@ function PremiumBreakdownSummary({
   row,
   superFreq,
   nonSuperFreq,
+  validated,
 }: {
   row: QuoteResultRow;
   superFreq: PremiumFrequency;
   nonSuperFreq: PremiumFrequency;
+  validated: boolean | null;
 }) {
   const bd = row.premiumBreakdown;
 
@@ -95,8 +98,11 @@ function PremiumBreakdownSummary({
             <span className="text-slate-800">{fmt(item.amount)}</span>
           </div>
         ))}
-        <div className="flex items-center justify-between px-2 py-2 mt-2 bg-indigo-900 text-white rounded text-xs font-bold">
-          <span>Total {fallbackFreqLabel} Premium</span>
+        <div className={`flex items-center justify-between px-2 py-2 mt-2 text-white rounded text-xs font-bold ${validated === true ? 'bg-emerald-700' : 'bg-indigo-900'}`}>
+          <span className="flex items-center gap-1">
+            {validated === true && <Check size={12} />}
+            Total {fallbackFreqLabel} Premium
+          </span>
           <span>{fmt(fallbackTotal)}</span>
         </div>
       </>
@@ -189,8 +195,11 @@ function PremiumBreakdownSummary({
         </>
       )}
 
-      <div className="flex items-center justify-between px-2 py-2 mt-2 bg-indigo-900 text-white rounded text-xs font-bold">
-        <span>{totalLabel}</span>
+      <div className={`flex items-center justify-between px-2 py-2 mt-2 text-white rounded text-xs font-bold ${validated === true ? 'bg-emerald-700' : 'bg-indigo-900'}`}>
+        <span className="flex items-center gap-1">
+          {validated === true && <Check size={12} />}
+          {totalLabel}
+        </span>
         <span>{fmt(totalValue)}</span>
       </div>
     </>
@@ -205,16 +214,42 @@ function AdditionalInfoPanel({
   row,
   superFreq,
   nonSuperFreq,
+  quoteRequestBody,
   onClose,
+  onValidated,
 }: {
   row: QuoteResultRow;
   superFreq: PremiumFrequency;
   nonSuperFreq: PremiumFrequency;
+  quoteRequestBody: Record<string, unknown>;
   onClose: () => void;
+  onValidated: (rowId: string, matched: boolean) => void;
 }) {
   const [activeTab, setActiveTab] = useState<AdditionalInfoTab>('summary');
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{ matched: boolean; omnium: number; supplier: number } | null>(null);
   const hasFeatures = row.topFeatures.length > 0 || row.bottomFeatures.length > 0;
   const hasLinks = !!row.pdsLink || !!row.tmdLink;
+
+  async function handleValidate() {
+    setValidating(true);
+    try {
+      const res = await postQuoteValidation(
+        row.portfolioCode,
+        quoteRequestBody,
+        superFreq,
+        nonSuperFreq,
+      );
+      const matched = res.validation === 'Success';
+      setValidationResult({ matched, omnium: res.omniumPremiumTotal, supplier: res.supplierPremiumTotal });
+      onValidated(row.id, matched);
+    } catch (err) {
+      console.error('[QuoteValidation]', err);
+      setValidationResult(null);
+    } finally {
+      setValidating(false);
+    }
+  }
 
   return (
     <div className="w-[320px] border-l border-gray-200 bg-white flex flex-col shrink-0 overflow-hidden">
@@ -291,7 +326,17 @@ function AdditionalInfoPanel({
               row={row}
               superFreq={superFreq}
               nonSuperFreq={nonSuperFreq}
+              validated={validationResult?.matched ?? null}
             />
+            {row.validationAvailable && !validationResult && (
+              <button
+                className="mt-3 w-full text-xs font-semibold py-1.5 rounded border border-teal-700 text-teal-700 hover:bg-teal-50 transition-colors disabled:opacity-50"
+                onClick={handleValidate}
+                disabled={validating}
+              >
+                {validating ? 'Validating…' : 'Validate Premium'}
+              </button>
+            )}
           </div>
         )}
 
@@ -431,6 +476,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
   const projectionYears = (quoteRequestBody?.settings as Record<string, unknown> | undefined)?.projectionYears as string | number | undefined;
   const [showGraphs, setShowGraphs] = useState(false);
   const [showOccRating, setShowOccRating] = useState(false);
+  const [validatedRows, setValidatedRows] = useState<Record<string, boolean>>({});
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
   function toggleSort(field: SortField) {
@@ -616,6 +662,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
                     key={row.id}
                     row={row}
                     isActive={selectedRowId === row.id}
+                    validated={validatedRows[row.id] ?? null}
                     superFreq={(quote?.superFrequency ?? 'M') as PremiumFrequency}
                     nonSuperFreq={(quote?.nonSuperFrequency ?? 'M') as PremiumFrequency}
                     onToggleSelect={() => onToggleSelect(row.id)}
@@ -692,7 +739,9 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
           row={selectedRow}
           superFreq={selectedRowFreqs.superFreq}
           nonSuperFreq={selectedRowFreqs.nonSuperFreq}
+          quoteRequestBody={quoteRequestBody}
           onClose={() => setSelectedRowId(null)}
+          onValidated={(rowId, matched) => setValidatedRows((prev) => ({ ...prev, [rowId]: matched }))}
         />
       )}
     </div>
@@ -704,6 +753,7 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
 function ResultRow({
   row,
   isActive,
+  validated,
   superFreq,
   nonSuperFreq,
   onToggleSelect,
@@ -712,6 +762,7 @@ function ResultRow({
 }: {
   row: QuoteResultRow;
   isActive: boolean;
+  validated: boolean | null;
   superFreq: PremiumFrequency;
   nonSuperFreq: PremiumFrequency;
   onToggleSelect: () => void;
@@ -761,8 +812,11 @@ function ResultRow({
         </td>
 
         {/* Premiums */}
-        <td className="px-3 py-2.5 text-right">
-          <div className="font-semibold text-slate-800">{fmt(totalPremium)}</div>
+        <td className={`px-3 py-2.5 text-right ${validated === true ? 'text-emerald-700' : ''}`}>
+          <div className={`font-semibold ${validated === true ? 'text-emerald-700' : 'text-slate-800'}`}>
+            {validated === true && <Check size={12} className="inline mr-0.5 -mt-0.5" />}
+            {fmt(totalPremium)}
+          </div>
           <div className="text-[10px] text-slate-400">
             {sameFreq ? freqShort(superFreq) : 'Annualised'}
           </div>
