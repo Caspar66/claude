@@ -543,7 +543,7 @@ export function InsuranceComparisonDialog({
   // ── Screens: Personal Details + Insurance Details 1-4 ────────────────────
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
-      <DialogContent className="max-w-[95vw] w-[1400px] p-0 overflow-hidden" style={{ height: '90vh', maxHeight: '90vh' }}>
+      <DialogContent className="max-w-[95vw] w-[1760px] p-0 overflow-hidden" style={{ height: '90vh', maxHeight: '90vh' }}>
         <div className="flex flex-col h-full">
           {/* Top header bar */}
           <div className="flex items-center justify-between px-4 py-2 bg-slate-800 text-white">
@@ -555,6 +555,15 @@ export function InsuranceComparisonDialog({
               <button className="hover:underline">HELP</button>
             </div>
             <div className="flex items-center gap-2">
+              {typeof screen === 'number' && screen >= 1 && (
+                <Button
+                  size="sm"
+                  className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7"
+                  onClick={handleSaveToScenario}
+                >
+                  Save to Scenario
+                </Button>
+              )}
               <span className="text-lg font-light tracking-wide">
                 {scenarioName}
               </span>
@@ -685,13 +694,6 @@ export function InsuranceComparisonDialog({
                   <span className="text-red-600 ml-2">Quote error: {portfolioError}</span>
                 )}
                 <div className="flex-1" />
-                <Button
-                  size="sm"
-                  className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7"
-                  onClick={handleSaveToScenario}
-                >
-                  Save to Scenario
-                </Button>
               </div>
 
               {/* Main content: tabbed client/quote panel + results table */}
