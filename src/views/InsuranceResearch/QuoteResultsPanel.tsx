@@ -103,34 +103,35 @@ function PremiumBreakdownSummary({
     );
   }
 
-  // Gather per-item amounts
-  const rows = bd.map((item) => {
-    const nonSuper = item.premiumOutsideSuper[nonSuperFreq] ?? 0;
-    const sup = item.premiumInsideSuper[superFreq] ?? 0;
-    return { desc: item.description, nonSuper, sup };
-  });
-
-  let nonSuperStampDuty = 0;
+  const superLines: { desc: string; amount: number }[] = [];
   let superStampDuty = 0;
   for (const item of bd) {
-    nonSuperStampDuty += item.stampDutyOutsideSuper[nonSuperFreq] ?? 0;
+    const prem = item.premiumInsideSuper[superFreq] ?? 0;
+    if (prem > 0) superLines.push({ desc: item.description, amount: prem });
     superStampDuty += item.stampDutyInsideSuper[superFreq] ?? 0;
   }
+  const superSubTotal = superLines.reduce((s, l) => s + l.amount, 0) + superStampDuty;
 
-  const nonSuperSubTotal = rows.reduce((s, r) => s + r.nonSuper, 0) + nonSuperStampDuty;
-  const superSubTotal = rows.reduce((s, r) => s + r.sup, 0) + superStampDuty;
+  const nonSuperLines: { desc: string; amount: number }[] = [];
+  let nonSuperStampDuty = 0;
+  for (const item of bd) {
+    const prem = item.premiumOutsideSuper[nonSuperFreq] ?? 0;
+    if (prem > 0) nonSuperLines.push({ desc: item.description, amount: prem });
+    nonSuperStampDuty += item.stampDutyOutsideSuper[nonSuperFreq] ?? 0;
+  }
+  const nonSuperSubTotal = nonSuperLines.reduce((s, l) => s + l.amount, 0) + nonSuperStampDuty;
 
-  const hasNonSuper = nonSuperSubTotal > 0;
   const hasSuper = superSubTotal > 0;
-  const hasBoth = hasNonSuper && hasSuper;
+  const hasNonSuper = nonSuperSubTotal > 0;
+  const hasBoth = hasSuper && hasNonSuper;
   const needsAnnualise = hasBoth && superFreq !== nonSuperFreq;
 
   let totalLabel: string;
   let totalValue: number;
   if (needsAnnualise) {
     totalLabel = 'Total Annualised Premium';
-    totalValue = nonSuperSubTotal * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]
-               + superSubTotal * FREQ_ANNUAL_MULTIPLIER[superFreq];
+    totalValue = superSubTotal * FREQ_ANNUAL_MULTIPLIER[superFreq]
+               + nonSuperSubTotal * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq];
   } else if (hasSuper && !hasNonSuper) {
     totalLabel = `Total ${freqShort(superFreq).toUpperCase()} Premium`;
     totalValue = superSubTotal;
@@ -139,46 +140,54 @@ function PremiumBreakdownSummary({
     totalValue = nonSuperSubTotal;
   } else {
     totalLabel = `Total ${freqShort(nonSuperFreq).toUpperCase()} Premium`;
-    totalValue = nonSuperSubTotal + superSubTotal;
+    totalValue = superSubTotal + nonSuperSubTotal;
   }
 
   return (
     <>
-      <table className="w-full text-xs">
-        <thead>
-          <tr className="border-b border-gray-200">
-            <th className="text-left py-1 pr-2 font-semibold text-slate-600">Description</th>
-            {hasNonSuper && <th className="text-right py-1 px-1 font-semibold text-slate-600 whitespace-nowrap">Non-Super</th>}
-            {hasSuper && <th className="text-right py-1 pl-1 font-semibold text-slate-600">Super</th>}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r, i) => {
-            if (!r.nonSuper && !r.sup) return null;
-            return (
-              <tr key={i} className="border-b border-gray-50">
-                <td className="py-1 pr-2 text-slate-600">{r.desc}</td>
-                {hasNonSuper && <td className="py-1 px-1 text-right text-slate-800">{r.nonSuper > 0 ? fmt(r.nonSuper) : '-'}</td>}
-                {hasSuper && <td className="py-1 pl-1 text-right text-slate-800">{r.sup > 0 ? fmt(r.sup) : '-'}</td>}
-              </tr>
-            );
-          })}
-          {(nonSuperStampDuty > 0 || superStampDuty > 0) && (
-            <tr className="border-b border-gray-50">
-              <td className="py-1 pr-2 text-slate-600">Stamp Duty</td>
-              {hasNonSuper && <td className="py-1 px-1 text-right text-slate-800">{nonSuperStampDuty > 0 ? fmt(nonSuperStampDuty) : '-'}</td>}
-              {hasSuper && <td className="py-1 pl-1 text-right text-slate-800">{superStampDuty > 0 ? fmt(superStampDuty) : '-'}</td>}
-            </tr>
+      {hasSuper && (
+        <>
+          <div className="text-xs font-bold text-slate-700 mb-1.5">Super</div>
+          {superLines.map((line, i) => (
+            <div key={i} className="flex items-center justify-between text-xs py-0.5 pl-3">
+              <span className="text-slate-600">{line.desc}</span>
+              <span className="text-slate-800 shrink-0 ml-2">{fmt(line.amount)}</span>
+            </div>
+          ))}
+          {superStampDuty > 0 && (
+            <div className="flex items-center justify-between text-xs py-0.5 pl-3">
+              <span className="text-slate-600">Stamp Duty</span>
+              <span className="text-slate-800">{fmt(superStampDuty)}</span>
+            </div>
           )}
-          <tr className="border-t border-gray-200">
-            <td className="py-1.5 pr-2 font-medium text-slate-700">
-              {hasBoth ? 'Sub Total' : `${hasSuper ? FREQ_LABEL[superFreq] : FREQ_LABEL[nonSuperFreq]} Sub Total`}
-            </td>
-            {hasNonSuper && <td className="py-1.5 px-1 text-right font-medium text-slate-800">{fmt(nonSuperSubTotal)}</td>}
-            {hasSuper && <td className="py-1.5 pl-1 text-right font-medium text-slate-800">{fmt(superSubTotal)}</td>}
-          </tr>
-        </tbody>
-      </table>
+          <div className="flex items-center justify-between text-xs py-1 mt-1 border-t border-gray-100">
+            <span className="text-slate-700 font-bold">{FREQ_LABEL[superFreq]} Sub Total</span>
+            <span className="text-slate-800 font-medium">{fmt(superSubTotal)}</span>
+          </div>
+        </>
+      )}
+
+      {hasNonSuper && (
+        <>
+          <div className={`text-xs font-bold text-slate-700 mb-1.5 ${hasSuper ? 'mt-3' : ''}`}>Non-super{hasBoth ? ' (linked to Super)' : ''}</div>
+          {nonSuperLines.map((line, i) => (
+            <div key={i} className="flex items-center justify-between text-xs py-0.5 pl-3">
+              <span className="text-slate-600">{line.desc}</span>
+              <span className="text-slate-800 shrink-0 ml-2">{fmt(line.amount)}</span>
+            </div>
+          ))}
+          {nonSuperStampDuty > 0 && (
+            <div className="flex items-center justify-between text-xs py-0.5 pl-3">
+              <span className="text-slate-600">Stamp Duty</span>
+              <span className="text-slate-800">{fmt(nonSuperStampDuty)}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between text-xs py-1 mt-1 border-t border-gray-100">
+            <span className="text-slate-700 font-bold">{FREQ_LABEL[nonSuperFreq]} Sub Total</span>
+            <span className="text-slate-800 font-medium">{fmt(nonSuperSubTotal)}</span>
+          </div>
+        </>
+      )}
 
       <div className="flex items-center justify-between px-2 py-2 mt-2 bg-indigo-900 text-white rounded text-xs font-bold">
         <span>{totalLabel}</span>
