@@ -1,7 +1,6 @@
 import { useState } from 'react';
 import {
   Check,
-  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Search,
@@ -11,10 +10,9 @@ import {
   ExternalLink,
   FileText,
   X,
-  XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { QuoteResults, QuoteResultRow, ExcludedProduct, PremiumBreakdownItem, FeatureItem } from './quoteResultsData';
+import type { QuoteResults, QuoteResultRow, ExcludedProduct, PremiumBreakdownItem } from './quoteResultsData';
 import { computePremiumTotal, computeCumulativePremium, FREQ_ANNUAL_MULTIPLIER } from './quoteResultsData';
 import type { PremiumFrequency } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
@@ -201,7 +199,7 @@ function PremiumBreakdownSummary({
 
 // ── Additional Information panel ─────────────────────────────────────────────
 
-type AdditionalInfoTab = 'summary' | 'strengths';
+type AdditionalInfoTab = 'summary' | 'notes' | 'links';
 
 function AdditionalInfoPanel({
   row,
@@ -216,6 +214,7 @@ function AdditionalInfoPanel({
 }) {
   const [activeTab, setActiveTab] = useState<AdditionalInfoTab>('summary');
   const hasFeatures = row.topFeatures.length > 0 || row.bottomFeatures.length > 0;
+  const hasLinks = !!row.pdsLink || !!row.tmdLink;
 
   return (
     <div className="w-[320px] border-l border-gray-200 bg-white flex flex-col shrink-0 overflow-hidden">
@@ -251,12 +250,6 @@ function AdditionalInfoPanel({
               <span className="text-slate-800 font-medium">{row.occupationDescription}</span>
             </div>
           )}
-          {row.pdsLink && (
-            <div className="flex items-start gap-2">
-              <span className="text-slate-500 shrink-0 w-28">Product Summary</span>
-              <a href={row.pdsLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">PDS</a>
-            </div>
-          )}
           {row.tpdOccClass && (
             <div className="flex items-start gap-2">
               <span className="text-slate-500 shrink-0 w-28">TPD Occ Class</span>
@@ -275,10 +268,18 @@ function AdditionalInfoPanel({
           </button>
           {hasFeatures && (
             <button
-              className={`text-xs font-semibold py-2 border-b-2 transition-colors ${activeTab === 'strengths' ? 'text-slate-800 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
-              onClick={() => setActiveTab('strengths')}
+              className={`text-xs font-semibold py-2 border-b-2 transition-colors ${activeTab === 'notes' ? 'text-slate-800 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+              onClick={() => setActiveTab('notes')}
             >
-              Strengths / Limitations
+              Notes
+            </button>
+          )}
+          {hasLinks && (
+            <button
+              className={`text-xs font-semibold py-2 border-b-2 transition-colors ${activeTab === 'links' ? 'text-slate-800 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+              onClick={() => setActiveTab('links')}
+            >
+              Links
             </button>
           )}
         </div>
@@ -294,19 +295,16 @@ function AdditionalInfoPanel({
           </div>
         )}
 
-        {activeTab === 'strengths' && hasFeatures && (
+        {activeTab === 'notes' && hasFeatures && (
           <div className="px-4 py-3 space-y-4">
             {row.topFeatures.length > 0 && (
               <div>
                 <h4 className="text-sm font-bold text-slate-700 mb-2">Strengths</h4>
                 <div className="space-y-2">
                   {row.topFeatures.map((f, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <CheckCircle2 size={16} className="text-teal-600 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-700">{f.headingName} </span>
-                        <span className="text-xs text-slate-500">{f.summaryText}</span>
-                      </div>
+                    <div key={i} className="min-w-0">
+                      <span className="text-xs font-bold text-slate-700">{f.headingName} </span>
+                      <span className="text-xs text-slate-500">{f.summaryText}</span>
                     </div>
                   ))}
                 </div>
@@ -317,16 +315,30 @@ function AdditionalInfoPanel({
                 <h4 className="text-sm font-bold text-slate-700 mb-2">Limitations</h4>
                 <div className="space-y-2">
                   {row.bottomFeatures.map((f, i) => (
-                    <div key={i} className="flex items-start gap-2">
-                      <XCircle size={16} className="text-slate-400 shrink-0 mt-0.5" />
-                      <div className="min-w-0">
-                        <span className="text-xs font-bold text-slate-700">{f.headingName} </span>
-                        <span className="text-xs text-slate-500">{f.summaryText}</span>
-                      </div>
+                    <div key={i} className="min-w-0">
+                      <span className="text-xs font-bold text-slate-700">{f.headingName} </span>
+                      <span className="text-xs text-slate-500">{f.summaryText}</span>
                     </div>
                   ))}
                 </div>
               </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'links' && hasLinks && (
+          <div className="px-4 py-3 space-y-3">
+            {row.pdsLink && (
+              <a href={row.pdsLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-blue-600 hover:underline">
+                <Download size={14} className="shrink-0" />
+                Product Disclosure Statement (PDS)
+              </a>
+            )}
+            {row.tmdLink && (
+              <a href={row.tmdLink} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-blue-600 hover:underline">
+                <Download size={14} className="shrink-0" />
+                Target Market Determination (TMD)
+              </a>
             )}
           </div>
         )}
