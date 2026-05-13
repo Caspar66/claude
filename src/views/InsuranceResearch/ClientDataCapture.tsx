@@ -349,8 +349,8 @@ function FormRow({ label, labelColor = 'text-slate-700', clientField, partnerFie
       <td className={`py-2 pr-6 text-sm font-semibold ${labelColor} align-top whitespace-nowrap`}>
         {label}
       </td>
-      <td className="py-2 pr-10 align-top">{clientField}</td>
-      {partnerField !== undefined && <td className="py-2 align-top">{partnerField}</td>}
+      <td className="py-2 pr-10 align-top w-1/2">{clientField}</td>
+      {partnerField !== undefined && <td className="py-2 align-top w-1/2">{partnerField}</td>}
     </tr>
   );
 }
@@ -495,15 +495,15 @@ export function ClientDataCapture({
 
       {/* Form body */}
       <div className="flex-1 px-8 py-5">
-        <table className="text-sm">
+        <table className="text-sm w-full">
           <thead>
             <tr>
-              <th />
-              <th className="text-left pb-3 pr-10 text-sm font-semibold text-slate-700">
+              <th className="w-[160px]" />
+              <th className="text-left pb-3 pr-10 text-sm font-semibold text-slate-700 w-1/2">
                 {clientData.firstName}, {clientData.lastName}
               </th>
               {showPartner && partnerData && (
-                <th className="text-left pb-3 text-sm font-semibold text-slate-700">
+                <th className="text-left pb-3 text-sm font-semibold text-slate-700 w-1/2">
                   {partnerData.firstName}, {partnerData.lastName}
                 </th>
               )}
