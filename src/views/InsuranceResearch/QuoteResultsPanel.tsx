@@ -426,19 +426,19 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
                     Premiums
                   </button>
                 </th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right whitespace-nowrap">
+                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-right">
                   <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('cumulativePremium')}>
                     <ArrowUpDown size={11} />
                     {projectionYears ? `${projectionYears}y ` : ''}Cumulative Premiums
                   </button>
                 </th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">
+                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center">
                   <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('featureScore')}>
                     <ArrowUpDown size={11} />
                     Feature Score
                   </button>
                 </th>
-                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center whitespace-nowrap">
+                <th className="px-3 py-2 text-xs font-semibold text-slate-600 text-center">
                   <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('valueScore')}>
                     <ArrowUpDown size={11} />
                     Value Score
@@ -597,19 +597,16 @@ function ResultRow({
           <InsurerLogo name={row.supplierName} logo={row.supplierLogo} />
         </td>
 
-        {/* Products — supplier name + portfolio + product names */}
+        {/* Products — portfolio + product names */}
         <td className="px-3 py-2.5 max-w-[280px]">
           <div className="flex flex-col">
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-sm text-slate-800">{row.supplierName}</span>
-              {row.existingCover && (
-                <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full">
-                  EXISTING
-                </span>
-              )}
-            </div>
+            {row.existingCover && (
+              <span className="text-[9px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full w-fit mb-0.5">
+                EXISTING
+              </span>
+            )}
             {row.portfolioName && (
-              <span className="text-[10px] text-teal-700 font-medium leading-tight">{row.portfolioName}</span>
+              <span className="text-xs text-teal-700 font-medium leading-tight">{row.portfolioName}</span>
             )}
             <span className="text-[10px] text-slate-500 leading-tight line-clamp-2">{row.products}</span>
           </div>
