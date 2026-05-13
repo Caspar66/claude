@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import {
   Check,
   ChevronDown,
@@ -251,8 +251,38 @@ function AdditionalInfoPanel({
     }
   }
 
+  const [panelWidth, setPanelWidth] = useState(360);
+  const dragging = useRef(false);
+  const startX = useRef(0);
+  const startW = useRef(360);
+
+  const onDragStart = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    dragging.current = true;
+    startX.current = e.clientX;
+    startW.current = panelWidth;
+
+    function onMove(ev: MouseEvent) {
+      if (!dragging.current) return;
+      const delta = startX.current - ev.clientX;
+      setPanelWidth(Math.max(280, Math.min(600, startW.current + delta)));
+    }
+    function onUp() {
+      dragging.current = false;
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+    }
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  }, [panelWidth]);
+
   return (
-    <div className="w-[320px] border-l border-gray-200 bg-white flex flex-col shrink-0 overflow-hidden">
+    <div className="border-l border-gray-200 bg-white flex flex-col shrink-0 overflow-hidden relative" style={{ width: panelWidth }}>
+      {/* Resize handle */}
+      <div
+        className="absolute left-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-indigo-300/40 active:bg-indigo-400/50 z-10"
+        onMouseDown={onDragStart}
+      />
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-2.5 bg-indigo-900 text-white">
         <span className="text-xs font-bold truncate">Additional Information : {row.supplierName}</span>
