@@ -615,6 +615,8 @@ export function InsuranceComparisonDialog({
               onChange={setNeedsAnalysis}
               clientName={`${clientData.firstName} ${clientData.lastName}`.trim()}
               partnerName={showPartner ? `${partnerData.firstName} ${partnerData.lastName}`.trim() : null}
+              clientAnnualIncome={clientData.annualIncome}
+              partnerAnnualIncome={showPartner ? partnerData.annualIncome : undefined}
               onBack={() => setScreen('personal')}
             />
           )}

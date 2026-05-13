@@ -144,14 +144,40 @@ interface Props {
   onChange: (data: NeedsAnalysisData) => void;
   clientName: string;
   partnerName: string | null;
+  clientAnnualIncome?: string;
+  partnerAnnualIncome?: string;
   onBack: () => void;
 }
 
-export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onBack }: Props) {
+function parseCurrencyString(s?: string): number {
+  if (!s) return 0;
+  const num = parseFloat(s.replace(/[^0-9.-]/g, ''));
+  return isNaN(num) ? 0 : num;
+}
+
+export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, clientAnnualIncome, partnerAnnualIncome, onBack }: Props) {
   const [activeTab, setActiveTab] = useState<SideTab>('client');
   const [optionsOpen, setOptionsOpen] = useState(false);
+  const [ipDefaultApplied, setIpDefaultApplied] = useState(false);
   const entity = activeTab === 'partner' ? data.partner : data.client;
   const sel = data.insuranceSelection;
+
+  if (!ipDefaultApplied) {
+    let updated = false;
+    let next = { ...data };
+    const clientIncome = parseCurrencyString(clientAnnualIncome);
+    if (clientIncome > 0 && data.client.incomeProtection === 0) {
+      next = { ...next, client: { ...next.client, incomeProtection: Math.round(clientIncome * 0.7) } };
+      updated = true;
+    }
+    const partnerIncome = parseCurrencyString(partnerAnnualIncome);
+    if (partnerIncome > 0 && data.partner.incomeProtection === 0) {
+      next = { ...next, partner: { ...next.partner, incomeProtection: Math.round(partnerIncome * 0.7) } };
+      updated = true;
+    }
+    if (updated) onChange(next);
+    setIpDefaultApplied(true);
+  }
 
   const visibleCoverFields = useMemo(() => COVER_FIELDS.filter((f) => sel[f]), [sel]);
   const showIP = sel.incomeProtection;
