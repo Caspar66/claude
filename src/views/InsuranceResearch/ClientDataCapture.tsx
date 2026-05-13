@@ -13,6 +13,7 @@ import { CurrentSituationSection } from './CurrentSituationSection';
 import { CoverSelectionSection } from './CoverSelectionSection';
 import { NeedsEditor } from './NeedsEditor';
 import { AddCoverPage } from './AddCoverPage';
+import type { NeedsShortfall } from './NeedsAnalysisPage';
 
 interface Props {
   clientData: ClientFormData;
@@ -31,6 +32,7 @@ interface Props {
   getQuotesLabel?: string;
   quoteGeneratedDates?: Record<string, string>;
   onOpenScenarioSettings?: () => void;
+  needsShortfalls?: { client: NeedsShortfall; partner: NeedsShortfall };
 }
 
 function Inp({ value, onChange, className = '' }: { value: string; onChange: (v: string) => void; className?: string }) {
@@ -370,6 +372,7 @@ export function ClientDataCapture({
   getQuotesLabel,
   quoteGeneratedDates,
   onOpenScenarioSettings,
+  needsShortfalls,
 }: Props) {
   const showPartner = partnerData !== null;
   const { options: occupations, loading: occupationsLoading, error: occupationsError } = useOccupations();
@@ -446,6 +449,7 @@ export function ClientDataCapture({
         quote={editingQuote}
         clientName={clientDisplayName}
         partnerName={partnerDisplayName}
+        shortfalls={needsShortfalls}
         onSave={handleSaveQuote}
         onCancel={() => setEditingQuoteId(null)}
       />

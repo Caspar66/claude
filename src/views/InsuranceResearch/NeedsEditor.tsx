@@ -3,6 +3,7 @@ import { ChevronLeft, ChevronDown, ChevronRight, Plus, Trash2, Settings2 } from 
 import RequiredFeaturesModal from './RequiredFeaturesModal';
 import { REQUIRED_FEATURES } from './requiredFeaturesData';
 import { Button } from '@/components/ui/button';
+import type { NeedsShortfall } from './NeedsAnalysisPage';
 import type {
   NeedsQuote, Need, NeedCode, LinkedNeedCode, QuoteFrequency,
   TrmFields, TpeFields, TreFields, TpsFields, TrsFields, TprFields,
@@ -43,6 +44,7 @@ interface Props {
   quote: NeedsQuote;
   clientName: string;
   partnerName: string | null;
+  shortfalls?: { client: NeedsShortfall; partner: NeedsShortfall };
   onSave: (quote: NeedsQuote) => void;
   onCancel: () => void;
 }
@@ -348,10 +350,26 @@ function resolveFieldValue<T extends string>(v: FieldValue<T> | '?', fallback: T
 
 // ── Main component ──────────────────────────────────────────────
 
-export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }: Props) {
+function fmtShortfall(n: number): string {
+  const abs = Math.abs(n);
+  const str = abs.toLocaleString('en-AU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return n < 0 ? `-$${str}` : `$${str}`;
+}
+
+function ShortfallBadge({ label, value }: { label: string; value: number }) {
+  if (value >= 0) return null;
+  return (
+    <span className="text-xs font-semibold text-red-600 whitespace-nowrap">
+      {label} shortfall: {fmtShortfall(value)}
+    </span>
+  );
+}
+
+export function NeedsEditor({ quote, clientName, partnerName, shortfalls, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState<NeedsQuote>(quote);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(quote.needs.map((n) => getNeedCode(n))));
   const [showJson, setShowJson] = useState(false);
+  const sf = shortfalls ? (draft.lifeInsured === 'partner' ? shortfalls.partner : shortfalls.client) : null;
 
   useEffect(() => { setDraft(quote); }, [quote]);
 
@@ -493,7 +511,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             {isExp && (
               <div className="px-6 py-3">
                 <div className="space-y-0.5">
-                  <NumInp label="Sum Insured" value={trm.sumInsured} onChange={(v) => updateNeed(index, { TRM: { ...trm, sumInsured: v } })} />
+                  <div className="flex items-center gap-3">
+                    <NumInp label="Sum Insured" value={trm.sumInsured} onChange={(v) => updateNeed(index, { TRM: { ...trm, sumInsured: v } })} />
+                    {sf && <ShortfallBadge label="Life" value={sf.life} />}
+                  </div>
                   <CodeSel label="Structure" value={trm.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, structure: v as Structure4 } })} />
                   <SingleCodeSel label="Owner" value={trm.owner} labelMap={OWNER_TRM_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, owner: v } })} />
                   <CodeSel label="Rollover" value={trm.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TRM: { ...trm, rollover: v as Rollover } })} />
@@ -512,7 +533,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                         <NeedCardHeader code="TPE" label={LINKED_NEED_LABELS.TPE} expanded={lnExp} onToggle={() => toggleExpanded(lnKey)} onRemove={() => removeLinkedFromTrm(index, 'TPE')} linked />
                         {lnExp && (
                           <div className="px-4 py-2 space-y-0.5">
-                            <NumInp label="Sum Insured" value={tpe.sumInsured} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, sumInsured: v })} />
+                            <div className="flex items-center gap-3">
+                              <NumInp label="Sum Insured" value={tpe.sumInsured} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, sumInsured: v })} />
+                              {sf && <ShortfallBadge label="TPD" value={sf.tpd} />}
+                            </div>
                             <CodeSel label="Structure" value={tpe.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, structure: v as Structure4 })} />
                             <SingleCodeSel label="Owner" value={tpe.owner} labelMap={OWNER_TPE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, owner: v })} />
                             <CodeSel label="Rollover" value={tpe.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TPE', { ...tpe, rollover: v as Rollover })} />
@@ -535,7 +559,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                         <NeedCardHeader code="TRE" label={LINKED_NEED_LABELS.TRE} expanded={lnExp} onToggle={() => toggleExpanded(lnKey)} onRemove={() => removeLinkedFromTrm(index, 'TRE')} linked />
                         {lnExp && (
                           <div className="px-4 py-2 space-y-0.5">
-                            <NumInp label="Sum Insured" value={tre.sumInsured} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, sumInsured: v })} />
+                            <div className="flex items-center gap-3">
+                              <NumInp label="Sum Insured" value={tre.sumInsured} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, sumInsured: v })} />
+                              {sf && <ShortfallBadge label="Trauma" value={sf.trauma} />}
+                            </div>
                             <CodeSel label="Structure" value={tre.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, structure: v as Structure4 })} />
                             <CodeSel label="Life Buy Back" value={tre.lifeBuyBack} labelMap={LIFE_BUY_BACK_TRE_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, lifeBuyBack: v as LifeBuyBackTRE })} />
                             <CodeSel label="Double Trauma" value={tre.doubleTrauma} labelMap={THREE_WAY_LABELS} onChange={(v) => updateLinkedInTrm(index, 'TRE', { ...tre, doubleTrauma: v as ThreeWay })} />
@@ -578,7 +605,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             <NeedCardHeader code="TPS" label={NEED_CODE_LABELS.TPS} expanded={isExp} onToggle={() => toggleExpanded(code)} onRemove={() => removeNeed(index)} />
             {isExp && (
               <div className="px-6 py-3 space-y-0.5">
-                <NumInp label="Sum Insured" value={tps.sumInsured} onChange={(v) => updateNeed(index, { TPS: { ...tps, sumInsured: v } })} />
+                <div className="flex items-center gap-3">
+                  <NumInp label="Sum Insured" value={tps.sumInsured} onChange={(v) => updateNeed(index, { TPS: { ...tps, sumInsured: v } })} />
+                  {sf && <ShortfallBadge label="TPD" value={sf.tpd} />}
+                </div>
                 <CodeSel label="Structure" value={tps.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, structure: v as Structure4 } })} />
                 <SingleCodeSel label="Owner" value={tps.owner} labelMap={OWNER_TPE_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, owner: v } })} />
                 <CodeSel label="Rollover" value={tps.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateNeed(index, { TPS: { ...tps, rollover: v as Rollover } })} />
@@ -601,7 +631,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             {isExp && (
               <div className="px-6 py-3">
                 <div className="space-y-0.5">
-                  <NumInp label="Sum Insured" value={trs.sumInsured} onChange={(v) => updateNeed(index, { TRS: { ...trs, sumInsured: v } })} />
+                  <div className="flex items-center gap-3">
+                    <NumInp label="Sum Insured" value={trs.sumInsured} onChange={(v) => updateNeed(index, { TRS: { ...trs, sumInsured: v } })} />
+                    {sf && <ShortfallBadge label="Trauma" value={sf.trauma} />}
+                  </div>
                   <CodeSel label="Structure" value={trs.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, structure: v as Structure4 } })} />
                   <CodeSel label="Trauma Reinstatement" value={trs.traumaReinstatement} labelMap={THREE_WAY_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, traumaReinstatement: v as ThreeWay } })} />
                   <CodeSel label="Premium Waiver" value={trs.premiumWaiver} labelMap={PREMIUM_WAIVER_LABELS} onChange={(v) => updateNeed(index, { TRS: { ...trs, premiumWaiver: v as PremiumWaiver } })} />
@@ -621,7 +654,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
                         <NeedCardHeader code="TPR" label={LINKED_NEED_LABELS.TPR} expanded={lnExp} onToggle={() => toggleExpanded(lnKey)} onRemove={() => removeLinkedFromTrs(index)} linked />
                         {lnExp && (
                           <div className="px-4 py-2 space-y-0.5">
-                            <NumInp label="Sum Insured" value={tpr.sumInsured} onChange={(v) => updateLinkedInTrs(index, { ...tpr, sumInsured: v })} />
+                            <div className="flex items-center gap-3">
+                              <NumInp label="Sum Insured" value={tpr.sumInsured} onChange={(v) => updateLinkedInTrs(index, { ...tpr, sumInsured: v })} />
+                              {sf && <ShortfallBadge label="TPD" value={sf.tpd} />}
+                            </div>
                             <CodeSel label="Structure" value={tpr.structure} labelMap={STRUCTURE_4_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, structure: v as Structure4 })} />
                             <SingleCodeSel label="Owner" value={tpr.owner} labelMap={OWNER_INC_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, owner: v })} />
                             <CodeSel label="Rollover" value={tpr.rollover} labelMap={ROLLOVER_LABELS} onChange={(v) => updateLinkedInTrs(index, { ...tpr, rollover: v as Rollover })} />
@@ -659,7 +695,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             <NeedCardHeader code="INC" label={NEED_CODE_LABELS.INC} expanded={isExp} onToggle={() => toggleExpanded(code)} onRemove={() => removeNeed(index)} />
             {isExp && (
               <div className="px-6 py-3 space-y-0.5">
-                <NumInp label="Monthly Benefit" value={inc.monthlyBenefit} onChange={(v) => updateNeed(index, { INC: { ...inc, monthlyBenefit: v } })} />
+                <div className="flex items-center gap-3">
+                  <NumInp label="Monthly Benefit" value={inc.monthlyBenefit} onChange={(v) => updateNeed(index, { INC: { ...inc, monthlyBenefit: v } })} />
+                  {sf && <ShortfallBadge label="IP" value={sf.incomeProtection} />}
+                </div>
                 <NumInp label="Super Contribution" value={inc.superContributionOption} onChange={(v) => updateNeed(index, { INC: { ...inc, superContributionOption: v } })} />
                 <CodeSel label="Structure" value={inc.structure} labelMap={STRUCTURE_3_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, structure: v as Structure3 } })} />
                 <SingleCodeSel label="Owner" value={inc.owner} labelMap={OWNER_INC_LABELS} onChange={(v) => updateNeed(index, { INC: { ...inc, owner: v } })} />
@@ -685,7 +724,10 @@ export function NeedsEditor({ quote, clientName, partnerName, onSave, onCancel }
             <NeedCardHeader code="BUS" label={NEED_CODE_LABELS.BUS} expanded={isExp} onToggle={() => toggleExpanded(code)} onRemove={() => removeNeed(index)} />
             {isExp && (
               <div className="px-6 py-3 space-y-0.5">
-                <NumInp label="Monthly Benefit" value={bus.monthlyBenefit} onChange={(v) => updateNeed(index, { BUS: { ...bus, monthlyBenefit: v } })} />
+                <div className="flex items-center gap-3">
+                  <NumInp label="Monthly Benefit" value={bus.monthlyBenefit} onChange={(v) => updateNeed(index, { BUS: { ...bus, monthlyBenefit: v } })} />
+                  {sf && <ShortfallBadge label="BE" value={sf.businessExpenses} />}
+                </div>
                 <CodeSel label="Structure" value={bus.structure} labelMap={STRUCTURE_3_LABELS} onChange={(v) => updateNeed(index, { BUS: { ...bus, structure: v as Structure3 } })} />
                 <CodeSel label="Waiting Period" value={bus.waitingPeriod} labelMap={WAITING_BUS_LABELS} onChange={(v) => updateNeed(index, { BUS: { ...bus, waitingPeriod: v as WaitingPeriodBUS } })} />
                 <div className="flex items-center justify-between gap-3 py-1">

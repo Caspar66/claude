@@ -18,7 +18,6 @@ export interface InsuranceSelection {
 }
 
 export interface NeedsAnalysisEntity {
-  insuranceSelection: InsuranceSelection;
   capitalRequirements: {
     liabilitiesToClear: CoverAmounts;
     futureExpenditureRequired: CoverAmounts;
@@ -37,6 +36,7 @@ export interface NeedsAnalysisEntity {
 }
 
 export interface NeedsAnalysisData {
+  insuranceSelection: InsuranceSelection;
   client: NeedsAnalysisEntity;
   partner: NeedsAnalysisEntity;
 }
@@ -46,7 +46,7 @@ function emptyCovers(): CoverAmounts {
 }
 
 export function getDefaultNeedsAnalysis(): NeedsAnalysisData {
-  return { client: getDefaultEntity(), partner: getDefaultEntity() };
+  return { insuranceSelection: getDefaultInsuranceSelection(), client: getDefaultEntity(), partner: getDefaultEntity() };
 }
 
 function getDefaultInsuranceSelection(): InsuranceSelection {
@@ -55,7 +55,6 @@ function getDefaultInsuranceSelection(): InsuranceSelection {
 
 function getDefaultEntity(): NeedsAnalysisEntity {
   return {
-    insuranceSelection: getDefaultInsuranceSelection(),
     capitalRequirements: {
       liabilitiesToClear: emptyCovers(),
       futureExpenditureRequired: emptyCovers(),
@@ -104,6 +103,38 @@ function fmtCurrency(n: number): string {
   return n < 0 ? `-$${str}` : `$${str}`;
 }
 
+// ── Shortfall computation (exported for use in NeedsEditor) ──────────────
+
+export interface NeedsShortfall {
+  life: number;
+  tpd: number;
+  trauma: number;
+  incomeProtection: number;
+  businessExpenses: number;
+}
+
+export function computeShortfalls(entity: NeedsAnalysisEntity): NeedsShortfall {
+  let lifeReq = 0, tpdReq = 0, traumaReq = 0;
+  let lifeProv = 0, tpdProv = 0, traumaProv = 0;
+  for (const key of REQ_ROWS.map((r) => r.key)) {
+    lifeReq += entity.capitalRequirements[key].life;
+    tpdReq += entity.capitalRequirements[key].tpd;
+    traumaReq += entity.capitalRequirements[key].trauma;
+  }
+  for (const key of PROV_ROWS.map((r) => r.key)) {
+    lifeProv += entity.capitalProvisions[key].life;
+    tpdProv += entity.capitalProvisions[key].tpd;
+    traumaProv += entity.capitalProvisions[key].trauma;
+  }
+  return {
+    life: lifeProv - lifeReq,
+    tpd: tpdProv - tpdReq,
+    trauma: traumaProv - traumaReq,
+    incomeProtection: -entity.incomeProtection,
+    businessExpenses: -entity.businessExpenses,
+  };
+}
+
 type SideTab = 'client' | 'partner';
 
 // ── Component ─────────────────────────────────────────────────────────────
@@ -120,7 +151,7 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
   const [activeTab, setActiveTab] = useState<SideTab>('client');
   const [optionsOpen, setOptionsOpen] = useState(false);
   const entity = activeTab === 'partner' ? data.partner : data.client;
-  const sel = entity.insuranceSelection;
+  const sel = data.insuranceSelection;
 
   const visibleCoverFields = useMemo(() => COVER_FIELDS.filter((f) => sel[f]), [sel]);
   const showIP = sel.incomeProtection;
@@ -132,7 +163,7 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
   }
 
   function updateInsuranceSelection(patch: Partial<InsuranceSelection>) {
-    updateEntity({ ...entity, insuranceSelection: { ...entity.insuranceSelection, ...patch } });
+    onChange({ ...data, insuranceSelection: { ...data.insuranceSelection, ...patch } });
   }
 
   function updateReq(key: ReqKey, field: CoverField, value: number) {

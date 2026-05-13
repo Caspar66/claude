@@ -55,7 +55,7 @@ import { postQuotePortfolio } from '@/services/omnilifeApi';
 import { useOccupations } from '@/hooks/useOccupations';
 import { ScenarioSettingsModal, getDefaultScenarioSettings } from './ScenarioSettingsModal';
 import type { ScenarioSettings } from './ScenarioSettingsModal';
-import { NeedsAnalysisPage, getDefaultNeedsAnalysis } from './NeedsAnalysisPage';
+import { NeedsAnalysisPage, getDefaultNeedsAnalysis, computeShortfalls } from './NeedsAnalysisPage';
 import type { NeedsAnalysisData } from './NeedsAnalysisPage';
 
 interface Props {
@@ -597,6 +597,7 @@ export function InsuranceComparisonDialog({
                 getQuotesLabel={portfolioLoading ? 'Fetching quotes…' : undefined}
                 quoteGeneratedDates={quoteGeneratedDates}
                 onOpenScenarioSettings={() => setScenarioSettingsOpen(true)}
+                needsShortfalls={{ client: computeShortfalls(needsAnalysis.client), partner: computeShortfalls(needsAnalysis.partner) }}
               />
               <ScenarioSettingsModal
                 open={scenarioSettingsOpen}
@@ -631,6 +632,7 @@ export function InsuranceComparisonDialog({
                 quote={editQuote}
                 clientName={clientDisplayName}
                 partnerName={partnerDisplayName}
+                shortfalls={{ client: computeShortfalls(needsAnalysis.client), partner: computeShortfalls(needsAnalysis.partner) }}
                 onSave={handleSaveQuoteFromResults}
                 onCancel={() => { setEditingQuoteId(null); setScreen(1); }}
               />
