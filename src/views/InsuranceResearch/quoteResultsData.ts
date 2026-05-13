@@ -239,8 +239,12 @@ function parsePortfolio(
   const featureObj = (score.feature ?? {}) as Record<string, unknown>;
   const combinedObj = (score.combined ?? {}) as Record<string, unknown>;
 
-  const commission = (p.commission ?? {}) as Record<string, unknown>;
-  const commissionLabel = asStr(commission.label) || asStr(commission.name) || asStr(commission.description) || undefined;
+  const commissionLabel = typeof p.commission === 'string'
+    ? p.commission || undefined
+    : (() => {
+        const commission = (p.commission ?? {}) as Record<string, unknown>;
+        return asStr(commission.label) || asStr(commission.name) || asStr(commission.description) || undefined;
+      })();
   const occupation = (p.occupation ?? {}) as Record<string, unknown>;
   const occupationDescription = asStr(occupation.description) || undefined;
   const tpdOccClass = asStr(p.tpdOccupationClass) || asStr((p.occupationClass ?? {}) as Record<string, unknown>).toString() || undefined;
@@ -278,13 +282,26 @@ function parsePortfolio(
   const rawBreakdown = (pt as Record<string, unknown>).breakdown;
   if (Array.isArray(rawBreakdown)) {
     for (const bd of rawBreakdown as Record<string, unknown>[]) {
-      premiumBreakdown.push({
-        description: asStr(bd.description),
-        premiumOutsideSuper: asFreqMap(bd.premiumOutsideSuper),
-        premiumInsideSuper: asFreqMap(bd.premiumInsideSuper),
-        stampDutyOutsideSuper: asFreqMap(bd.stampDutyOutsideSuper),
-        stampDutyInsideSuper: asFreqMap(bd.stampDutyInsideSuper),
-      });
+      const nested = bd.breakdown;
+      if (Array.isArray(nested) && nested.length > 0) {
+        for (const sub of nested as Record<string, unknown>[]) {
+          premiumBreakdown.push({
+            description: asStr(sub.description),
+            premiumOutsideSuper: asFreqMap(sub.premiumOutsideSuper),
+            premiumInsideSuper: asFreqMap(sub.premiumInsideSuper),
+            stampDutyOutsideSuper: asFreqMap(sub.stampDutyOutsideSuper),
+            stampDutyInsideSuper: asFreqMap(sub.stampDutyInsideSuper),
+          });
+        }
+      } else {
+        premiumBreakdown.push({
+          description: asStr(bd.description),
+          premiumOutsideSuper: asFreqMap(bd.premiumOutsideSuper),
+          premiumInsideSuper: asFreqMap(bd.premiumInsideSuper),
+          stampDutyOutsideSuper: asFreqMap(bd.stampDutyOutsideSuper),
+          stampDutyInsideSuper: asFreqMap(bd.stampDutyInsideSuper),
+        });
+      }
     }
   }
 
