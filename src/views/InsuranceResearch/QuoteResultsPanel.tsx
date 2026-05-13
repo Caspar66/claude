@@ -415,7 +415,6 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('premium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
   const [excludedCollapsed, setExcludedCollapsed] = useState(true);
   const projectionYears = (quoteRequestBody?.settings as Record<string, unknown> | undefined)?.projectionYears as string | number | undefined;
   const [showGraphs, setShowGraphs] = useState(false);
@@ -425,15 +424,6 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
   function toggleSort(field: SortField) {
     if (sortField === field) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     else { setSortField(field); setSortDir('asc'); }
-  }
-
-  function toggleExpand(id: string) {
-    setExpandedRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
   }
 
   function getRowFreqs(row: QuoteResultRow): { superFreq: PremiumFrequency; nonSuperFreq: PremiumFrequency } {
@@ -567,7 +557,6 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
                     {selectAll && <Check size={10} strokeWidth={3} />}
                   </button>
                 </th>
-                <th className="w-6 px-1 py-2" />
                 <th className="px-3 py-2 text-left text-xs font-semibold text-slate-600 whitespace-nowrap">
                   <button className="inline-flex items-center gap-1 hover:text-teal-700" onClick={() => toggleSort('insurer')}>
                     <ArrowUpDown size={11} />
@@ -614,12 +603,10 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
                   <ResultRow
                     key={row.id}
                     row={row}
-                    expanded={expandedRows.has(row.id)}
                     isActive={selectedRowId === row.id}
                     superFreq={(quote?.superFrequency ?? 'M') as PremiumFrequency}
                     nonSuperFreq={(quote?.nonSuperFrequency ?? 'M') as PremiumFrequency}
                     onToggleSelect={() => onToggleSelect(row.id)}
-                    onToggleExpand={() => toggleExpand(row.id)}
                     onSetRecommendation={(v) => onSetRecommendation(row.id, v)}
                     onSelectRow={() => setSelectedRowId(selectedRowId === row.id ? null : row.id)}
                   />
@@ -704,22 +691,18 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
 
 function ResultRow({
   row,
-  expanded,
   isActive,
   superFreq,
   nonSuperFreq,
   onToggleSelect,
-  onToggleExpand,
   onSetRecommendation,
   onSelectRow,
 }: {
   row: QuoteResultRow;
-  expanded: boolean;
   isActive: boolean;
   superFreq: PremiumFrequency;
   nonSuperFreq: PremiumFrequency;
   onToggleSelect: () => void;
-  onToggleExpand: () => void;
   onSetRecommendation: (value: 'rec' | 'alt' | null) => void;
   onSelectRow: () => void;
 }) {
@@ -742,13 +725,6 @@ function ResultRow({
             className={`w-4 h-4 rounded-sm border flex items-center justify-center ${row.selected ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'}`}
           >
             {row.selected && <Check size={10} strokeWidth={3} />}
-          </button>
-        </td>
-
-        {/* Expand toggle */}
-        <td className="px-1 py-2.5" onClick={(e) => { e.stopPropagation(); onToggleExpand(); }}>
-          <button className="text-slate-400 hover:text-slate-700">
-            {expanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
           </button>
         </td>
 
@@ -840,16 +816,6 @@ function ResultRow({
         </td>
       </tr>
 
-      {/* Expanded detail placeholder */}
-      {expanded && (
-        <tr className="bg-slate-50">
-          <td colSpan={99} className="px-6 py-3">
-            <div className="text-xs text-slate-500">
-              Premium detail breakdown will appear here once the API response format is fully mapped.
-            </div>
-          </td>
-        </tr>
-      )}
     </>
   );
 }
