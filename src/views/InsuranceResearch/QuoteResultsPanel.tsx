@@ -86,7 +86,7 @@ function PremiumBreakdownSummary({
     const fallbackNonSuper = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
     const fallbackSuper = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
     const fallbackTotal = computePremiumTotal(row, superFreq, nonSuperFreq);
-    const fallbackFreqLabel = superFreq === nonSuperFreq ? freqShort(superFreq) : 'pa';
+    const fallbackFreqLabel = superFreq === nonSuperFreq ? FREQ_LABEL[superFreq] : 'Annualised';
     return (
       <>
         {row.premiumLineItems.map((item, i) => (
@@ -96,7 +96,7 @@ function PremiumBreakdownSummary({
           </div>
         ))}
         <div className="flex items-center justify-between px-2 py-2 mt-2 bg-indigo-900 text-white rounded text-xs font-bold">
-          <span>Total {fallbackFreqLabel.toUpperCase()} Premium</span>
+          <span>Total {fallbackFreqLabel} Premium</span>
           <span>{fmt(fallbackTotal)}</span>
         </div>
       </>
@@ -133,13 +133,13 @@ function PremiumBreakdownSummary({
     totalValue = superSubTotal * FREQ_ANNUAL_MULTIPLIER[superFreq]
                + nonSuperSubTotal * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq];
   } else if (hasSuper && !hasNonSuper) {
-    totalLabel = `Total ${freqShort(superFreq).toUpperCase()} Premium`;
+    totalLabel = `Total ${FREQ_LABEL[superFreq]} Premium`;
     totalValue = superSubTotal;
   } else if (hasNonSuper && !hasSuper) {
-    totalLabel = `Total ${freqShort(nonSuperFreq).toUpperCase()} Premium`;
+    totalLabel = `Total ${FREQ_LABEL[nonSuperFreq]} Premium`;
     totalValue = nonSuperSubTotal;
   } else {
-    totalLabel = `Total ${freqShort(nonSuperFreq).toUpperCase()} Premium`;
+    totalLabel = `Total ${FREQ_LABEL[nonSuperFreq]} Premium`;
     totalValue = superSubTotal + nonSuperSubTotal;
   }
 
@@ -258,11 +258,9 @@ function AdditionalInfoPanel({
           )}
         </div>
 
-        {/* Summary tab area */}
+        {/* Summary */}
         <div className="px-4 py-3">
-          <div className="flex items-center gap-3 border-b border-gray-200 mb-3">
-            <span className="text-xs font-semibold text-slate-800 pb-1.5 border-b-2 border-indigo-600">Summary</span>
-          </div>
+          <div className="text-xs font-semibold text-slate-800 mb-3">Summary</div>
 
           <PremiumBreakdownSummary
             row={row}
