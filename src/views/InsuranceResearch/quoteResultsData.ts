@@ -28,6 +28,14 @@ export interface PremiumLineItem {
   amount: number;
 }
 
+export interface PremiumBreakdownItem {
+  description: string;
+  premiumOutsideSuper: FreqPremiumMap;
+  premiumInsideSuper: FreqPremiumMap;
+  stampDutyOutsideSuper: FreqPremiumMap;
+  stampDutyInsideSuper: FreqPremiumMap;
+}
+
 export interface QuoteResultRow {
   id: string;
   quoteIndex: number;
@@ -55,6 +63,7 @@ export interface QuoteResultRow {
   tmdLink?: string;
   policyFee?: number;
   premiumLineItems: PremiumLineItem[];
+  premiumBreakdown: PremiumBreakdownItem[];
 }
 
 // ── Premium computation helpers ─────────────────────────────────────────────
@@ -242,6 +251,20 @@ function parsePortfolio(
     }
   }
 
+  const premiumBreakdown: PremiumBreakdownItem[] = [];
+  const rawBreakdown = (pt as Record<string, unknown>).breakdown;
+  if (Array.isArray(rawBreakdown)) {
+    for (const bd of rawBreakdown as Record<string, unknown>[]) {
+      premiumBreakdown.push({
+        description: asStr(bd.description),
+        premiumOutsideSuper: asFreqMap(bd.premiumOutsideSuper),
+        premiumInsideSuper: asFreqMap(bd.premiumInsideSuper),
+        stampDutyOutsideSuper: asFreqMap(bd.stampDutyOutsideSuper),
+        stampDutyInsideSuper: asFreqMap(bd.stampDutyInsideSuper),
+      });
+    }
+  }
+
   return {
     id: `qr-${crypto.randomUUID()}`,
     quoteIndex,
@@ -269,6 +292,7 @@ function parsePortfolio(
     tmdLink,
     policyFee,
     premiumLineItems,
+    premiumBreakdown,
   };
 }
 
