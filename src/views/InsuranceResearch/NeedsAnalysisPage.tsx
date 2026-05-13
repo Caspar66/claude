@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Settings } from 'lucide-react';
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -9,8 +9,16 @@ interface CoverAmounts {
   trauma: number;
 }
 
+export interface InsuranceSelection {
+  life: boolean;
+  tpd: boolean;
+  trauma: boolean;
+  incomeProtection: boolean;
+  businessExpense: boolean;
+}
+
 export interface NeedsAnalysisEntity {
-  analysisMode: 'simple' | 'splits';
+  insuranceSelection: InsuranceSelection;
   capitalRequirements: {
     liabilitiesToClear: CoverAmounts;
     futureExpenditureRequired: CoverAmounts;
@@ -41,9 +49,13 @@ export function getDefaultNeedsAnalysis(): NeedsAnalysisData {
   return { client: getDefaultEntity(), partner: getDefaultEntity() };
 }
 
+function getDefaultInsuranceSelection(): InsuranceSelection {
+  return { life: true, tpd: true, trauma: true, incomeProtection: true, businessExpense: false };
+}
+
 function getDefaultEntity(): NeedsAnalysisEntity {
   return {
-    analysisMode: 'simple',
+    insuranceSelection: getDefaultInsuranceSelection(),
     capitalRequirements: {
       liabilitiesToClear: emptyCovers(),
       futureExpenditureRequired: emptyCovers(),
@@ -69,7 +81,7 @@ type ProvKey = keyof NeedsAnalysisEntity['capitalProvisions'];
 type CoverField = keyof CoverAmounts;
 
 const COVER_FIELDS: CoverField[] = ['life', 'tpd', 'trauma'];
-const COL_LABELS = ['Life', 'TPD', 'Trauma', 'Income\nProtection pa', 'Business\nExpenses pa'];
+const COVER_LABEL: Record<CoverField, string> = { life: 'Life', tpd: 'TPD', trauma: 'Trauma' };
 
 const REQ_ROWS: { key: ReqKey; label: string }[] = [
   { key: 'liabilitiesToClear', label: 'Liabilities to clear' },
@@ -106,10 +118,21 @@ interface Props {
 
 export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onBack }: Props) {
   const [activeTab, setActiveTab] = useState<SideTab>('client');
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const entity = activeTab === 'partner' ? data.partner : data.client;
+  const sel = entity.insuranceSelection;
+
+  const visibleCoverFields = useMemo(() => COVER_FIELDS.filter((f) => sel[f]), [sel]);
+  const showIP = sel.incomeProtection;
+  const showBE = sel.businessExpense;
+  const visibleColCount = visibleCoverFields.length + (showIP ? 1 : 0) + (showBE ? 1 : 0) + 1;
 
   function updateEntity(updated: NeedsAnalysisEntity) {
     onChange(activeTab === 'partner' ? { ...data, partner: updated } : { ...data, client: updated });
+  }
+
+  function updateInsuranceSelection(patch: Partial<InsuranceSelection>) {
+    updateEntity({ ...entity, insuranceSelection: { ...entity.insuranceSelection, ...patch } });
   }
 
   function updateReq(key: ReqKey, field: CoverField, value: number) {
@@ -150,19 +173,19 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
 
   const totalCoverRequired = useMemo(() => {
     const vals: number[] = [];
-    for (const f of COVER_FIELDS) vals.push(Math.max(0, totalReq[f] - totalProv[f]));
-    vals.push(entity.incomeProtection);
-    vals.push(entity.businessExpenses);
+    for (const f of visibleCoverFields) vals.push(Math.max(0, totalReq[f] - totalProv[f]));
+    if (showIP) vals.push(entity.incomeProtection);
+    if (showBE) vals.push(entity.businessExpenses);
     return vals;
-  }, [totalReq, totalProv, entity.incomeProtection, entity.businessExpenses]);
+  }, [totalReq, totalProv, entity.incomeProtection, entity.businessExpenses, visibleCoverFields, showIP, showBE]);
 
   const surplusShortfall = useMemo(() => {
     const vals: number[] = [];
-    for (const f of COVER_FIELDS) vals.push(totalProv[f] - totalReq[f]);
-    vals.push(-entity.incomeProtection);
-    vals.push(-entity.businessExpenses);
+    for (const f of visibleCoverFields) vals.push(totalProv[f] - totalReq[f]);
+    if (showIP) vals.push(-entity.incomeProtection);
+    if (showBE) vals.push(-entity.businessExpenses);
     return vals;
-  }, [totalReq, totalProv, entity.incomeProtection, entity.businessExpenses]);
+  }, [totalReq, totalProv, entity.incomeProtection, entity.businessExpenses, visibleCoverFields, showIP, showBE]);
 
   const entityLabel = activeTab === 'partner' ? 'Partner' : 'Client';
 
@@ -207,46 +230,60 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
 
           <div className="px-6 py-4">
             {/* Settings row */}
-            <div className="text-sm text-slate-700 mb-1">
-              Requirements - {entityLabel}
-            </div>
-            <div className="flex items-center gap-6 mb-5 py-2 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <span className="text-xs text-slate-600">Analysis Mode</span>
-                <select
-                  className="border border-slate-300 rounded px-2 py-1 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
-                  value={entity.analysisMode}
-                  onChange={(e) => updateEntity({ ...entity, analysisMode: e.target.value as 'simple' | 'splits' })}
-                >
-                  <option value="simple">Simple</option>
-                  <option value="splits">Splits</option>
-                </select>
+            <div className="flex items-center justify-between mb-5 py-2 border-b border-gray-200">
+              <div className="text-sm text-slate-700 font-medium">
+                Requirements - {entityLabel}
               </div>
+              <button
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 rounded hover:bg-blue-100 transition-colors"
+                onClick={() => setOptionsOpen(true)}
+              >
+                <Settings size={13} /> Options
+              </button>
             </div>
+
+            {/* Options modal */}
+            {optionsOpen && (
+              <InsuranceOptionsModal
+                selection={sel}
+                onChange={updateInsuranceSelection}
+                onClose={() => setOptionsOpen(false)}
+              />
+            )}
 
             {/* Table */}
             <table className="w-full text-sm border-collapse">
               <thead>
                 <tr className="bg-slate-100 border-b border-slate-300">
                   <th className="text-left px-3 py-2 min-w-[260px]" />
-                  {COL_LABELS.map((label) => (
-                    <th key={label} className="text-right px-3 py-2 text-xs font-bold text-slate-700 whitespace-pre-line min-w-[110px]">
-                      {label}
+                  {visibleCoverFields.map((f) => (
+                    <th key={f} className="text-right px-3 py-2 text-xs font-bold text-slate-700 min-w-[110px]">
+                      {COVER_LABEL[f]}
                     </th>
                   ))}
+                  {showIP && (
+                    <th className="text-right px-3 py-2 text-xs font-bold text-slate-700 whitespace-pre-line min-w-[110px]">
+                      {'Income\nProtection pa'}
+                    </th>
+                  )}
+                  {showBE && (
+                    <th className="text-right px-3 py-2 text-xs font-bold text-slate-700 whitespace-pre-line min-w-[110px]">
+                      {'Business\nExpenses pa'}
+                    </th>
+                  )}
                 </tr>
               </thead>
               <tbody>
                 {/* Capital Requirements */}
                 <tr className="bg-slate-100 border-b border-slate-200">
-                  <td colSpan={6} className="px-3 py-2 text-xs font-bold text-slate-800">
+                  <td colSpan={visibleColCount} className="px-3 py-2 text-xs font-bold text-slate-800">
                     Capital Requirements
                   </td>
                 </tr>
                 {REQ_ROWS.map((row) => (
                   <tr key={row.key} className="border-b border-gray-100 hover:bg-slate-50/50">
                     <td className="px-3 py-1.5 text-xs text-slate-600">{row.label}</td>
-                    {COVER_FIELDS.map((f) => (
+                    {visibleCoverFields.map((f) => (
                       <td key={f} className="px-3 py-1.5 text-right">
                         <CurrencyInput
                           value={entity.capitalRequirements[row.key][f]}
@@ -254,46 +291,50 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
                         />
                       </td>
                     ))}
-                    <td className="px-3 py-1.5" />
-                    <td className="px-3 py-1.5" />
+                    {showIP && <td className="px-3 py-1.5" />}
+                    {showBE && <td className="px-3 py-1.5" />}
                   </tr>
                 ))}
 
                 {/* Total Capital Required */}
                 <tr className="bg-slate-100 border-y border-slate-300">
                   <td className="px-3 py-2 text-xs font-bold text-slate-800">Total Capital Required</td>
-                  {COVER_FIELDS.map((f) => (
+                  {visibleCoverFields.map((f) => (
                     <td key={f} className="px-3 py-2 text-right text-xs font-bold text-slate-800">
                       {fmtCurrency(totalReq[f])}
                     </td>
                   ))}
-                  <td className="px-3 py-2 text-right">
-                    <CurrencyInput
-                      value={entity.incomeProtection}
-                      onChange={(v) => updateEntity({ ...entity, incomeProtection: v })}
-                    />
-                  </td>
-                  <td className="px-3 py-2 text-right">
-                    <CurrencyInput
-                      value={entity.businessExpenses}
-                      onChange={(v) => updateEntity({ ...entity, businessExpenses: v })}
-                    />
-                  </td>
+                  {showIP && (
+                    <td className="px-3 py-2 text-right">
+                      <CurrencyInput
+                        value={entity.incomeProtection}
+                        onChange={(v) => updateEntity({ ...entity, incomeProtection: v })}
+                      />
+                    </td>
+                  )}
+                  {showBE && (
+                    <td className="px-3 py-2 text-right">
+                      <CurrencyInput
+                        value={entity.businessExpenses}
+                        onChange={(v) => updateEntity({ ...entity, businessExpenses: v })}
+                      />
+                    </td>
+                  )}
                 </tr>
 
                 {/* Spacer */}
-                <tr><td colSpan={6} className="py-2" /></tr>
+                <tr><td colSpan={visibleColCount} className="py-2" /></tr>
 
                 {/* Capital Provisions */}
                 <tr className="bg-slate-100 border-b border-slate-200">
-                  <td colSpan={6} className="px-3 py-2 text-xs font-bold text-slate-800">
+                  <td colSpan={visibleColCount} className="px-3 py-2 text-xs font-bold text-slate-800">
                     Capital Provisions
                   </td>
                 </tr>
                 {PROV_ROWS.map((row) => (
                   <tr key={row.key} className="border-b border-gray-100 hover:bg-slate-50/50">
                     <td className="px-3 py-1.5 text-xs text-slate-600">{row.label}</td>
-                    {COVER_FIELDS.map((f) => (
+                    {visibleCoverFields.map((f) => (
                       <td key={f} className="px-3 py-1.5 text-right">
                         <CurrencyInput
                           value={entity.capitalProvisions[row.key][f]}
@@ -301,29 +342,29 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
                         />
                       </td>
                     ))}
-                    <td className="px-3 py-1.5" />
-                    <td className="px-3 py-1.5" />
+                    {showIP && <td className="px-3 py-1.5" />}
+                    {showBE && <td className="px-3 py-1.5" />}
                   </tr>
                 ))}
 
                 {/* Total Capital Available */}
                 <tr className="bg-slate-100 border-y border-slate-300">
                   <td className="px-3 py-2 text-xs font-bold text-slate-800">Total Capital Available</td>
-                  {COVER_FIELDS.map((f) => (
+                  {visibleCoverFields.map((f) => (
                     <td key={f} className="px-3 py-2 text-right text-xs font-bold text-slate-800">
                       {fmtCurrency(totalProv[f])}
                     </td>
                   ))}
-                  <td className="px-3 py-2" />
-                  <td className="px-3 py-2" />
+                  {showIP && <td className="px-3 py-2" />}
+                  {showBE && <td className="px-3 py-2" />}
                 </tr>
 
                 {/* Spacer */}
-                <tr><td colSpan={6} className="py-2" /></tr>
+                <tr><td colSpan={visibleColCount} className="py-2" /></tr>
 
                 {/* Insurance Needs */}
                 <tr className="bg-slate-100 border-b border-slate-200">
-                  <td colSpan={6} className="px-3 py-2 text-xs font-bold text-slate-800">
+                  <td colSpan={visibleColCount} className="px-3 py-2 text-xs font-bold text-slate-800">
                     Insurance Needs
                   </td>
                 </tr>
@@ -337,7 +378,7 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
                 </tr>
 
                 {/* Spacer */}
-                <tr><td colSpan={6} className="py-1" /></tr>
+                <tr><td colSpan={visibleColCount} className="py-1" /></tr>
 
                 {/* Surplus/Shortfall */}
                 <tr className="border-t border-slate-300">
@@ -351,6 +392,68 @@ export function NeedsAnalysisPage({ data, onChange, clientName, partnerName, onB
               </tbody>
             </table>
           </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Insurance Options Modal ──────────────────────────────────────────────
+
+const INSURANCE_OPTIONS: { key: keyof InsuranceSelection; label: string }[] = [
+  { key: 'life', label: 'Life Insurance' },
+  { key: 'tpd', label: 'TPD Insurance' },
+  { key: 'trauma', label: 'Trauma Insurance' },
+  { key: 'incomeProtection', label: 'Income Protection' },
+  { key: 'businessExpense', label: 'Business Expense' },
+];
+
+function InsuranceOptionsModal({
+  selection,
+  onChange,
+  onClose,
+}: {
+  selection: InsuranceSelection;
+  onChange: (patch: Partial<InsuranceSelection>) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30" onClick={onClose}>
+      <div
+        className="bg-white rounded-lg shadow-xl w-[380px] max-h-[80vh] overflow-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-slate-50 rounded-t-lg">
+          <h3 className="text-sm font-bold text-slate-700">Options</h3>
+          <button className="text-slate-400 hover:text-slate-600 text-lg leading-none" onClick={onClose}>
+            &times;
+          </button>
+        </div>
+
+        <div className="px-5 py-4">
+          <h4 className="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">Insurance Selection</h4>
+          <div className="flex flex-col gap-3">
+            {INSURANCE_OPTIONS.map(({ key, label }) => (
+              <label key={key} className="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-400"
+                  checked={selection[key]}
+                  onChange={(e) => onChange({ [key]: e.target.checked })}
+                />
+                <span className="text-sm text-slate-700">{label}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex justify-end px-5 py-3 border-t border-gray-200 bg-slate-50 rounded-b-lg">
+          <button
+            className="px-4 py-1.5 text-xs font-medium text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+            onClick={onClose}
+          >
+            Done
+          </button>
         </div>
       </div>
     </div>
