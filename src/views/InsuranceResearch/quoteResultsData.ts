@@ -36,6 +36,11 @@ export interface PremiumBreakdownItem {
   stampDutyInsideSuper: FreqPremiumMap;
 }
 
+export interface FeatureItem {
+  headingName: string;
+  summaryText: string;
+}
+
 export interface QuoteResultRow {
   id: string;
   quoteIndex: number;
@@ -58,12 +63,15 @@ export interface QuoteResultRow {
   existingCover: boolean;
   recommendation: 'rec' | 'alt' | null;
   commissionLabel?: string;
+  occupationDescription?: string;
   tpdOccClass?: string;
   pdsLink?: string;
   tmdLink?: string;
   policyFee?: number;
   premiumLineItems: PremiumLineItem[];
   premiumBreakdown: PremiumBreakdownItem[];
+  topFeatures: FeatureItem[];
+  bottomFeatures: FeatureItem[];
 }
 
 // ── Premium computation helpers ─────────────────────────────────────────────
@@ -233,11 +241,26 @@ function parsePortfolio(
 
   const commission = (p.commission ?? {}) as Record<string, unknown>;
   const commissionLabel = asStr(commission.label) || asStr(commission.name) || asStr(commission.description) || undefined;
+  const occupation = (p.occupation ?? {}) as Record<string, unknown>;
+  const occupationDescription = asStr(occupation.description) || undefined;
   const tpdOccClass = asStr(p.tpdOccupationClass) || asStr((p.occupationClass ?? {}) as Record<string, unknown>).toString() || undefined;
   const links = (p.links ?? {}) as Record<string, unknown>;
   const pdsLink = ensureUrl(asStr(links.pds)) || undefined;
   const tmdLink = ensureUrl(asStr(links.tmd)) || undefined;
   const policyFee = typeof pt.policyFee === 'number' ? pt.policyFee : undefined;
+
+  function parseFeatures(raw: unknown): FeatureItem[] {
+    if (!Array.isArray(raw)) return [];
+    return raw
+      .filter((f): f is Record<string, unknown> => !!f && typeof f === 'object')
+      .map((f) => ({
+        headingName: asStr(f.headingName),
+        summaryText: asStr(f.summaryText),
+      }))
+      .filter((f) => f.headingName);
+  }
+  const topFeatures = parseFeatures(p.topFeatures);
+  const bottomFeatures = parseFeatures(p.bottomFeatures);
 
   const premiumLineItems: PremiumLineItem[] = [];
   if (Array.isArray(p.products)) {
@@ -287,12 +310,15 @@ function parsePortfolio(
     existingCover: isExistingCover,
     recommendation: null,
     commissionLabel,
+    occupationDescription,
     tpdOccClass: tpdOccClass === '[object Object]' ? undefined : tpdOccClass,
     pdsLink,
     tmdLink,
     policyFee,
     premiumLineItems,
     premiumBreakdown,
+    topFeatures,
+    bottomFeatures,
   };
 }
 

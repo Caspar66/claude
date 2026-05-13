@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   Check,
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   Search,
@@ -10,9 +11,10 @@ import {
   ExternalLink,
   FileText,
   X,
+  XCircle,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { QuoteResults, QuoteResultRow, ExcludedProduct, PremiumBreakdownItem } from './quoteResultsData';
+import type { QuoteResults, QuoteResultRow, ExcludedProduct, PremiumBreakdownItem, FeatureItem } from './quoteResultsData';
 import { computePremiumTotal, computeCumulativePremium, FREQ_ANNUAL_MULTIPLIER } from './quoteResultsData';
 import type { PremiumFrequency } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
@@ -199,6 +201,8 @@ function PremiumBreakdownSummary({
 
 // ── Additional Information panel ─────────────────────────────────────────────
 
+type AdditionalInfoTab = 'summary' | 'strengths';
+
 function AdditionalInfoPanel({
   row,
   superFreq,
@@ -210,11 +214,8 @@ function AdditionalInfoPanel({
   nonSuperFreq: PremiumFrequency;
   onClose: () => void;
 }) {
-  const totalPremium = computePremiumTotal(row, superFreq, nonSuperFreq);
-  const superPrem = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
-  const nonSuperPrem = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
-  const sameFreq = superFreq === nonSuperFreq;
-  const freqLabel = sameFreq ? freqShort(superFreq) : 'pa';
+  const [activeTab, setActiveTab] = useState<AdditionalInfoTab>('summary');
+  const hasFeatures = row.topFeatures.length > 0 || row.bottomFeatures.length > 0;
 
   return (
     <div className="w-[320px] border-l border-gray-200 bg-white flex flex-col shrink-0 overflow-hidden">
@@ -244,6 +245,12 @@ function AdditionalInfoPanel({
               <span className="text-slate-800 font-medium">{row.commissionLabel}</span>
             </div>
           )}
+          {row.occupationDescription && (
+            <div className="flex items-start gap-2">
+              <span className="text-slate-500 shrink-0 w-28">Occupation</span>
+              <span className="text-slate-800 font-medium">{row.occupationDescription}</span>
+            </div>
+          )}
           {row.pdsLink && (
             <div className="flex items-start gap-2">
               <span className="text-slate-500 shrink-0 w-28">Product Summary</span>
@@ -258,16 +265,71 @@ function AdditionalInfoPanel({
           )}
         </div>
 
-        {/* Summary */}
-        <div className="px-4 py-3">
-          <div className="text-xs font-semibold text-slate-800 mb-3">Summary</div>
-
-          <PremiumBreakdownSummary
-            row={row}
-            superFreq={superFreq}
-            nonSuperFreq={nonSuperFreq}
-          />
+        {/* Tabs */}
+        <div className="flex items-center gap-4 px-4 border-b border-gray-200">
+          <button
+            className={`text-xs font-semibold py-2 border-b-2 transition-colors ${activeTab === 'summary' ? 'text-slate-800 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+            onClick={() => setActiveTab('summary')}
+          >
+            Summary
+          </button>
+          {hasFeatures && (
+            <button
+              className={`text-xs font-semibold py-2 border-b-2 transition-colors ${activeTab === 'strengths' ? 'text-slate-800 border-indigo-600' : 'text-slate-400 border-transparent hover:text-slate-600'}`}
+              onClick={() => setActiveTab('strengths')}
+            >
+              Strengths / Limitations
+            </button>
+          )}
         </div>
+
+        {/* Tab content */}
+        {activeTab === 'summary' && (
+          <div className="px-4 py-3">
+            <PremiumBreakdownSummary
+              row={row}
+              superFreq={superFreq}
+              nonSuperFreq={nonSuperFreq}
+            />
+          </div>
+        )}
+
+        {activeTab === 'strengths' && hasFeatures && (
+          <div className="px-4 py-3 space-y-4">
+            {row.topFeatures.length > 0 && (
+              <div>
+                <h4 className="text-sm font-bold text-slate-700 mb-2">Strengths</h4>
+                <div className="space-y-2">
+                  {row.topFeatures.map((f, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <CheckCircle2 size={16} className="text-teal-600 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-700">{f.headingName} </span>
+                        <span className="text-xs text-slate-500">{f.summaryText}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {row.bottomFeatures.length > 0 && (
+              <div>
+                <h4 className="text-sm font-bold text-slate-700 mb-2">Limitations</h4>
+                <div className="space-y-2">
+                  {row.bottomFeatures.map((f, i) => (
+                    <div key={i} className="flex items-start gap-2">
+                      <XCircle size={16} className="text-slate-400 shrink-0 mt-0.5" />
+                      <div className="min-w-0">
+                        <span className="text-xs font-bold text-slate-700">{f.headingName} </span>
+                        <span className="text-xs text-slate-500">{f.summaryText}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
