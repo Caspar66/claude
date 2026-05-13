@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, ChevronDown, ArrowLeft, Settings, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
@@ -53,6 +53,7 @@ import { NeedsEditor } from './NeedsEditor';
 import { buildPortfolioRequest, PORTFOLIO_QUERY_PARAMS } from './portfolioRequest';
 import { postQuotePortfolio } from '@/services/omnilifeApi';
 import { useOccupations } from '@/hooks/useOccupations';
+import { useSuppliers } from '@/hooks/useSuppliers';
 import { ScenarioSettingsModal, getDefaultScenarioSettings } from './ScenarioSettingsModal';
 import type { ScenarioSettings } from './ScenarioSettingsModal';
 import { NeedsAnalysisPage, getDefaultNeedsAnalysis, computeShortfalls } from './NeedsAnalysisPage';
@@ -232,6 +233,19 @@ export function InsuranceComparisonDialog({
   const [needsAnalysis, setNeedsAnalysis] = useState<NeedsAnalysisData>(getDefaultNeedsAnalysis());
 
   const { options: occupations } = useOccupations();
+  const { suppliers } = useSuppliers();
+
+  useEffect(() => {
+    if (suppliers.length === 0) return;
+    if (Object.keys(scenarioSettings.commissionBySupplier).length > 0) return;
+    const seed: Record<string, string> = {};
+    for (const s of suppliers) {
+      if (s.defaultCommissionCode) seed[s.code] = s.defaultCommissionCode;
+    }
+    if (Object.keys(seed).length > 0) {
+      setScenarioSettings((prev) => ({ ...prev, commissionBySupplier: seed }));
+    }
+  }, [suppliers]);
 
   const showPartner = caseType === 'Client & Partner';
 
