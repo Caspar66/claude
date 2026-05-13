@@ -1,55 +1,96 @@
 import { SquarePen, RefreshCw } from 'lucide-react';
-import type { NeedsQuote, Need, TrmFields, TrsFields, QuoteFrequency } from './needsTypes';
-import { getNeedCode, NEED_CODE_LABELS, LINKED_NEED_LABELS } from './needsTypes';
+import type { NeedsQuote, Need, TrmFields, TrsFields, TpeFields, TreFields, TprFields, IncFields, BusFields, QuoteFrequency, FieldValue } from './needsTypes';
+import { getNeedCode, NEED_CODE_LABELS, STRUCTURE_4_LABELS, STRUCTURE_3_LABELS, WAITING_INC_LABELS, WAITING_BUS_LABELS, BENEFIT_INC_LABELS } from './needsTypes';
 import type { ClientFormData } from './insuranceData';
 
 const FREQ_LABEL: Record<QuoteFrequency, string> = {
   Y: 'Yearly', H: 'Half Yearly', Q: 'Quarterly', M: 'Monthly', F: 'Fortnightly', W: 'Weekly',
 };
 
-interface Props {
-  clientData: ClientFormData;
-  partnerData: ClientFormData | null;
-  activeClient: 'client' | 'partner';
-  quotes: NeedsQuote[];
-  activeQuoteIndex: number | null;
-  onSelectQuote: (index: number | null) => void;
-  onEditQuote?: (id: string) => void;
-  quoteGeneratedDates?: Record<string, string>;
-  onRequote?: (quoteId: string) => void;
-  requotingQuoteId?: string | null;
+function firstVal<T extends string>(v: FieldValue<T>): T {
+  return Array.isArray(v) ? v[0] : v;
 }
 
-function needDescription(need: Need): string {
-  const code = getNeedCode(need);
-  const label = NEED_CODE_LABELS[code];
-  if (code === 'TRM') {
-    const trm = (need as { TRM: TrmFields }).TRM;
-    const linked = trm.linkedNeeds.map((ln) => {
-      if ('TPE' in ln) return LINKED_NEED_LABELS.TPE;
-      if ('TRE' in ln) return LINKED_NEED_LABELS.TRE;
-      return '';
-    }).filter(Boolean);
-    return linked.length > 0 ? `${label} + ${linked.join(', ')}` : label;
-  }
-  if (code === 'TRS') {
-    const trs = (need as { TRS: TrsFields }).TRS;
-    const linked = trs.linkedNeeds.map((ln) => ('TPR' in ln ? LINKED_NEED_LABELS.TPR : '')).filter(Boolean);
-    return linked.length > 0 ? `${label} + ${linked.join(', ')}` : label;
-  }
-  return label;
+function structLabel4(s: FieldValue<string>): string {
+  const v = firstVal(s);
+  return STRUCTURE_4_LABELS[v as keyof typeof STRUCTURE_4_LABELS] ?? v;
 }
 
-function needSumInsured(need: Need): string | null {
+function structLabel3(s: FieldValue<string>): string {
+  const v = firstVal(s);
+  return STRUCTURE_3_LABELS[v as keyof typeof STRUCTURE_3_LABELS] ?? v;
+}
+
+interface NeedLine {
+  label: string;
+  value: string | null;
+}
+
+function needLines(need: Need): NeedLine[] {
   const code = getNeedCode(need);
   const fields = Object.values(need)[0] as Record<string, unknown>;
-  if (code === 'INC' || code === 'BUS') {
-    const v = fields.monthlyBenefit as number | undefined;
-    return typeof v === 'number' && v > 0 ? `$${v.toLocaleString('en-AU')}/mo` : null;
+  const lines: NeedLine[] = [];
+
+  if (code === 'TRM') {
+    const trm = (need as { TRM: TrmFields }).TRM;
+    const struct = structLabel4(trm.structure);
+    lines.push({ label: `Life / ${struct}`, value: `$${trm.sumInsured.toLocaleString('en-AU')}` });
+    for (const ln of trm.linkedNeeds) {
+      if ('TPE' in ln) {
+        const tpe = ln.TPE;
+        lines.push({ label: `TPD Linked / ${structLabel4(tpe.structure)}`, value: `$${tpe.sumInsured.toLocaleString('en-AU')}` });
+      }
+      if ('TRE' in ln) {
+        const tre = ln.TRE;
+        lines.push({ label: `Trauma Linked / ${structLabel4(tre.structure)}`, value: `$${tre.sumInsured.toLocaleString('en-AU')}` });
+      }
+    }
+    return lines;
   }
-  if (code === 'CHT') return null;
-  const v = fields.sumInsured as number | undefined;
-  return typeof v === 'number' && v > 0 ? `$${v.toLocaleString('en-AU')}` : null;
+
+  if (code === 'TRS') {
+    const trs = (need as { TRS: TrsFields }).TRS;
+    const struct = structLabel4(trs.structure);
+    lines.push({ label: `Trauma Standalone / ${struct}`, value: `$${trs.sumInsured.toLocaleString('en-AU')}` });
+    for (const ln of trs.linkedNeeds) {
+      if ('TPR' in ln) {
+        const tpr = ln.TPR;
+        lines.push({ label: `TPD Linked / ${structLabel4(tpr.structure)}`, value: `$${tpr.sumInsured.toLocaleString('en-AU')}` });
+      }
+    }
+    return lines;
+  }
+
+  if (code === 'INC') {
+    const inc = fields as unknown as IncFields;
+    const struct = structLabel3(inc.structure);
+    const wp = inc.waitingPeriod === '?' ? '?' : (WAITING_INC_LABELS[firstVal(inc.waitingPeriod) as keyof typeof WAITING_INC_LABELS] ?? firstVal(inc.waitingPeriod));
+    const bp = inc.benefitPeriod === '?' ? '?' : (BENEFIT_INC_LABELS[firstVal(inc.benefitPeriod) as keyof typeof BENEFIT_INC_LABELS] ?? firstVal(inc.benefitPeriod));
+    const val = inc.monthlyBenefit > 0 ? `$${inc.monthlyBenefit.toLocaleString('en-AU')}/mo` : null;
+    lines.push({ label: `IP / ${struct} / WP ${wp} / BP ${bp}`, value: val });
+    return lines;
+  }
+
+  if (code === 'BUS') {
+    const bus = fields as unknown as BusFields;
+    const struct = structLabel3(bus.structure);
+    const wp = WAITING_BUS_LABELS[firstVal(bus.waitingPeriod) as keyof typeof WAITING_BUS_LABELS] ?? firstVal(bus.waitingPeriod);
+    const val = bus.monthlyBenefit > 0 ? `$${bus.monthlyBenefit.toLocaleString('en-AU')}/mo` : null;
+    lines.push({ label: `BE / ${struct} / WP ${wp}`, value: val });
+    return lines;
+  }
+
+  if (code === 'TPS') {
+    const struct = structLabel4(fields.structure as FieldValue<string>);
+    const si = fields.sumInsured as number;
+    lines.push({ label: `TPD Standalone / ${struct}`, value: si > 0 ? `$${si.toLocaleString('en-AU')}` : null });
+    return lines;
+  }
+
+  const label = NEED_CODE_LABELS[code] ?? code;
+  const si = fields.sumInsured as number | undefined;
+  lines.push({ label, value: si && si > 0 ? `$${si.toLocaleString('en-AU')}` : null });
+  return lines;
 }
 
 function clientLabelFor(
@@ -60,6 +101,19 @@ function clientLabelFor(
   const d = who === 'client' ? clientData : partnerData;
   if (!d) return who === 'client' ? 'Client' : 'Partner';
   return `${d.firstName} ${d.lastName}`.trim() || (who === 'client' ? 'Client' : 'Partner');
+}
+
+interface Props {
+  clientData: ClientFormData;
+  partnerData: ClientFormData | null;
+  activeClient: 'client' | 'partner';
+  quotes: NeedsQuote[];
+  activeQuoteIndex: number | null;
+  onSelectQuote: (index: number | null) => void;
+  onEditQuote?: (quoteId: string) => void;
+  quoteGeneratedDates?: Record<string, string>;
+  onRequote?: (quoteId: string) => void;
+  requotingQuoteId?: string | null;
 }
 
 export function ClientQuoteTabsPanel({
@@ -147,15 +201,14 @@ export function ClientQuoteTabsPanel({
                 {q.needs.length === 0 ? (
                   <div className="text-xs text-slate-400 py-1">No needs configured</div>
                 ) : (
-                  q.needs.map((n, nIdx) => {
-                    const sum = needSumInsured(n);
-                    return (
-                      <div key={nIdx} className="flex items-center justify-between py-0.5 text-xs">
-                        <span className="text-slate-700">{needDescription(n)}</span>
-                        {sum && <span className="text-slate-800 font-medium">{sum}</span>}
+                  q.needs.flatMap((n, nIdx) =>
+                    needLines(n).map((line, lIdx) => (
+                      <div key={`${nIdx}-${lIdx}`} className="flex items-center justify-between py-0.5 text-xs">
+                        <span className="text-slate-700">{line.label}</span>
+                        {line.value && <span className="text-slate-800 font-medium">{line.value}</span>}
                       </div>
-                    );
-                  })
+                    ))
+                  )
                 )}
                 {/* Premium frequency settings */}
                 <div className="mt-1.5 pt-1.5 border-t border-gray-100 flex gap-3 text-[10px] text-slate-500">
