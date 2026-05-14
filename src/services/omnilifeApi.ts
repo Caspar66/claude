@@ -489,3 +489,49 @@ export async function fetchSuppliers(): Promise<Supplier[]> {
     .map(normaliseSupplier)
     .filter((s): s is Supplier => s !== null);
 }
+
+// ── Supplier Occupation Search ────────────────────────────────────────────
+
+export interface SupplierOccupation {
+  supplierCode: string;
+  id: string;
+  description: string;
+  classTRM: string;
+  classTPDAny: string;
+  classTPDOwn: string;
+  classTPDADL: string;
+  classTRA: string;
+  classINC: string;
+  classBUS: string;
+}
+
+export async function searchSupplierOccupations(
+  supplierCode: string,
+  searchText: string,
+): Promise<SupplierOccupation[]> {
+  const params = new URLSearchParams({ searchText });
+  const res = await fetch(`/api/supplier-occupations/${supplierCode}/occupations?${params.toString()}`, {
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`OmniLife /suppliers/${supplierCode}/occupations returned ${res.status}`);
+  }
+
+  const payload: unknown = await res.json();
+  if (!Array.isArray(payload)) return [];
+  return payload
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((item) => ({
+      supplierCode: String(item.supplierCode ?? supplierCode),
+      id: String(item.id ?? ''),
+      description: String(item.description ?? ''),
+      classTRM: String(item.classTRM ?? ''),
+      classTPDAny: String(item.classTPDAny ?? ''),
+      classTPDOwn: String(item.classTPDOwn ?? ''),
+      classTPDADL: String(item.classTPDADL ?? ''),
+      classTRA: String(item.classTRA ?? ''),
+      classINC: String(item.classINC ?? ''),
+      classBUS: String(item.classBUS ?? ''),
+    }));
+}

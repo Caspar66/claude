@@ -80,6 +80,15 @@ export default defineConfig(({ mode }) => {
             });
           },
         },
+        '/api/supplier-occupations/': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => p.replace('/api/supplier-occupations/', '/suppliers/'),
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         '/api/suppliers': {
           target: target + '/suppliers',
           changeOrigin: true,

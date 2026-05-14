@@ -221,6 +221,7 @@ export function InsuranceComparisonDialog({
   // Per-quote generated dates (keyed by quote id)
   const [quoteGeneratedDates, setQuoteGeneratedDates] = useState<Record<string, string>>({});
   const [requotingQuoteId, setRequotingQuoteId] = useState<string | null>(null);
+  const [requotingOccupation, setRequotingOccupation] = useState(false);
 
   // Editing a quote from the results page
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
@@ -483,6 +484,65 @@ export function InsuranceComparisonDialog({
       setPortfolioError(msg);
     } finally {
       setRequotingQuoteId(null);
+    }
+  }
+
+  async function handleRequoteWithOccupation(quoteIndex: number, supplierCode: string, occupationId: string) {
+    const quote = coverQuotes[quoteIndex];
+    if (!quote) return;
+
+    setRequotingOccupation(true);
+    try {
+      const data = quote.lifeInsured === 'partner' && showPartner ? partnerData : clientData;
+      const body = buildPortfolioRequest({
+        clientData: data,
+        partnerData: null,
+        quotes: [quote],
+        policies,
+        occupations,
+        scenarioSettings,
+      });
+      const client = (body.clients as Record<string, unknown>[])[0];
+      client.customOccupations = { [supplierCode]: occupationId };
+      setLastQuoteRequestBody((prev) => {
+        const next = { ...prev };
+        if (Array.isArray(next.clients)) {
+          const clients = [...(next.clients as unknown[])];
+          clients[quoteIndex] = client;
+          next.clients = clients;
+        }
+        return next;
+      });
+      const res = await postQuotePortfolio(body, buildPortfolioQueryParams(quote));
+      console.info('[OmniLife] /quote/portfolio requote (custom occ) response:', res.raw);
+      const parsed = parsePortfolioResponse(res.raw);
+      setQuoteResults((prev) => {
+        const oldRows = prev.rows.filter((r) => r.quoteIndex === quoteIndex);
+        const recMap = new Map<string, 'rec' | 'alt'>();
+        const selMap = new Map<string, boolean>();
+        for (const r of oldRows) {
+          if (r.recommendation) recMap.set(r.portfolioCode, r.recommendation);
+          if (r.selected) selMap.set(r.portfolioCode, true);
+        }
+        const kept = prev.rows.filter((r) => r.quoteIndex !== quoteIndex);
+        const keptExcl = prev.excluded.filter((e) => e.quoteIndex !== quoteIndex);
+        const newRows = parsed.rows.map((r) => ({
+          ...r,
+          quoteIndex,
+          recommendation: recMap.get(r.portfolioCode) ?? null,
+          selected: selMap.get(r.portfolioCode) ?? false,
+        }));
+        const newExcl = parsed.excluded.map((e) => ({ ...e, quoteIndex }));
+        return { rows: [...kept, ...newRows], excluded: [...keptExcl, ...newExcl], populated: true };
+      });
+      const now = new Date();
+      const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+      setQuoteGeneratedDates((prev) => ({ ...prev, [quote.id]: dateStr }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setPortfolioError(msg);
+    } finally {
+      setRequotingOccupation(false);
     }
   }
 
@@ -754,6 +814,8 @@ export function InsuranceComparisonDialog({
                   onSetRecommendation={handleSetRecommendation}
                   onCompareProducts={handleCompareProducts}
                   onViewCompareFeatures={handleViewCompareFeatures}
+                  onRequoteWithOccupation={handleRequoteWithOccupation}
+                  requotingOccupation={requotingOccupation}
                 />
               </div>
 

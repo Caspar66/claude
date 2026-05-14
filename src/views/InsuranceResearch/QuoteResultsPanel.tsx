@@ -18,6 +18,7 @@ import { postQuoteValidation } from '@/services/omnilifeApi';
 import type { PremiumFrequency } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { ExclusionReasonsModal } from './ExclusionReasonsModal';
+import { OccupationDetailsModal } from './OccupationDetailsModal';
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -222,6 +223,8 @@ function AdditionalInfoPanel({
   quoteRequestBody,
   onClose,
   onValidated,
+  onRequoteWithOccupation,
+  requotingOccupation,
 }: {
   row: QuoteResultRow;
   superFreq: PremiumFrequency;
@@ -229,10 +232,13 @@ function AdditionalInfoPanel({
   quoteRequestBody: Record<string, unknown>;
   onClose: () => void;
   onValidated: (rowId: string, matched: boolean) => void;
+  onRequoteWithOccupation: (quoteIndex: number, supplierCode: string, occupationId: string) => void;
+  requotingOccupation: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<AdditionalInfoTab>('summary');
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ matched: boolean; omnium: number; supplier: number } | null>(null);
+  const [showOccModal, setShowOccModal] = useState(false);
   const hasFeatures = row.topFeatures.length > 0 || row.bottomFeatures.length > 0;
   const hasLinks = !!row.pdsLink || !!row.tmdLink;
 
@@ -311,8 +317,24 @@ function AdditionalInfoPanel({
           {row.occupationDescription && (
             <div className="flex items-start gap-2">
               <span className="text-slate-500 shrink-0 w-28">Occupation</span>
-              <span className="text-slate-800 font-medium">{row.occupationDescription}</span>
+              <button
+                className="text-teal-700 font-medium hover:text-teal-800 underline underline-offset-2 text-left"
+                onClick={() => setShowOccModal(true)}
+              >
+                {row.occupationDescription}
+              </button>
             </div>
+          )}
+          {showOccModal && (
+            <OccupationDetailsModal
+              supplierName={row.supplierName}
+              supplierCode={row.supplierCode}
+              occupationDescription={row.occupationDescription}
+              occupationClasses={row.occupationClasses}
+              onRequoteWithOccupation={(sc, occId) => onRequoteWithOccupation(row.quoteIndex, sc, occId)}
+              requoting={requotingOccupation}
+              onClose={() => setShowOccModal(false)}
+            />
           )}
           {row.tpdOccClass && (
             <div className="flex items-start gap-2">
@@ -541,9 +563,11 @@ interface Props {
   onSetRecommendation: (id: string, value: 'rec' | 'alt' | null) => void;
   onCompareProducts: () => void;
   onViewCompareFeatures: () => void;
+  onRequoteWithOccupation: (quoteIndex: number, supplierCode: string, occupationId: string) => void;
+  requotingOccupation: boolean;
 }
 
-export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, quoteRequestBody, onToggleSelect, onSetRecommendation, onCompareProducts, onViewCompareFeatures }: Props) {
+export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, quoteRequestBody, onToggleSelect, onSetRecommendation, onCompareProducts, onViewCompareFeatures, onRequoteWithOccupation, requotingOccupation }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('premium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -815,6 +839,8 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
           quoteRequestBody={quoteRequestBody}
           onClose={() => setSelectedRowId(null)}
           onValidated={(rowId, matched) => setValidatedRows((prev) => ({ ...prev, [rowId]: matched }))}
+          onRequoteWithOccupation={onRequoteWithOccupation}
+          requotingOccupation={requotingOccupation}
         />
       )}
     </div>

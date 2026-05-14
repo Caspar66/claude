@@ -41,6 +41,16 @@ export interface FeatureItem {
   summaryText: string;
 }
 
+export interface OccupationClasses {
+  life?: string;
+  trauma?: string;
+  tpdADL?: string;
+  tpdAny?: string;
+  tpdOwn?: string;
+  ip?: string;
+  be?: string;
+}
+
 export interface QuoteResultRow {
   id: string;
   quoteIndex: number;
@@ -70,6 +80,7 @@ export interface QuoteResultRow {
   commissionOngoingAnnualised?: number;
   commissionOngoing: FreqPremiumMap;
   occupationDescription?: string;
+  occupationClasses: OccupationClasses;
   tpdOccClass?: string;
   pdsLink?: string;
   tmdLink?: string;
@@ -262,7 +273,17 @@ function parsePortfolio(
   const commissionOngoing = asFreqMap(pt.commissionOngoing);
   const occupation = (p.occupation ?? {}) as Record<string, unknown>;
   const occupationDescription = asStr(occupation.description) || undefined;
-  const tpdOccClass = asStr(p.tpdOccupationClass) || asStr((p.occupationClass ?? {}) as Record<string, unknown>).toString() || undefined;
+  const tpdOccClass = asStr(p.tpdOccupationClass) || undefined;
+  const occClasses = (p.occupationClass ?? {}) as Record<string, unknown>;
+  const occupationClasses: OccupationClasses = {
+    life: asStr(occClasses.classTRM) || undefined,
+    trauma: asStr(occClasses.classTRA) || undefined,
+    tpdADL: asStr(occClasses.classTPDADL) || undefined,
+    tpdAny: asStr(occClasses.classTPDAny) || undefined,
+    tpdOwn: asStr(occClasses.classTPDOwn) || undefined,
+    ip: asStr(occClasses.classINC) || undefined,
+    be: asStr(occClasses.classBUS) || undefined,
+  };
   const links = (p.links ?? {}) as Record<string, unknown>;
   const pdsLink = ensureUrl(asStr(links.pds)) || undefined;
   const tmdLink = ensureUrl(asStr(links.tmd)) || undefined;
@@ -350,7 +371,8 @@ function parsePortfolio(
     commissionOngoingAnnualised,
     commissionOngoing,
     occupationDescription,
-    tpdOccClass: tpdOccClass === '[object Object]' ? undefined : tpdOccClass,
+    occupationClasses,
+    tpdOccClass,
     pdsLink,
     tmdLink,
     policyFee,
