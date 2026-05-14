@@ -312,9 +312,9 @@ function AdditionalInfoPanel({
             const upfrontPct = row.commissionUpfrontPercent[nonSuperFreq];
             const ongoingPct = row.commissionOngoingPercent[nonSuperFreq];
             const upfrontAnn = row.commissionUpfrontAnnualised
-              ?? ((row.commissionUpfront[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined;
+              ?? (((row.commissionUpfront[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined);
             const ongoingAnn = row.commissionOngoingAnnualised
-              ?? ((row.commissionOngoing[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined;
+              ?? (((row.commissionOngoing[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined);
             const hasData = row.commissionLabel || upfrontPct != null || ongoingPct != null;
             if (!hasData) return null;
             return (
