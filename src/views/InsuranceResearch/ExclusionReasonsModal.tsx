@@ -26,7 +26,12 @@ export function ExclusionReasonsModal({ product, quoteRequestBody, onClose }: Pr
       try {
         setLoading(true);
         setError(null);
-        const raw = await postProductOptions(product.portfolioCode, quoteRequestBody);
+        const allClients = quoteRequestBody.clients as unknown[];
+        const singleClientBody = {
+          ...quoteRequestBody,
+          clients: allClients ? [allClients[product.quoteIndex] ?? allClients[0]] : [],
+        };
+        const raw = await postProductOptions(product.portfolioCode, singleClientBody);
         if (cancelled) return;
         const parsed = parseProductOptionsResponse(raw);
         setProductOptions(parsed);
