@@ -85,7 +85,7 @@ export function computePremiumTotal(
   const superPrem = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
   const nonSuperPrem = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
 
-  if (superFreq === nonSuperFreq) {
+  if (superFreq === nonSuperFreq || superPrem === 0 || nonSuperPrem === 0) {
     return superPrem + nonSuperPrem;
   }
   return superPrem * FREQ_ANNUAL_MULTIPLIER[superFreq]

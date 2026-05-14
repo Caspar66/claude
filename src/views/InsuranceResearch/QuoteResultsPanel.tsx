@@ -89,7 +89,12 @@ function PremiumBreakdownSummary({
     const fallbackNonSuper = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
     const fallbackSuper = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
     const fallbackTotal = computePremiumTotal(row, superFreq, nonSuperFreq);
-    const fallbackFreqLabel = superFreq === nonSuperFreq ? FREQ_LABEL[superFreq] : 'Annualised';
+    const fallbackHasBoth = fallbackSuper !== 0 && fallbackNonSuper !== 0;
+    const fallbackFreqLabel = superFreq === nonSuperFreq
+      ? FREQ_LABEL[superFreq]
+      : fallbackHasBoth
+        ? 'Annualised'
+        : FREQ_LABEL[fallbackNonSuper !== 0 ? nonSuperFreq : superFreq];
     return (
       <>
         {row.premiumLineItems.map((item, i) => (
@@ -808,9 +813,14 @@ function ResultRow({
 }) {
   const totalPremium = computePremiumTotal(row, superFreq, nonSuperFreq);
   const cumulativePremium = computeCumulativePremium(row, superFreq, nonSuperFreq);
-  const sameFreq = superFreq === nonSuperFreq;
   const superPrem = (row.premiumInsideSuper[superFreq] ?? 0) + (row.stampDutyInsideSuper[superFreq] ?? 0);
   const nonSuperPrem = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) + (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
+  const hasBothSides = superPrem !== 0 && nonSuperPrem !== 0;
+  const effectiveFreqLabel = superFreq === nonSuperFreq
+    ? freqShort(superFreq)
+    : hasBothSides
+      ? 'Annualised'
+      : freqShort(nonSuperPrem !== 0 ? nonSuperFreq : superFreq);
 
   return (
     <>
@@ -855,14 +865,14 @@ function ResultRow({
             {fmt(totalPremium)}
           </div>
           <div className="text-[10px] text-slate-400">
-            {sameFreq ? freqShort(superFreq) : 'Annualised'}
+            {effectiveFreqLabel}
           </div>
-          {superPrem !== 0 && (
+          {hasBothSides && superPrem !== 0 && (
             <div className="text-[10px] text-slate-500 mt-0.5">
               Super ({freqShort(superFreq)}) {fmt(superPrem)}
             </div>
           )}
-          {nonSuperPrem !== 0 && (
+          {hasBothSides && nonSuperPrem !== 0 && (
             <div className="text-[10px] text-slate-500">
               Non Super ({freqShort(nonSuperFreq)}) {fmt(nonSuperPrem)}
             </div>
