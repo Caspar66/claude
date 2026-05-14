@@ -867,12 +867,12 @@ function ResultRow({
           <div className="text-[10px] text-slate-400">
             {effectiveFreqLabel}
           </div>
-          {hasBothSides && superPrem !== 0 && (
+          {superPrem !== 0 && (
             <div className="text-[10px] text-slate-500 mt-0.5">
               Super ({freqShort(superFreq)}) {fmt(superPrem)}
             </div>
           )}
-          {hasBothSides && nonSuperPrem !== 0 && (
+          {nonSuperPrem !== 0 && (
             <div className="text-[10px] text-slate-500">
               Non Super ({freqShort(nonSuperFreq)}) {fmt(nonSuperPrem)}
             </div>
