@@ -63,8 +63,12 @@ export interface QuoteResultRow {
   existingCover: boolean;
   recommendation: 'rec' | 'alt' | null;
   commissionLabel?: string;
-  commissionUpfront?: string;
-  commissionOngoing?: string;
+  commissionUpfrontPercent: FreqPremiumMap;
+  commissionUpfrontAnnualised?: number;
+  commissionUpfront: FreqPremiumMap;
+  commissionOngoingPercent: FreqPremiumMap;
+  commissionOngoingAnnualised?: number;
+  commissionOngoing: FreqPremiumMap;
   occupationDescription?: string;
   tpdOccClass?: string;
   pdsLink?: string;
@@ -242,12 +246,20 @@ function parsePortfolio(
   const featureObj = (score.feature ?? {}) as Record<string, unknown>;
   const combinedObj = (score.combined ?? {}) as Record<string, unknown>;
 
-  const commissionObj = (typeof p.commission === 'object' && p.commission !== null ? p.commission : {}) as Record<string, unknown>;
-  const commissionLabel = typeof p.commission === 'string'
-    ? p.commission || undefined
-    : asStr(commissionObj.label) || asStr(commissionObj.name) || asStr(commissionObj.description) || undefined;
-  const commissionUpfront = asStr(p.commissionUpfront) || asStr(commissionObj.upfront) || undefined;
-  const commissionOngoing = asStr(p.commissionOngoing) || asStr(commissionObj.ongoing) || undefined;
+  const commissionRaw = p.commission;
+  const commissionLabel = typeof commissionRaw === 'string'
+    ? commissionRaw || undefined
+    : (() => {
+        const c = (commissionRaw ?? {}) as Record<string, unknown>;
+        return asStr(c.label) || asStr(c.name) || asStr(c.description) || undefined;
+      })();
+
+  const commissionUpfrontPercent = asFreqMap(pt.commissionUpfrontPercent);
+  const commissionUpfrontAnnualised = typeof pt.commissionUpfrontAnnualised === 'number' ? pt.commissionUpfrontAnnualised : undefined;
+  const commissionUpfront = asFreqMap(pt.commissionUpfront);
+  const commissionOngoingPercent = asFreqMap(pt.commissionOngoingPercent);
+  const commissionOngoingAnnualised = typeof pt.commissionOngoingAnnualised === 'number' ? pt.commissionOngoingAnnualised : undefined;
+  const commissionOngoing = asFreqMap(pt.commissionOngoing);
   const occupation = (p.occupation ?? {}) as Record<string, unknown>;
   const occupationDescription = asStr(occupation.description) || undefined;
   const tpdOccClass = asStr(p.tpdOccupationClass) || asStr((p.occupationClass ?? {}) as Record<string, unknown>).toString() || undefined;
@@ -331,7 +343,11 @@ function parsePortfolio(
     existingCover: isExistingCover,
     recommendation: null,
     commissionLabel,
+    commissionUpfrontPercent,
+    commissionUpfrontAnnualised,
     commissionUpfront,
+    commissionOngoingPercent,
+    commissionOngoingAnnualised,
     commissionOngoing,
     occupationDescription,
     tpdOccClass: tpdOccClass === '[object Object]' ? undefined : tpdOccClass,
