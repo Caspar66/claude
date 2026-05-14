@@ -308,45 +308,6 @@ function AdditionalInfoPanel({
 
         {/* Details */}
         <div className="px-4 py-3 space-y-2.5 border-b border-gray-200 text-xs">
-          {(() => {
-            const upfrontPct = row.commissionUpfrontPercent[nonSuperFreq];
-            const ongoingPct = row.commissionOngoingPercent[nonSuperFreq];
-            const upfrontAnn = row.commissionUpfrontAnnualised
-              ?? (((row.commissionUpfront[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined);
-            const ongoingAnn = row.commissionOngoingAnnualised
-              ?? (((row.commissionOngoing[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined);
-            const hasData = row.commissionLabel || upfrontPct != null || ongoingPct != null;
-            if (!hasData) return null;
-            return (
-              <div>
-                <table className="w-full text-xs">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-1 text-left text-slate-700 font-bold w-24">Commissions</th>
-                      <th className="py-1 text-right text-slate-700 font-medium">{row.commissionLabel ?? ''}</th>
-                      <th className="py-1 text-right text-slate-700 font-medium">Annualised</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {(upfrontPct != null || upfrontAnn != null) && (
-                      <tr>
-                        <td className="py-1 text-slate-500">Upfront:</td>
-                        <td className="py-1 text-right text-slate-800 font-medium">{upfrontPct != null ? `${Math.round(upfrontPct)}%` : ''}</td>
-                        <td className="py-1 text-right text-slate-800 font-medium">{upfrontAnn != null ? fmt(upfrontAnn) : ''}</td>
-                      </tr>
-                    )}
-                    {(ongoingPct != null || ongoingAnn != null) && (
-                      <tr>
-                        <td className="py-1 text-slate-500">Ongoing:</td>
-                        <td className="py-1 text-right text-slate-800 font-medium">{ongoingPct != null ? `${Math.round(ongoingPct)}%` : ''}</td>
-                        <td className="py-1 text-right text-slate-800 font-medium">{ongoingAnn != null ? fmt(ongoingAnn) : ''}</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            );
-          })()}
           {row.occupationDescription && (
             <div className="flex items-start gap-2">
               <span className="text-slate-500 shrink-0 w-28">Occupation</span>
@@ -405,6 +366,43 @@ function AdditionalInfoPanel({
                 {validating ? 'Validating…' : 'Validate Premium'}
               </button>
             )}
+            {(() => {
+              const upfrontPct = row.commissionUpfrontPercent[nonSuperFreq];
+              const ongoingPct = row.commissionOngoingPercent[nonSuperFreq];
+              const upfrontAnn = row.commissionUpfrontAnnualised
+                ?? (((row.commissionUpfront[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined);
+              const ongoingAnn = row.commissionOngoingAnnualised
+                ?? (((row.commissionOngoing[nonSuperFreq] ?? 0) * FREQ_ANNUAL_MULTIPLIER[nonSuperFreq]) || undefined);
+              const hasData = row.commissionLabel || upfrontPct != null || ongoingPct != null;
+              if (!hasData) return null;
+              return (
+                <table className="w-full text-xs mt-3">
+                  <thead>
+                    <tr className="border-b border-gray-200">
+                      <th className="py-1 text-left text-slate-700 font-bold w-24">Commissions</th>
+                      <th className="py-1 text-right text-slate-700 font-medium">{row.commissionLabel ?? ''}</th>
+                      <th className="py-1 text-right text-slate-700 font-medium">Annualised</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {(upfrontPct != null || upfrontAnn != null) && (
+                      <tr>
+                        <td className="py-1 text-slate-500">Upfront:</td>
+                        <td className="py-1 text-right text-slate-800 font-medium">{upfrontPct != null ? `${Math.round(upfrontPct)}%` : ''}</td>
+                        <td className="py-1 text-right text-slate-800 font-medium">{upfrontAnn != null ? fmt(upfrontAnn) : ''}</td>
+                      </tr>
+                    )}
+                    {(ongoingPct != null || ongoingAnn != null) && (
+                      <tr>
+                        <td className="py-1 text-slate-500">Ongoing:</td>
+                        <td className="py-1 text-right text-slate-800 font-medium">{ongoingPct != null ? `${Math.round(ongoingPct)}%` : ''}</td>
+                        <td className="py-1 text-right text-slate-800 font-medium">{ongoingAnn != null ? fmt(ongoingAnn) : ''}</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              );
+            })()}
           </div>
         )}
 
