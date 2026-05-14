@@ -8,6 +8,48 @@ import {
   type ExcludedProduct,
 } from './quoteResultsData';
 
+interface NeedRequirement {
+  code: string;
+  owner: string;
+}
+
+function extractNeedRequirements(clientEntry: Record<string, unknown>): NeedRequirement[] {
+  const needs = clientEntry.needs as Record<string, unknown>[] | undefined;
+  if (!Array.isArray(needs)) return [];
+  const reqs: NeedRequirement[] = [];
+
+  for (const need of needs) {
+    const code = Object.keys(need)[0];
+    if (!code) continue;
+    const fields = need[code] as Record<string, unknown> | undefined;
+    if (!fields || typeof fields !== 'object') continue;
+
+    reqs.push({ code, owner: String(fields.owner ?? '') });
+
+    const linked = fields.linkedNeeds as Record<string, unknown>[] | undefined;
+    if (Array.isArray(linked)) {
+      for (const ln of linked) {
+        const lnCode = Object.keys(ln)[0];
+        if (!lnCode) continue;
+        const lnFields = ln[lnCode] as Record<string, unknown> | undefined;
+        if (!lnFields || typeof lnFields !== 'object') continue;
+        reqs.push({ code: lnCode, owner: String(lnFields.owner ?? '') });
+      }
+    }
+  }
+
+  return reqs;
+}
+
+function productMatchesNeeds(option: ProductOption, reqs: NeedRequirement[]): boolean {
+  if (reqs.length === 0) return true;
+  return reqs.every((req) =>
+    option.supportedNeeds.some(
+      (sn) => sn.needCode === req.code && sn.ownership === req.owner,
+    ),
+  );
+}
+
 interface Props {
   product: ExcludedProduct;
   quoteRequestBody: Record<string, unknown>;
@@ -34,7 +76,10 @@ export function ExclusionReasonsModal({ product, quoteRequestBody, onClose }: Pr
         const raw = await postProductOptions(product.portfolioCode, singleClientBody);
         if (cancelled) return;
         const parsed = parseProductOptionsResponse(raw);
-        setProductOptions(parsed);
+        const clientEntry = (allClients?.[product.quoteIndex] ?? allClients?.[0]) as Record<string, unknown> | undefined;
+        const reqs = clientEntry ? extractNeedRequirements(clientEntry) : [];
+        const filtered = reqs.length > 0 ? parsed.filter((p) => productMatchesNeeds(p, reqs)) : parsed;
+        setProductOptions(filtered);
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : 'Failed to fetch product options');
