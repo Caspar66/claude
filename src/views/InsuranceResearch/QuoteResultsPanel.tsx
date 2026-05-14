@@ -449,6 +449,15 @@ function ExcludedRow({ item, quoteRequestBody }: { item: ExcludedProduct; quoteR
           </button>
         </td>
         <td className="px-4 py-2">
+          {item.errors.length > 0 && (
+            <div className="flex flex-col gap-0.5">
+              {item.errors.map((err, i) => (
+                <span key={i} className="text-xs text-red-600">{err}</span>
+              ))}
+            </div>
+          )}
+        </td>
+        <td className="px-4 py-2">
           {item.pdsLink && (
             <a
               href={item.pdsLink}
