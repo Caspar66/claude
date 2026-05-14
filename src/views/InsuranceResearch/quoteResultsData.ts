@@ -63,6 +63,8 @@ export interface QuoteResultRow {
   existingCover: boolean;
   recommendation: 'rec' | 'alt' | null;
   commissionLabel?: string;
+  commissionUpfront?: string;
+  commissionOngoing?: string;
   occupationDescription?: string;
   tpdOccClass?: string;
   pdsLink?: string;
@@ -240,12 +242,12 @@ function parsePortfolio(
   const featureObj = (score.feature ?? {}) as Record<string, unknown>;
   const combinedObj = (score.combined ?? {}) as Record<string, unknown>;
 
+  const commissionObj = (typeof p.commission === 'object' && p.commission !== null ? p.commission : {}) as Record<string, unknown>;
   const commissionLabel = typeof p.commission === 'string'
     ? p.commission || undefined
-    : (() => {
-        const commission = (p.commission ?? {}) as Record<string, unknown>;
-        return asStr(commission.label) || asStr(commission.name) || asStr(commission.description) || undefined;
-      })();
+    : asStr(commissionObj.label) || asStr(commissionObj.name) || asStr(commissionObj.description) || undefined;
+  const commissionUpfront = asStr(p.commissionUpfront) || asStr(commissionObj.upfront) || undefined;
+  const commissionOngoing = asStr(p.commissionOngoing) || asStr(commissionObj.ongoing) || undefined;
   const occupation = (p.occupation ?? {}) as Record<string, unknown>;
   const occupationDescription = asStr(occupation.description) || undefined;
   const tpdOccClass = asStr(p.tpdOccupationClass) || asStr((p.occupationClass ?? {}) as Record<string, unknown>).toString() || undefined;
@@ -329,6 +331,8 @@ function parsePortfolio(
     existingCover: isExistingCover,
     recommendation: null,
     commissionLabel,
+    commissionUpfront,
+    commissionOngoing,
     occupationDescription,
     tpdOccClass: tpdOccClass === '[object Object]' ? undefined : tpdOccClass,
     pdsLink,

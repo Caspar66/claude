@@ -308,10 +308,31 @@ function AdditionalInfoPanel({
 
         {/* Details */}
         <div className="px-4 py-3 space-y-2.5 border-b border-gray-200 text-xs">
-          {row.commissionLabel && (
-            <div className="flex items-start gap-2">
-              <span className="text-slate-500 shrink-0 w-28">Commission</span>
-              <span className="text-slate-800 font-medium">{row.commissionLabel}</span>
+          {(row.commissionLabel || row.commissionUpfront || row.commissionOngoing) && (
+            <div>
+              <span className="text-slate-500 text-[10px] font-semibold uppercase tracking-wide">Commission</span>
+              <table className="w-full mt-1 text-xs">
+                <tbody className="divide-y divide-gray-100">
+                  {row.commissionLabel && (
+                    <tr>
+                      <td className="py-1 text-slate-500 w-36">Commission</td>
+                      <td className="py-1 text-slate-800 font-medium">{row.commissionLabel}</td>
+                    </tr>
+                  )}
+                  {row.commissionUpfront && (
+                    <tr>
+                      <td className="py-1 text-slate-500 w-36">Upfront Commission</td>
+                      <td className="py-1 text-slate-800 font-medium">{row.commissionUpfront}</td>
+                    </tr>
+                  )}
+                  {row.commissionOngoing && (
+                    <tr>
+                      <td className="py-1 text-slate-500 w-36">Ongoing Commission</td>
+                      <td className="py-1 text-slate-800 font-medium">{row.commissionOngoing}</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
           {row.occupationDescription && (
