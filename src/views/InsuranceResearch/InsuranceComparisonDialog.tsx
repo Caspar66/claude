@@ -118,31 +118,11 @@ function ClientSummaryBar({
         </>
       )}
       <span className="bg-slate-600 rounded px-2 py-0.5">Age {displayed.age}</span>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="bg-slate-600 rounded px-2 py-0.5 flex items-center gap-1 hover:bg-slate-500">
-            {displayed.gender} <ChevronDown size={10} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent><DropdownMenuItem>Male</DropdownMenuItem><DropdownMenuItem>Female</DropdownMenuItem></DropdownMenuContent>
-      </DropdownMenu>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button className="bg-slate-600 rounded px-2 py-0.5 flex items-center gap-1 hover:bg-slate-500">
-            {displayed.smoker === 'No' ? 'Non Smoker' : 'Smoker'} <ChevronDown size={10} />
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent><DropdownMenuItem>Non Smoker</DropdownMenuItem><DropdownMenuItem>Smoker</DropdownMenuItem></DropdownMenuContent>
-      </DropdownMenu>
+      <span className="bg-slate-600 rounded px-2 py-0.5">{displayed.gender}</span>
+      <span className="bg-slate-600 rounded px-2 py-0.5">{displayed.smoker === 'No' ? 'Non Smoker' : 'Smoker'}</span>
       <span className="bg-slate-600 rounded px-2 py-0.5">Income {displayed.annualIncome}</span>
       <span className="bg-slate-600 rounded px-2 py-0.5">{displayed.occupation}</span>
       <div className="flex-1" />
-      <button className="text-xs hover:underline">Occupation Ratings</button>
-      <button className="text-xs hover:underline">Loadings</button>
-      <button className="text-xs hover:underline">Quote APL</button>
-      <button className="text-xs hover:underline">Scoring</button>
-      <button className="text-xs hover:underline">Required Features</button>
-      <button className="text-xs text-slate-300 hover:underline">(Back)</button>
     </div>
   );
 }
@@ -215,8 +195,8 @@ export function InsuranceComparisonDialog({
   const [portfolioError, setPortfolioError] = useState<string | null>(null);
   const [lastQuoteRequestBody, setLastQuoteRequestBody] = useState<Record<string, unknown>>({});
 
-  // Active quote filter (null = show all quotes)
-  const [activeQuoteIndex, setActiveQuoteIndex] = useState<number | null>(null);
+  // Selected quote indices (empty = show all quotes)
+  const [selectedQuoteIndices, setSelectedQuoteIndices] = useState<number[]>([]);
 
   // Per-quote generated dates (keyed by quote id)
   const [quoteGeneratedDates, setQuoteGeneratedDates] = useState<Record<string, string>>({});
@@ -281,7 +261,7 @@ export function InsuranceComparisonDialog({
     setCoverQuotes([]);
     setPortfolioLoading(false);
     setPortfolioError(null);
-    setActiveQuoteIndex(null);
+    setSelectedQuoteIndices([]);
     setEditingQuoteId(null);
     setQuoteGeneratedDates({});
     setRequotingQuoteId(null);
@@ -342,7 +322,18 @@ export function InsuranceComparisonDialog({
         clients: allBodies.map((b) => (b.clients as unknown[])[0]),
       };
       setLastQuoteRequestBody(mergedBody);
-      setQuoteResults({ rows: allRows, excluded: allExcluded, populated: true });
+
+      const clientRows = allRows.filter((r) => quotes.find((q, qi) => coverQuotes.indexOf(q) === r.quoteIndex)?.lifeInsured === 'client' ?? true);
+      const clientExcl = allExcluded.filter((e) => quotes.find((q, qi) => coverQuotes.indexOf(q) === e.quoteIndex)?.lifeInsured === 'client' ?? true);
+      const partnerRows = allRows.filter((r) => quotes.find((q) => coverQuotes.indexOf(q) === r.quoteIndex)?.lifeInsured === 'partner');
+      const partnerExcl = allExcluded.filter((e) => quotes.find((q) => coverQuotes.indexOf(q) === e.quoteIndex)?.lifeInsured === 'partner');
+
+      if (clientRows.length > 0 || clientExcl.length > 0 || quotes.some((q) => q.lifeInsured === 'client')) {
+        setClientQuoteResults({ rows: clientRows, excluded: clientExcl, populated: true });
+      }
+      if (partnerRows.length > 0 || partnerExcl.length > 0 || quotes.some((q) => q.lifeInsured === 'partner')) {
+        setPartnerQuoteResults({ rows: partnerRows, excluded: partnerExcl, populated: true });
+      }
       const now = new Date();
       const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
       const dates: Record<string, string> = {};
@@ -402,11 +393,25 @@ export function InsuranceComparisonDialog({
         newExcl.push(...parsed.excluded.map((e) => ({ ...e, quoteIndex: idx })));
       }
 
-      setQuoteResults((prev) => ({
-        rows: [...prev.rows, ...newRows],
-        excluded: [...prev.excluded, ...newExcl],
-        populated: true,
-      }));
+      const clientNewRows = newRows.filter((r) => unquoted.find((q) => coverQuotes.indexOf(q) === r.quoteIndex)?.lifeInsured === 'client');
+      const clientNewExcl = newExcl.filter((e) => unquoted.find((q) => coverQuotes.indexOf(q) === e.quoteIndex)?.lifeInsured === 'client');
+      const partnerNewRows = newRows.filter((r) => unquoted.find((q) => coverQuotes.indexOf(q) === r.quoteIndex)?.lifeInsured === 'partner');
+      const partnerNewExcl = newExcl.filter((e) => unquoted.find((q) => coverQuotes.indexOf(q) === e.quoteIndex)?.lifeInsured === 'partner');
+
+      if (clientNewRows.length > 0 || clientNewExcl.length > 0) {
+        setClientQuoteResults((prev) => ({
+          rows: [...prev.rows, ...clientNewRows],
+          excluded: [...prev.excluded, ...clientNewExcl],
+          populated: true,
+        }));
+      }
+      if (partnerNewRows.length > 0 || partnerNewExcl.length > 0) {
+        setPartnerQuoteResults((prev) => ({
+          rows: [...prev.rows, ...partnerNewRows],
+          excluded: [...prev.excluded, ...partnerNewExcl],
+          populated: true,
+        }));
+      }
       const now = new Date();
       const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
       const dates: Record<string, string> = {};
@@ -457,7 +462,8 @@ export function InsuranceComparisonDialog({
       const res = await postQuotePortfolio(body, buildPortfolioQueryParams(quote));
       console.info('[OmniLife] /quote/portfolio requote response:', res.raw);
       const parsed = parsePortfolioResponse(res.raw);
-      setQuoteResults((prev) => {
+      const setter = quote.lifeInsured === 'partner' ? setPartnerQuoteResults : setClientQuoteResults;
+      setter((prev) => {
         const oldRows = prev.rows.filter((r) => r.quoteIndex === quoteIdx);
         const recMap = new Map<string, 'rec' | 'alt'>();
         const selMap = new Map<string, boolean>();
@@ -516,7 +522,8 @@ export function InsuranceComparisonDialog({
       const res = await postQuotePortfolio(body, buildPortfolioQueryParams(quote));
       console.info('[OmniLife] /quote/portfolio requote (custom occ) response:', res.raw);
       const parsed = parsePortfolioResponse(res.raw);
-      setQuoteResults((prev) => {
+      const setter = quote.lifeInsured === 'partner' ? setPartnerQuoteResults : setClientQuoteResults;
+      setter((prev) => {
         const oldRows = prev.rows.filter((r) => r.quoteIndex === quoteIndex);
         const recMap = new Map<string, 'rec' | 'alt'>();
         const selMap = new Map<string, boolean>();
@@ -756,7 +763,7 @@ export function InsuranceComparisonDialog({
                 client={clientData}
                 partner={showPartner ? partnerData : null}
                 activeClient={activeClient}
-                onToggleClient={(who) => { setActiveClient(who); setActiveQuoteIndex(null); }}
+                onToggleClient={(who) => { setActiveClient(who); setSelectedQuoteIndices([]); }}
               />
 
               {/* Screen nav: Back + Save */}
@@ -794,8 +801,14 @@ export function InsuranceComparisonDialog({
                   partnerData={showPartner ? partnerData : null}
                   activeClient={activeClient}
                   quotes={coverQuotes}
-                  activeQuoteIndex={activeQuoteIndex}
-                  onSelectQuote={setActiveQuoteIndex}
+                  selectedQuoteIndices={selectedQuoteIndices}
+                  onToggleQuoteIndex={(idx) => {
+                    setSelectedQuoteIndices((prev) => {
+                      if (prev.includes(idx)) return prev.filter((i) => i !== idx);
+                      return [...prev, idx];
+                    });
+                  }}
+                  onSelectAll={() => setSelectedQuoteIndices([])}
                   onEditQuote={(id) => {
                     setEditingQuoteId(id);
                     setScreen('editQuote');
@@ -806,7 +819,7 @@ export function InsuranceComparisonDialog({
                 />
                 <QuoteResultsPanel
                   results={quoteResults}
-                  activeQuoteIndex={activeQuoteIndex}
+                  selectedQuoteIndices={selectedQuoteIndices}
                   activeClient={activeClient}
                   quotes={coverQuotes}
                   quoteRequestBody={lastQuoteRequestBody}
@@ -849,14 +862,14 @@ export function InsuranceComparisonDialog({
           )}
 
           {/* Features Comparison screen */}
-          {screen === 'features' && activeQuoteIndex !== null && (() => {
-            const quoteRows = quoteResults.rows.filter((r) => r.quoteIndex === activeQuoteIndex);
+          {screen === 'features' && selectedQuoteIndices.length > 0 && (() => {
+            const quoteRows = quoteResults.rows.filter((r) => selectedQuoteIndices.includes(r.quoteIndex));
             const selected = quoteRows.filter((r) => r.selected);
             return (
               <FeaturesComparisonPage
                 selectedRows={selected.length > 0 ? selected : quoteRows.slice(0, 4)}
                 quoteRequestBody={lastQuoteRequestBody}
-                activeQuoteIndex={activeQuoteIndex}
+                activeQuoteIndex={selectedQuoteIndices[0]}
                 onBack={() => setScreen(preCompareScreen)}
               />
             );

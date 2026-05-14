@@ -555,7 +555,7 @@ function ExcludedRow({ item, quoteRequestBody }: { item: ExcludedProduct; quoteR
 
 interface Props {
   results: QuoteResults;
-  activeQuoteIndex: number | null;
+  selectedQuoteIndices: number[];
   activeClient: 'client' | 'partner';
   quotes: NeedsQuote[];
   quoteRequestBody: Record<string, unknown>;
@@ -567,7 +567,7 @@ interface Props {
   requotingOccupation: boolean;
 }
 
-export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quotes, quoteRequestBody, onToggleSelect, onSetRecommendation, onCompareProducts, onViewCompareFeatures, onRequoteWithOccupation, requotingOccupation }: Props) {
+export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient, quotes, quoteRequestBody, onToggleSelect, onSetRecommendation, onCompareProducts, onViewCompareFeatures, onRequoteWithOccupation, requotingOccupation }: Props) {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortField, setSortField] = useState<SortField>('premium');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -610,13 +610,14 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
       .map(({ idx }) => idx),
   );
 
-  // Filter by specific quote or all quotes for the active client
-  const visibleRows = activeQuoteIndex !== null
-    ? results.rows.filter((r) => r.quoteIndex === activeQuoteIndex)
-    : results.rows.filter((r) => clientQuoteIndices.has(r.quoteIndex));
-  const visibleExcluded = activeQuoteIndex !== null
-    ? results.excluded.filter((e) => e.quoteIndex === activeQuoteIndex)
-    : results.excluded.filter((e) => clientQuoteIndices.has(e.quoteIndex));
+  // Filter by selected quotes or all quotes for the active client
+  const showAll = selectedQuoteIndices.length === 0;
+  const visibleRows = showAll
+    ? results.rows.filter((r) => clientQuoteIndices.has(r.quoteIndex))
+    : results.rows.filter((r) => selectedQuoteIndices.includes(r.quoteIndex));
+  const visibleExcluded = showAll
+    ? results.excluded.filter((e) => clientQuoteIndices.has(e.quoteIndex))
+    : results.excluded.filter((e) => selectedQuoteIndices.includes(e.quoteIndex));
 
   const filtered = visibleRows.filter((r) => {
     if (!searchTerm) return true;
@@ -685,9 +686,9 @@ export function QuoteResultsPanel({ results, activeQuoteIndex, activeClient, quo
 
           <button
             type="button"
-            className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded border font-semibold transition-colors ${activeQuoteIndex === null ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-            disabled={activeQuoteIndex === null}
-            title={activeQuoteIndex === null ? 'Select a specific quote to compare features' : undefined}
+            className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded border font-semibold transition-colors ${showAll ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
+            disabled={showAll}
+            title={showAll ? 'Select a specific quote to compare features' : undefined}
             onClick={() => onViewCompareFeatures()}
           >
             <ExternalLink size={12} />

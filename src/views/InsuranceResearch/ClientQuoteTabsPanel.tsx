@@ -1,4 +1,4 @@
-import { SquarePen, RefreshCw } from 'lucide-react';
+import { SquarePen, RefreshCw, Check } from 'lucide-react';
 import type { NeedsQuote, Need, TrmFields, TrsFields, TpeFields, TreFields, TprFields, IncFields, BusFields, QuoteFrequency, FieldValue } from './needsTypes';
 import { getNeedCode, NEED_CODE_LABELS, STRUCTURE_4_LABELS, STRUCTURE_3_LABELS, WAITING_INC_LABELS, WAITING_BUS_LABELS, BENEFIT_INC_LABELS } from './needsTypes';
 import type { ClientFormData } from './insuranceData';
@@ -108,8 +108,9 @@ interface Props {
   partnerData: ClientFormData | null;
   activeClient: 'client' | 'partner';
   quotes: NeedsQuote[];
-  activeQuoteIndex: number | null;
-  onSelectQuote: (index: number | null) => void;
+  selectedQuoteIndices: number[];
+  onToggleQuoteIndex: (index: number) => void;
+  onSelectAll: () => void;
   onEditQuote?: (quoteId: string) => void;
   quoteGeneratedDates?: Record<string, string>;
   onRequote?: (quoteId: string) => void;
@@ -121,8 +122,9 @@ export function ClientQuoteTabsPanel({
   partnerData,
   activeClient,
   quotes,
-  activeQuoteIndex,
-  onSelectQuote,
+  selectedQuoteIndices,
+  onToggleQuoteIndex,
+  onSelectAll,
   onEditQuote,
   quoteGeneratedDates,
   onRequote,
@@ -131,6 +133,8 @@ export function ClientQuoteTabsPanel({
   const filteredQuotes = quotes
     .map((q, idx) => ({ quote: q, originalIndex: idx }))
     .filter(({ quote }) => quote.lifeInsured === activeClient);
+
+  const allSelected = selectedQuoteIndices.length === 0;
 
   return (
     <div className="w-[320px] border-r border-gray-200 bg-white flex flex-col overflow-hidden">
@@ -143,9 +147,9 @@ export function ClientQuoteTabsPanel({
       <div className="flex-1 overflow-auto p-3">
         {/* All Quotes link */}
         <button
-          onClick={() => onSelectQuote(null)}
+          onClick={onSelectAll}
           className={`w-full text-left px-3 py-2 rounded text-xs font-medium mb-1 transition-colors ${
-            activeQuoteIndex === null
+            allSelected
               ? 'bg-teal-50 text-teal-800 border border-teal-200'
               : 'text-blue-600 hover:bg-slate-50 hover:underline border border-transparent'
           }`}
@@ -160,21 +164,29 @@ export function ClientQuoteTabsPanel({
         )}
 
         {filteredQuotes.map(({ quote: q, originalIndex: idx }) => {
-          const isActive = activeQuoteIndex === idx;
+          const isSelected = allSelected || selectedQuoteIndices.includes(idx);
           return (
             <div
               key={q.id}
               className={`border rounded mb-2 overflow-hidden transition-colors ${
-                isActive ? 'border-teal-300 bg-teal-50/40' : 'border-gray-200'
+                isSelected ? 'border-teal-300 bg-teal-50/40' : 'border-gray-200'
               }`}
             >
-              {/* Quote header — clickable link + edit button */}
+              {/* Quote header — checkbox + clickable link + edit button */}
               <div className="px-3 py-1.5 bg-slate-100 flex items-center justify-between">
+                <button
+                  onClick={() => onToggleQuoteIndex(idx)}
+                  className={`w-4 h-4 rounded-sm border flex items-center justify-center shrink-0 mr-2 ${
+                    isSelected ? 'bg-teal-700 border-teal-700 text-white' : 'border-slate-300'
+                  }`}
+                >
+                  {isSelected && <Check size={10} strokeWidth={3} />}
+                </button>
                 <div className="flex flex-col flex-1 min-w-0">
                   <button
-                    onClick={() => onSelectQuote(idx)}
+                    onClick={() => onToggleQuoteIndex(idx)}
                     className={`text-left text-xs font-bold truncate transition-colors ${
-                      isActive
+                      isSelected
                         ? 'text-teal-700'
                         : 'text-blue-600 hover:text-blue-800 hover:underline'
                     }`}
