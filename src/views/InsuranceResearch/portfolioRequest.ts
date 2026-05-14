@@ -167,13 +167,16 @@ export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, 
     }
   }
 
+  const freq = quotes[0]?.nonSuperFrequency ?? 'M';
+  const superFreq = quotes[0]?.superFrequency ?? 'M';
+
   return {
     clients,
     settings: {
       commissionOptions,
       campaignOptions,
-      frequency: 'M',
-      superFrequency: 'M',
+      frequency: freq,
+      superFrequency: superFreq,
       priceWeighting: 0,
       includedSuppliers: [],
       excludedProducts: [],
@@ -187,6 +190,19 @@ export function buildPortfolioRequest(args: BuildPortfolioArgs): Record<string, 
     adviser: adviser ?? DEFAULT_ADVISER,
     tags: tags ?? DEFAULT_TAGS,
   };
+}
+
+export function buildPortfolioQueryParams(quote: NeedsQuote): URLSearchParams {
+  return new URLSearchParams({
+    premiumBreakdown: 'covertype',
+    premiumComponents: 'commission',
+    includeTopFeatures: '5',
+    includeBottomFeatures: '5',
+    compareAllCombinations: 'true',
+    scoreWeightingType: 'Balanced',
+    nonSuperFrequency: quote.nonSuperFrequency,
+    superFrequency: quote.superFrequency,
+  });
 }
 
 export const PORTFOLIO_QUERY_PARAMS = new URLSearchParams({

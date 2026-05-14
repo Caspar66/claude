@@ -34,7 +34,7 @@ import {
 import { getDefaultQuoteForm } from './quoteFormTypes';
 import type { QuoteFormState } from './quoteFormTypes';
 import { getEmptyQuoteResults, parsePortfolioResponse } from './quoteResultsData';
-import type { QuoteResults } from './quoteResultsData';
+import type { QuoteResults, QuoteResultRow, ExcludedProduct } from './quoteResultsData';
 import type {
   ClientFormData,
   QuoteOptions,
@@ -50,7 +50,7 @@ import type {
 } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { NeedsEditor } from './NeedsEditor';
-import { buildPortfolioRequest, PORTFOLIO_QUERY_PARAMS } from './portfolioRequest';
+import { buildPortfolioRequest, buildPortfolioQueryParams } from './portfolioRequest';
 import { postQuotePortfolio } from '@/services/omnilifeApi';
 import { useOccupations } from '@/hooks/useOccupations';
 import { useSuppliers } from '@/hooks/useSuppliers';
@@ -306,19 +306,42 @@ export function InsuranceComparisonDialog({
     setPortfolioLoading(true);
     setPortfolioError(null);
     try {
-      const body = buildPortfolioRequest({
-        clientData,
-        partnerData: showPartner ? partnerData : null,
-        quotes,
-        policies,
-        occupations,
-        scenarioSettings,
-      });
-      setLastQuoteRequestBody(body);
-      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
-      console.info('[OmniLife] /quote/portfolio response:', res.raw);
-      const parsed = parsePortfolioResponse(res.raw);
-      setQuoteResults(parsed);
+      const allRows: QuoteResultRow[] = [];
+      const allExcluded: ExcludedProduct[] = [];
+      const allBodies: Record<string, unknown>[] = [];
+
+      const results = await Promise.all(
+        quotes.map((quote) => {
+          const data = quote.lifeInsured === 'partner' && showPartner ? partnerData : clientData;
+          const body = buildPortfolioRequest({
+            clientData: data,
+            partnerData: null,
+            quotes: [quote],
+            policies,
+            occupations,
+            scenarioSettings,
+          });
+          allBodies.push(body);
+          return postQuotePortfolio(body, buildPortfolioQueryParams(quote));
+        }),
+      );
+
+      for (let i = 0; i < results.length; i++) {
+        console.info(`[OmniLife] /quote/portfolio response for ${quotes[i].name}:`, results[i].raw);
+        const parsed = parsePortfolioResponse(results[i].raw);
+        const quoteIdx = (quotesToUse ?? coverQuotes).indexOf(quotes[i]);
+        const globalIdx = coverQuotes.indexOf(quotes[i]);
+        const idx = globalIdx !== -1 ? globalIdx : quoteIdx !== -1 ? quoteIdx : i;
+        allRows.push(...parsed.rows.map((r) => ({ ...r, quoteIndex: idx })));
+        allExcluded.push(...parsed.excluded.map((e) => ({ ...e, quoteIndex: idx })));
+      }
+
+      const mergedBody: Record<string, unknown> = {
+        ...(allBodies[0] ?? {}),
+        clients: allBodies.map((b) => (b.clients as unknown[])[0]),
+      };
+      setLastQuoteRequestBody(mergedBody);
+      setQuoteResults({ rows: allRows, excluded: allExcluded, populated: true });
       const now = new Date();
       const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
       const dates: Record<string, string> = {};
@@ -351,28 +374,38 @@ export function InsuranceComparisonDialog({
     setPortfolioLoading(true);
     setPortfolioError(null);
     try {
-      const body = buildPortfolioRequest({
-        clientData,
-        partnerData: showPartner ? partnerData : null,
-        quotes: unquoted,
-        policies,
-        occupations,
-        scenarioSettings,
-      });
-      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
-      console.info('[OmniLife] /quote/portfolio (unquoted) response:', res.raw);
-      const parsed = parsePortfolioResponse(res.raw);
+      const newRows: QuoteResultRow[] = [];
+      const newExcl: ExcludedProduct[] = [];
 
-      const indexMap = unquoted.map((q) => coverQuotes.indexOf(q));
-      setQuoteResults((prev) => {
-        const newRows = parsed.rows.map((r) => ({ ...r, quoteIndex: indexMap[r.quoteIndex] ?? r.quoteIndex }));
-        const newExcl = parsed.excluded.map((e) => ({ ...e, quoteIndex: indexMap[e.quoteIndex] ?? e.quoteIndex }));
-        return {
-          rows: [...prev.rows, ...newRows],
-          excluded: [...prev.excluded, ...newExcl],
-          populated: true,
-        };
-      });
+      const results = await Promise.all(
+        unquoted.map((quote) => {
+          const data = quote.lifeInsured === 'partner' && showPartner ? partnerData : clientData;
+          const body = buildPortfolioRequest({
+            clientData: data,
+            partnerData: null,
+            quotes: [quote],
+            policies,
+            occupations,
+            scenarioSettings,
+          });
+          return postQuotePortfolio(body, buildPortfolioQueryParams(quote));
+        }),
+      );
+
+      for (let i = 0; i < results.length; i++) {
+        console.info(`[OmniLife] /quote/portfolio (unquoted) response for ${unquoted[i].name}:`, results[i].raw);
+        const parsed = parsePortfolioResponse(results[i].raw);
+        const globalIdx = coverQuotes.indexOf(unquoted[i]);
+        const idx = globalIdx !== -1 ? globalIdx : i;
+        newRows.push(...parsed.rows.map((r) => ({ ...r, quoteIndex: idx })));
+        newExcl.push(...parsed.excluded.map((e) => ({ ...e, quoteIndex: idx })));
+      }
+
+      setQuoteResults((prev) => ({
+        rows: [...prev.rows, ...newRows],
+        excluded: [...prev.excluded, ...newExcl],
+        populated: true,
+      }));
       const now = new Date();
       const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
       const dates: Record<string, string> = {};
@@ -420,7 +453,7 @@ export function InsuranceComparisonDialog({
         }
         return next;
       });
-      const res = await postQuotePortfolio(body, PORTFOLIO_QUERY_PARAMS);
+      const res = await postQuotePortfolio(body, buildPortfolioQueryParams(quote));
       console.info('[OmniLife] /quote/portfolio requote response:', res.raw);
       const parsed = parsePortfolioResponse(res.raw);
       setQuoteResults((prev) => {
