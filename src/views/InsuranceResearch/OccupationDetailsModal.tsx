@@ -94,8 +94,8 @@ export function OccupationDetailsModal({
             >
               Change Occupation
             </button>
-            {!showSearch && occupationDescription && (
-              <span className="text-sm text-teal-700 font-medium">{occupationDescription}</span>
+            {!showSearch && (selectedOcc?.description || occupationDescription) && (
+              <span className="text-sm text-teal-700 font-medium">{selectedOcc?.description ?? occupationDescription}</span>
             )}
             {showSearch && (
               <div className="flex-1 relative">
@@ -120,7 +120,7 @@ export function OccupationDetailsModal({
                 <button
                   key={`${occ.supplierCode}-${occ.id}`}
                   className="w-full text-left px-3 py-2 text-xs hover:bg-teal-50 border-b border-gray-100 last:border-b-0"
-                  onClick={() => setSelectedOcc(occ)}
+                  onClick={() => { setSelectedOcc(occ); setShowSearch(false); setSearchText(''); setResults([]); }}
                 >
                   <span className="font-medium text-slate-700">{occ.description}</span>
                   <span className="text-slate-400 ml-2">({occ.id})</span>
