@@ -274,15 +274,14 @@ function parsePortfolio(
   const occupation = (p.occupation ?? {}) as Record<string, unknown>;
   const occupationDescription = asStr(occupation.description) || undefined;
   const tpdOccClass = asStr(p.tpdOccupationClass) || undefined;
-  const occClasses = (p.occupationClass ?? {}) as Record<string, unknown>;
   const occupationClasses: OccupationClasses = {
-    life: asStr(occClasses.classTRM) || undefined,
-    trauma: asStr(occClasses.classTRA) || undefined,
-    tpdADL: asStr(occClasses.classTPDADL) || undefined,
-    tpdAny: asStr(occClasses.classTPDAny) || undefined,
-    tpdOwn: asStr(occClasses.classTPDOwn) || undefined,
-    ip: asStr(occClasses.classINC) || undefined,
-    be: asStr(occClasses.classBUS) || undefined,
+    life: asStr(occupation.classTRM) || undefined,
+    trauma: asStr(occupation.classTRA) || undefined,
+    tpdADL: asStr(occupation.classTPDADL) || undefined,
+    tpdAny: asStr(occupation.classTPDAny) || undefined,
+    tpdOwn: asStr(occupation.classTPDOwn) || undefined,
+    ip: asStr(occupation.classINC) || undefined,
+    be: asStr(occupation.classBUS) || undefined,
   };
   const links = (p.links ?? {}) as Record<string, unknown>;
   const pdsLink = ensureUrl(asStr(links.pds)) || undefined;
