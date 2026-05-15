@@ -97,11 +97,15 @@ function resolve(segments: string[], query: VercelRequest['query'], rawUrl: stri
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   const pathParam = req.query.path;
-  const segments: string[] = Array.isArray(pathParam)
-    ? pathParam
-    : typeof pathParam === 'string'
-      ? pathParam.split('/')
-      : [];
+  let segments: string[];
+  if (Array.isArray(pathParam) && pathParam.length > 0) {
+    segments = pathParam;
+  } else if (typeof pathParam === 'string' && pathParam) {
+    segments = pathParam.split('/');
+  } else {
+    const urlPath = (req.url ?? '').split('?')[0].replace(/^\/api\//, '');
+    segments = urlPath ? urlPath.split('/').filter(Boolean) : [];
+  }
 
   const route = resolve(segments, req.query, req.url ?? '');
   if (!route) {
