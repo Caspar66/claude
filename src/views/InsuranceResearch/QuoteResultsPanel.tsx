@@ -236,7 +236,7 @@ function AdditionalInfoPanel({
   onRequoteWithOccupation: (quoteIndex: number, supplierCode: string, occupationId: string) => void;
   requotingOccupation: boolean;
 }) {
-  const [activeTab, setActiveTab] = useState<AdditionalInfoTab>('summary');
+  const [activeTab, setActiveTab] = useState<AdditionalInfoTab>(row.existingCover ? 'links' : 'summary');
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ matched: boolean; omnium: number; supplier: number } | 'failed' | null>(
     initialValidated === true ? { matched: true, omnium: 0, supplier: 0 } : initialValidated === false ? 'failed' : null,
