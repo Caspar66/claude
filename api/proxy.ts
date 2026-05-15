@@ -15,7 +15,17 @@ interface Route {
   hasBody?: boolean;
 }
 
-function resolve(segments: string[], query: VercelRequest['query'], rawUrl: string): Route | null {
+function forwardQs(query: VercelRequest['query']): string {
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(query)) {
+    if (key === '_path') continue;
+    if (typeof val === 'string') params.set(key, val);
+  }
+  const qs = params.toString();
+  return qs ? `?${qs}` : '';
+}
+
+function resolve(segments: string[], query: VercelRequest['query']): Route | null {
   const s0 = segments[0];
 
   if (s0 === 'occupations' && segments.length === 1)
@@ -52,8 +62,7 @@ function resolve(segments: string[], query: VercelRequest['query'], rawUrl: stri
   }
 
   if (s0 === 'quote-portfolio' && segments.length === 1) {
-    const qs = rawUrl.includes('?') ? rawUrl.substring(rawUrl.indexOf('?')) : '';
-    return { upstream: `/quote/portfolio${qs}`, method: 'POST', hasBody: true };
+    return { upstream: `/quote/portfolio${forwardQs(query)}`, method: 'POST', hasBody: true };
   }
 
   if (s0 === 'quote-portfolio' && segments.length === 3 && segments[2] === 'quoteValidation') {
@@ -71,7 +80,8 @@ function resolve(segments: string[], query: VercelRequest['query'], rawUrl: stri
     if (!codes) return null;
     const qs = new URLSearchParams();
     for (const [key, val] of Object.entries(query)) {
-      if (key !== 'codes' && key !== 'path' && typeof val === 'string') qs.set(key, val);
+      if (key === '_path' || key === 'codes') continue;
+      if (typeof val === 'string') qs.set(key, val);
     }
     return { upstream: `/quote/portfolio/${encodeURIComponent(codes)}/features?${qs.toString()}`, method: 'POST', hasBody: true };
   }
@@ -83,31 +93,21 @@ function resolve(segments: string[], query: VercelRequest['query'], rawUrl: stri
   }
 
   if (s0 === 'gained-and-lost' && segments.length === 1) {
-    const qs = rawUrl.includes('?') ? rawUrl.substring(rawUrl.indexOf('?')) : '';
-    return { upstream: `/research/portfolio/gainedAndLost${qs}`, method: 'POST', hasBody: true };
+    return { upstream: `/research/portfolio/gainedAndLost${forwardQs(query)}`, method: 'POST', hasBody: true };
   }
 
   if (s0 === 'portfolio-features' && segments.length === 1) {
-    const qs = rawUrl.includes('?') ? rawUrl.substring(rawUrl.indexOf('?')) : '';
-    return { upstream: `/research/portfolio/features${qs}`, method: 'POST', hasBody: true };
+    return { upstream: `/research/portfolio/features${forwardQs(query)}`, method: 'POST', hasBody: true };
   }
 
   return null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
-  const pathParam = req.query.path;
-  let segments: string[];
-  if (Array.isArray(pathParam) && pathParam.length > 0) {
-    segments = pathParam;
-  } else if (typeof pathParam === 'string' && pathParam) {
-    segments = pathParam.split('/');
-  } else {
-    const urlPath = (req.url ?? '').split('?')[0].replace(/^\/api\//, '');
-    segments = urlPath ? urlPath.split('/').filter(Boolean) : [];
-  }
+  const routePath = str(req.query._path);
+  const segments = routePath ? routePath.split('/').filter(Boolean) : [];
 
-  const route = resolve(segments, req.query, req.url ?? '');
+  const route = resolve(segments, req.query);
   if (!route) {
     return res.status(404).json({ error: 'Unknown API route', path: segments.join('/') });
   }
