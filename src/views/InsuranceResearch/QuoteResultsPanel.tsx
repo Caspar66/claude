@@ -232,12 +232,15 @@ function AdditionalInfoPanel({
   quoteRequestBody: Record<string, unknown>;
   onClose: () => void;
   onValidated: (rowId: string, matched: boolean) => void;
+  initialValidated: boolean | null;
   onRequoteWithOccupation: (quoteIndex: number, supplierCode: string, occupationId: string) => void;
   requotingOccupation: boolean;
 }) {
   const [activeTab, setActiveTab] = useState<AdditionalInfoTab>('summary');
   const [validating, setValidating] = useState(false);
-  const [validationResult, setValidationResult] = useState<{ matched: boolean; omnium: number; supplier: number } | null>(null);
+  const [validationResult, setValidationResult] = useState<{ matched: boolean; omnium: number; supplier: number } | 'failed' | null>(
+    initialValidated === true ? { matched: true, omnium: 0, supplier: 0 } : initialValidated === false ? 'failed' : null,
+  );
   const [showOccModal, setShowOccModal] = useState(false);
   const hasFeatures = row.topFeatures.length > 0 || row.bottomFeatures.length > 0;
   const hasLinks = !!row.pdsLink || !!row.tmdLink;
@@ -256,7 +259,7 @@ function AdditionalInfoPanel({
       onValidated(row.id, matched);
     } catch (err) {
       console.error('[QuoteValidation]', err);
-      setValidationResult(null);
+      setValidationResult('failed');
     } finally {
       setValidating(false);
     }
@@ -377,15 +380,19 @@ function AdditionalInfoPanel({
               row={row}
               superFreq={superFreq}
               nonSuperFreq={nonSuperFreq}
-              validated={validationResult?.matched ?? null}
+              validated={validationResult !== null && validationResult !== 'failed' ? validationResult.matched : null}
             />
-            {row.validationAvailable && !validationResult && (
+            {row.validationAvailable && (validationResult === null || validationResult === 'failed') && (
               <button
-                className="mt-3 w-full text-xs font-semibold py-1.5 rounded border border-teal-700 text-teal-700 hover:bg-teal-50 transition-colors disabled:opacity-50"
+                className={`mt-3 w-full text-xs font-semibold py-1.5 rounded border transition-colors disabled:opacity-50 ${
+                  validationResult === 'failed'
+                    ? 'border-red-400 text-red-600 hover:bg-red-50'
+                    : 'border-teal-700 text-teal-700 hover:bg-teal-50'
+                }`}
                 onClick={handleValidate}
                 disabled={validating}
               >
-                {validating ? 'Validating…' : 'Validate Premium'}
+                {validating ? 'Validating…' : validationResult === 'failed' ? 'Failed to validate — Retry' : 'Validate Premium'}
               </button>
             )}
             {(() => {
@@ -625,9 +632,16 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
     return r.supplierName.toLowerCase().includes(term) || r.products.toLowerCase().includes(term) || r.portfolioName.toLowerCase().includes(term);
   });
 
-  // Sort — existing cover rows always at the bottom
+  // Sort — existing cover rows always at the bottom, deduplicated
   const quoteRows = filtered.filter((r) => !r.existingCover);
-  const existingRows = filtered.filter((r) => r.existingCover);
+  const existingRowsRaw = filtered.filter((r) => r.existingCover);
+  const seenExisting = new Set<string>();
+  const existingRows = existingRowsRaw.filter((r) => {
+    const key = `${r.supplierCode}|${r.portfolioCode}|${r.products}`;
+    if (seenExisting.has(key)) return false;
+    seenExisting.add(key);
+    return true;
+  });
 
   function sortRows(rows: QuoteResultRow[]) {
     rows.sort((a, b) => {
@@ -834,12 +848,14 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
       {/* ── Additional Information panel ────────────────────────────────── */}
       {selectedRow && selectedRowFreqs && (
         <AdditionalInfoPanel
+          key={selectedRow.id}
           row={selectedRow}
           superFreq={selectedRowFreqs.superFreq}
           nonSuperFreq={selectedRowFreqs.nonSuperFreq}
           quoteRequestBody={quoteRequestBody}
           onClose={() => setSelectedRowId(null)}
           onValidated={(rowId, matched) => setValidatedRows((prev) => ({ ...prev, [rowId]: matched }))}
+          initialValidated={validatedRows[selectedRow.id] ?? null}
           onRequoteWithOccupation={onRequoteWithOccupation}
           requotingOccupation={requotingOccupation}
         />
