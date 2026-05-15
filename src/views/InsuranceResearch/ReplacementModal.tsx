@@ -90,11 +90,6 @@ function FeatureGroup({
                 </button>
                 <div className="flex-1 min-w-0">
                   <div className="font-medium text-slate-800">{f.name}</div>
-                  {f.coverType && (
-                    <span className="text-slate-500 text-[10px]">
-                      {(COVER_TYPE_LABELS as Record<string, string>)[f.coverType] ?? f.coverType}
-                    </span>
-                  )}
                   {f.subFeatures.length > 0 && (
                     <div className="mt-1 space-y-0.5">
                       {f.subFeatures.map((sf) => (
@@ -244,6 +239,11 @@ export function ReplacementModal({
               ))}
             </div>
           )}
+          <div className="mt-2">
+            <button className="text-xs text-blue-600 hover:text-blue-800 underline">
+              Link Products
+            </button>
+          </div>
         </div>
 
         {/* Candidates list */}
@@ -259,35 +259,58 @@ export function ReplacementModal({
                 const isSelected = selectedCandidates.has(c.id);
                 const isLoading = loading.has(c.id);
                 const error = errors.get(c.id);
+                const candLifeInsured = c.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
                 return (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleCandidate(c)}
-                    className={`w-full flex items-center gap-2 px-3 py-2 rounded border text-left text-xs transition-colors ${
-                      isSelected
-                        ? 'border-teal-300 bg-teal-50'
-                        : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div
-                      className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                        isSelected ? 'bg-teal-600 border-teal-600 text-white' : 'border-slate-300'
+                  <div key={c.id}>
+                    <button
+                      onClick={() => toggleCandidate(c)}
+                      className={`w-full flex items-center gap-2 px-3 py-2 rounded-t border text-left text-xs transition-colors ${
+                        isSelected ? 'border-teal-300 bg-teal-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
                       }`}
                     >
-                      {isSelected && <Check size={10} />}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium text-slate-800 truncate">{c.label}</div>
-                      <div className="text-slate-500">{c.insurer}</div>
-                    </div>
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
-                      c.type === 'rec' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'
-                    }`}>
-                      {c.type === 'rec' ? 'Recommend' : 'Vary to Existing'}
-                    </span>
-                    {isLoading && <Loader2 size={14} className="animate-spin text-slate-400" />}
-                    {error && <span className="text-red-500 text-[10px] max-w-[120px] truncate">{error}</span>}
-                  </button>
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-teal-600 border-teal-600 text-white' : 'border-slate-300'}`}>
+                        {isSelected && <Check size={10} />}
+                      </div>
+                      {c.insurerLogo && <img src={c.insurerLogo} alt="" className="w-7 h-7 object-contain flex-shrink-0" />}
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium text-slate-800 truncate">{c.label}</div>
+                        <div className="text-slate-500">{c.insurer}</div>
+                      </div>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.type === 'rec' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'}`}>
+                        {c.type === 'rec' ? 'Recommend' : 'Vary to Existing'}
+                      </span>
+                      {isLoading && <Loader2 size={14} className="animate-spin text-slate-400" />}
+                      {error && <span className="text-red-500 text-[10px] max-w-[120px] truncate">{error}</span>}
+                    </button>
+                    {isSelected && c.covers.length > 0 && (
+                      <div className="border border-t-0 border-teal-300 bg-teal-50/30 rounded-b px-3 py-2">
+                        <table className="w-full text-[10px]">
+                          <thead>
+                            <tr className="border-b border-gray-200">
+                              <th className="py-0.5 text-left text-slate-600 font-semibold">Type</th>
+                              <th className="py-0.5 text-left text-slate-600 font-semibold">Definition</th>
+                              <th className="py-0.5 text-left text-slate-600 font-semibold">Owner</th>
+                              <th className="py-0.5 text-left text-slate-600 font-semibold">Life Insured</th>
+                              <th className="py-0.5 text-right text-slate-600 font-semibold">Benefit Amount</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {c.covers.map((cv, idx) => (
+                              <tr key={idx} className="border-b border-gray-100">
+                                <td className="py-0.5 text-slate-700">{cv.type}</td>
+                                <td className="py-0.5 text-slate-600">{cv.definition || cv.type}</td>
+                                <td className="py-0.5 text-slate-600">{candLifeInsured}</td>
+                                <td className="py-0.5 text-slate-600">{candLifeInsured}</td>
+                                <td className="py-0.5 text-right text-slate-800 font-medium">
+                                  {cv.sumInsured ? `$${parseFloat(cv.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
             </div>

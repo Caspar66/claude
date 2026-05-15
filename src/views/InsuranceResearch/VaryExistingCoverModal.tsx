@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { X, AlertTriangle } from 'lucide-react';
+import { AlertTriangle, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ExistingCover, ExistingCoverType, ExistingPolicy, PremiumFrequency } from './insuranceData';
 import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER } from './insuranceData';
@@ -76,8 +76,10 @@ export function VaryExistingCoverModal({ policy, clientName, partnerName, onSave
   const [provider] = useState(policy.provider);
   const [policyDescription, setPolicyDescription] = useState(policy.policyDescription);
   const [premiumSuper, setPremiumSuper] = useState(String(policy.premiumSuper));
+  const [stampDutySuper, setStampDutySuper] = useState(String(policy.stampDutySuper));
   const [superFreq, setSuperFreq] = useState<PremiumFrequency>(policy.superFrequency);
   const [premiumNonSuper, setPremiumNonSuper] = useState(String(policy.premiumNonSuper));
+  const [stampDutyNonSuper, setStampDutyNonSuper] = useState(String(policy.stampDutyNonSuper));
   const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFrequency>(policy.nonSuperFrequency);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,8 +108,8 @@ export function VaryExistingCoverModal({ policy, clientName, partnerName, onSave
   });
 
   const { totalPremium, totalFrequencyLabel } = useMemo(() => {
-    const superVal = parseMoney(premiumSuper);
-    const nonSuperVal = parseMoney(premiumNonSuper);
+    const superVal = parseMoney(premiumSuper) + parseMoney(stampDutySuper);
+    const nonSuperVal = parseMoney(premiumNonSuper) + parseMoney(stampDutyNonSuper);
     const superPy = superVal * PREMIUM_FREQUENCY_MULTIPLIER[superFreq];
     const nonSuperPy = nonSuperVal * PREMIUM_FREQUENCY_MULTIPLIER[nonSuperFreq];
     const total = superPy + nonSuperPy;
@@ -120,7 +122,7 @@ export function VaryExistingCoverModal({ policy, clientName, partnerName, onSave
     const displayTotal = freq === 'Y' ? total : total / PREMIUM_FREQUENCY_MULTIPLIER[freq];
     const suffix = freq === 'Y' ? 'pa' : PREMIUM_FREQUENCY_LABELS[freq].toLowerCase();
     return { totalPremium: displayTotal, totalFrequencyLabel: suffix };
-  }, [premiumSuper, superFreq, premiumNonSuper, nonSuperFreq]);
+  }, [premiumSuper, stampDutySuper, superFreq, premiumNonSuper, stampDutyNonSuper, nonSuperFreq]);
 
   function updateCover(type: ExistingCoverType, patch: Partial<ExistingCover>) {
     setCovers((prev) => {
@@ -145,10 +147,10 @@ export function VaryExistingCoverModal({ policy, clientName, partnerName, onSave
       id: `vary-${Date.now()}`,
       policyDescription: policyDescription.trim() || policy.policyDescription,
       premiumSuper: parseMoney(premiumSuper),
-      stampDutySuper: 0,
+      stampDutySuper: parseMoney(stampDutySuper),
       superFrequency: superFreq,
       premiumNonSuper: parseMoney(premiumNonSuper),
-      stampDutyNonSuper: 0,
+      stampDutyNonSuper: parseMoney(stampDutyNonSuper),
       nonSuperFrequency: nonSuperFreq,
       covers: coversWithValue,
       action: 'Review',
@@ -159,179 +161,230 @@ export function VaryExistingCoverModal({ policy, clientName, partnerName, onSave
   const lifeInsuredLabel = policy.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={onCancel}>
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[85vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-3 bg-indigo-900 rounded-t-lg">
-          <h2 className="text-sm font-semibold text-white">Vary Existing Policy</h2>
-          <button className="text-white/70 hover:text-white" onClick={onCancel}><X size={18} /></button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto p-5 space-y-5">
-          {error && (
-            <div className="flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-amber-800 text-xs">
-              <div className="flex items-center gap-2"><AlertTriangle size={14} /> {error}</div>
-              <button onClick={() => setError(null)} className="text-amber-700 hover:text-amber-900"><X size={14} /></button>
-            </div>
-          )}
-
-          {/* Policy header fields */}
-          <div className="grid grid-cols-3 gap-4 text-xs">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Provider:</label>
-              <input className="w-full border border-gray-300 rounded px-3 py-1.5 bg-slate-50 text-slate-600" value={provider} readOnly />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Policy Description:</label>
-              <input className="w-full border border-gray-300 rounded px-3 py-1.5" value={policyDescription} onChange={(e) => setPolicyDescription(e.target.value)} />
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Life Insured:</label>
-              <input className="w-full border border-gray-300 rounded px-3 py-1.5 bg-slate-50 text-slate-600" value={lifeInsuredLabel} readOnly />
-            </div>
-          </div>
-
-          {/* Premium Details */}
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 mb-2 border-b border-gray-200 pb-1">Premium Details</h3>
-            <div className="grid grid-cols-2 gap-4 text-xs">
-              <div className="flex items-center gap-2">
-                <label className="text-slate-600 italic w-32">Premium (Super):</label>
-                <input className="border border-gray-300 rounded px-2 py-1.5 w-32" value={premiumSuper} onChange={(e) => setPremiumSuper(sanitizeMoneyInput(e.target.value))} />
-                <select className="border border-gray-300 rounded px-2 py-1.5" value={superFreq} onChange={(e) => setSuperFreq(e.target.value as PremiumFrequency)}>
-                  {Object.entries(PREMIUM_FREQUENCY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-slate-600 italic w-32">Premium (Non-super):</label>
-                <input className="border border-gray-300 rounded px-2 py-1.5 w-32" value={premiumNonSuper} onChange={(e) => setPremiumNonSuper(sanitizeMoneyInput(e.target.value))} />
-                <select className="border border-gray-300 rounded px-2 py-1.5" value={nonSuperFreq} onChange={(e) => setNonSuperFreq(e.target.value as PremiumFrequency)}>
-                  {Object.entries(PREMIUM_FREQUENCY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                </select>
-              </div>
-            </div>
-            <div className="mt-2 text-xs font-bold text-slate-800">
-              Total Premium: <span className="text-slate-900">${totalPremium.toLocaleString('en-AU', { minimumFractionDigits: 2 })}</span>
-              <span className="text-slate-500 font-normal ml-1">/{totalFrequencyLabel}</span>
-            </div>
-          </div>
-
-          {/* Cover Details */}
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 mb-2 border-b border-gray-200 pb-1">Cover Details</h3>
-            <div className="overflow-x-auto">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-gray-200 bg-gray-50">
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold w-36">Cover Type</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold w-28">Sum Insured</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold w-40">Premium Style</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Super</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Definition</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Stand Alone</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Flexi-Linked</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Super-Linked</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Waiting Period</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Benefit Period</th>
-                    <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Add. Death Cover</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {COVER_TYPE_ORDER.map((type) => {
-                    const c = covers[type];
-                    const vis = COL_VISIBILITY[type];
-                    const styleOpts = PREMIUM_STYLE_BY_TYPE[type];
-                    return (
-                      <tr key={type} className="border-b border-gray-100">
-                        <td className="py-1.5 px-2 font-medium text-slate-700">{COVER_TYPE_LABELS[type]}</td>
-                        <td className="py-1.5 px-2">
-                          <input
-                            className="border border-gray-300 rounded px-2 py-1 w-24"
-                            value={c.sumInsured}
-                            placeholder="$0"
-                            onChange={(e) => updateCover(type, { sumInsured: sanitizeMoneyInput(e.target.value) })}
-                          />
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {styleOpts ? (
-                            <select className="border border-gray-300 rounded px-1 py-1 w-36" value={c.premiumStyle} onChange={(e) => updateCover(type, { premiumStyle: e.target.value })}>
-                              {styleOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
-                            </select>
-                          ) : <span className="text-slate-400">—</span>}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.super ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.super ?? 'No'} disabled>
-                              <option value="Yes">Yes</option>
-                              <option value="No">No</option>
-                            </select>
-                          ) : null}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.definition ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.definition ?? ''} onChange={(e) => updateCover(type, { definition: e.target.value })}>
-                              {(type === 'TPD' ? TPD_DEFINITIONS : IP_DEFINITIONS).map((d) => <option key={d} value={d}>{d}</option>)}
-                            </select>
-                          ) : null}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.standAlone ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.standAlone ?? 'No'} onChange={(e) => updateCover(type, { standAlone: e.target.value })}>
-                              <option value="No">No</option>
-                              <option value="Yes">Yes</option>
-                            </select>
-                          ) : null}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.flexiLinked ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.flexiLinked ?? 'No'} onChange={(e) => updateCover(type, { flexiLinked: e.target.value })}>
-                              <option value="No">No</option>
-                              <option value="Yes">Yes</option>
-                            </select>
-                          ) : null}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.superLinked ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.superLinked ?? 'No'} onChange={(e) => updateCover(type, { superLinked: e.target.value })}>
-                              <option value="No">No</option>
-                              <option value="Yes">Yes</option>
-                            </select>
-                          ) : null}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.waitingPeriod ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.waitingPeriod ?? ''} onChange={(e) => updateCover(type, { waitingPeriod: e.target.value })}>
-                              {(type === 'BE' ? BE_WAITING_PERIODS : IP_WAITING_PERIODS).map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
-                            </select>
-                          ) : null}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.benefitPeriod ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.benefitPeriod ?? ''} onChange={(e) => updateCover(type, { benefitPeriod: e.target.value })}>
-                              {IP_BENEFIT_PERIODS.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
-                            </select>
-                          ) : null}
-                        </td>
-                        <td className="py-1.5 px-2">
-                          {vis.addDeathCover ? (
-                            <input className="border border-gray-300 rounded px-2 py-1 w-20" value={c.addDeathCover ?? ''} onChange={(e) => updateCover(type, { addDeathCover: e.target.value })} />
-                          ) : null}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 rounded-b-lg flex justify-end gap-2">
+    <div className="flex-1 overflow-auto bg-gray-50">
+      {/* Title bar */}
+      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white">
+        <h2 className="text-sm font-bold text-slate-800">Vary Existing Policy</h2>
+        <div className="flex items-center gap-2">
           <Button size="sm" className="bg-indigo-900 hover:bg-indigo-950 text-white text-xs h-8 px-4" onClick={handleSave}>Save</Button>
           <Button size="sm" variant="outline" className="text-xs h-8 px-4" onClick={onCancel}>Cancel</Button>
         </div>
       </div>
+
+      {/* Error banner */}
+      {error && (
+        <div className="mx-5 mt-3 flex items-center justify-between gap-3 bg-amber-50 border border-amber-200 rounded px-3 py-2 text-amber-800 text-xs">
+          <div className="flex items-center gap-2">
+            <AlertTriangle size={14} /> {error}
+          </div>
+          <button onClick={() => setError(null)} className="text-amber-700 hover:text-amber-900"><X size={14} /></button>
+        </div>
+      )}
+
+      {/* Section header */}
+      <div className="mx-5 mt-4 px-4 py-2 bg-slate-400/70 text-white text-sm font-bold rounded-t">
+        Vary Existing Policy
+      </div>
+
+      {/* Form */}
+      <div className="mx-5 bg-white border border-gray-200 rounded-b p-5 space-y-4">
+        {/* Policy header fields */}
+        <div className="grid grid-cols-3 gap-4 text-xs">
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Provider:</label>
+            <input className="w-full border border-gray-300 rounded px-3 py-1.5 bg-slate-50 text-slate-600" value={provider} readOnly />
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Policy Description:</label>
+            <input className="w-full border border-gray-300 rounded px-3 py-1.5" value={policyDescription} onChange={(e) => setPolicyDescription(e.target.value)} />
+          </div>
+          <div>
+            <label className="block font-semibold text-slate-700 mb-1">Life Insured:</label>
+            <input className="w-full border border-gray-300 rounded px-3 py-1.5 bg-slate-50 text-slate-600" value={lifeInsuredLabel} readOnly />
+          </div>
+        </div>
+
+        {/* Premium Details */}
+        <div>
+          <h3 className="text-sm font-bold text-slate-800 mb-2">Premium Details</h3>
+          <div className="grid grid-cols-[160px_140px_140px_140px] gap-2 items-center mb-1">
+            <div />
+            <div className="text-xs font-bold text-slate-600 text-center">Premium</div>
+            <div className="text-xs font-bold text-slate-600 text-center">Stamp Duty</div>
+            <div className="text-xs font-bold text-slate-600 text-center">Frequency</div>
+          </div>
+          <div className="grid grid-cols-[160px_140px_140px_140px] gap-2 items-center mb-2">
+            <label className="text-sm italic text-slate-600">Super:</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={premiumSuper}
+              onChange={(e) => setPremiumSuper(sanitizeMoneyInput(e.target.value))}
+            />
+            <input
+              type="text"
+              inputMode="decimal"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={stampDutySuper}
+              onChange={(e) => setStampDutySuper(sanitizeMoneyInput(e.target.value))}
+            />
+            <select
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={superFreq}
+              onChange={(e) => setSuperFreq(e.target.value as PremiumFrequency)}
+            >
+              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-[160px_140px_140px_140px] gap-2 items-center mb-2">
+            <label className="text-sm italic text-slate-600">Non-Super:</label>
+            <input
+              type="text"
+              inputMode="decimal"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={premiumNonSuper}
+              onChange={(e) => setPremiumNonSuper(sanitizeMoneyInput(e.target.value))}
+            />
+            <input
+              type="text"
+              inputMode="decimal"
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={stampDutyNonSuper}
+              onChange={(e) => setStampDutyNonSuper(sanitizeMoneyInput(e.target.value))}
+            />
+            <select
+              className="border border-slate-300 rounded px-2.5 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+              value={nonSuperFreq}
+              onChange={(e) => setNonSuperFreq(e.target.value as PremiumFrequency)}
+            >
+              {(Object.entries(PREMIUM_FREQUENCY_LABELS) as [PremiumFrequency, string][]).map(([code, label]) => (
+                <option key={code} value={code}>{label}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-[160px_auto] gap-2 items-center">
+            <label className="text-sm italic text-slate-600">Total Premium:</label>
+            <span className="text-sm text-slate-700">
+              <strong>${totalPremium.toFixed(2)}</strong>
+              <span className="text-teal-700 ml-1"> / {totalFrequencyLabel}</span>
+            </span>
+          </div>
+        </div>
+
+        {/* Cover Details */}
+        <div>
+          <h3 className="text-sm font-bold text-slate-800 mb-2">Cover Details</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200 bg-gray-50">
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold w-36">Cover Type</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold w-28">Sum Insured</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold w-40">Premium Style</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Super</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Definition</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Stand Alone</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Flexi-Linked</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Super-Linked</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Waiting Period</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Benefit Period</th>
+                  <th className="py-1.5 px-2 text-left text-slate-600 font-semibold">Add. Death Cover</th>
+                </tr>
+              </thead>
+              <tbody>
+                {COVER_TYPE_ORDER.map((type) => {
+                  const c = covers[type];
+                  const vis = COL_VISIBILITY[type];
+                  const styleOpts = PREMIUM_STYLE_BY_TYPE[type];
+                  return (
+                    <tr key={type} className="border-b border-gray-100">
+                      <td className="py-1.5 px-2 font-medium text-slate-700">{COVER_TYPE_LABELS[type]}</td>
+                      <td className="py-1.5 px-2">
+                        <input
+                          className="border border-gray-300 rounded px-2 py-1 w-24"
+                          value={c.sumInsured}
+                          placeholder="$0"
+                          onChange={(e) => updateCover(type, { sumInsured: sanitizeMoneyInput(e.target.value) })}
+                        />
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {styleOpts ? (
+                          <select className="border border-gray-300 rounded px-1 py-1 w-36" value={c.premiumStyle} onChange={(e) => updateCover(type, { premiumStyle: e.target.value })}>
+                            {styleOpts.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
+                          </select>
+                        ) : <span className="text-slate-400">—</span>}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.super ? (
+                          <select className="border border-gray-300 rounded px-1 py-1" value={c.super ?? 'No'} disabled>
+                            <option value="Yes">Yes</option>
+                            <option value="No">No</option>
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.definition ? (
+                          <select className="border border-gray-300 rounded px-1 py-1" value={c.definition ?? ''} onChange={(e) => updateCover(type, { definition: e.target.value })}>
+                            {(type === 'TPD' ? TPD_DEFINITIONS : IP_DEFINITIONS).map((d) => <option key={d} value={d}>{d}</option>)}
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.standAlone ? (
+                          <select className="border border-gray-300 rounded px-1 py-1" value={c.standAlone ?? 'No'} onChange={(e) => updateCover(type, { standAlone: e.target.value })}>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.flexiLinked ? (
+                          <select className="border border-gray-300 rounded px-1 py-1" value={c.flexiLinked ?? 'No'} onChange={(e) => updateCover(type, { flexiLinked: e.target.value })}>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.superLinked ? (
+                          <select className="border border-gray-300 rounded px-1 py-1" value={c.superLinked ?? 'No'} onChange={(e) => updateCover(type, { superLinked: e.target.value })}>
+                            <option value="No">No</option>
+                            <option value="Yes">Yes</option>
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.waitingPeriod ? (
+                          <select className="border border-gray-300 rounded px-1 py-1" value={c.waitingPeriod ?? ''} onChange={(e) => updateCover(type, { waitingPeriod: e.target.value })}>
+                            {(type === 'BE' ? BE_WAITING_PERIODS : IP_WAITING_PERIODS).map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.benefitPeriod ? (
+                          <select className="border border-gray-300 rounded px-1 py-1" value={c.benefitPeriod ?? ''} onChange={(e) => updateCover(type, { benefitPeriod: e.target.value })}>
+                            {IP_BENEFIT_PERIODS.map((o) => <option key={o.code} value={o.code}>{o.label}</option>)}
+                          </select>
+                        ) : null}
+                      </td>
+                      <td className="py-1.5 px-2">
+                        {vis.addDeathCover ? (
+                          <input className="border border-gray-300 rounded px-2 py-1 w-20" value={c.addDeathCover ?? ''} onChange={(e) => updateCover(type, { addDeathCover: e.target.value })} />
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div className="h-8" />
     </div>
   );
 }

@@ -109,7 +109,16 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[]): ReviewIt
         frequency: PREMIUM_FREQUENCY_LABELS[nonSuperFreq],
         lifeInsured: q?.lifeInsured ?? 'client',
         quoteRow: r,
-        covers: r.products.split(', ').map((p) => ({ type: p, sumInsured: '' })),
+        covers: r.premiumBreakdown.length > 0
+          ? r.premiumBreakdown.map((bd, idx) => {
+              const lineItem = r.premiumLineItems[idx];
+              return {
+                type: bd.description.split(' / ')[0] || bd.description,
+                definition: bd.description,
+                sumInsured: lineItem ? `${lineItem.amount}` : '',
+              };
+            })
+          : r.products.split(', ').map((p) => ({ type: p, sumInsured: '' })),
         supplierCode: r.supplierCode,
         revisionDate: r.revisionDate,
         productCodes: r.productCodes,
@@ -169,9 +178,14 @@ function ReviewRow({
           </button>
         </td>
         <td className="px-3 py-3">
-          <div className="flex flex-col">
-            <span className="text-sm font-medium text-slate-800">{item.label}</span>
-            <span className="text-xs text-slate-500">{item.insurer}</span>
+          <div className="flex items-center gap-2">
+            {item.insurerLogo && (
+              <img src={item.insurerLogo} alt="" className="w-8 h-8 object-contain flex-shrink-0" />
+            )}
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-slate-800">{item.label}</span>
+              <span className="text-xs text-slate-500">{item.insurer}</span>
+            </div>
           </div>
         </td>
         <td className="px-3 py-3 text-xs text-slate-600">{lifeInsuredName}</td>
@@ -238,7 +252,30 @@ function ReviewRow({
         <tr className="bg-slate-50/50">
           <td />
           <td colSpan={5} className="px-6 py-3">
-            <div className="text-xs text-slate-600">{item.quoteRow.products}</div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="py-1 text-left text-slate-600 font-semibold">Type</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Definition</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Owner</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Life Insured</th>
+                  <th className="py-1 text-right text-slate-600 font-semibold">Benefit Amount</th>
+                </tr>
+              </thead>
+              <tbody>
+                {item.covers.map((c, idx) => (
+                  <tr key={idx} className="border-b border-gray-100">
+                    <td className="py-1.5 text-slate-700">{c.type}</td>
+                    <td className="py-1.5 text-slate-600">{c.definition || c.type}</td>
+                    <td className="py-1.5 text-slate-600">{lifeInsuredName}</td>
+                    <td className="py-1.5 text-slate-600">{lifeInsuredName}</td>
+                    <td className="py-1.5 text-right text-slate-800 font-medium">
+                      {c.sumInsured ? `$${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </td>
         </tr>
       )}
@@ -344,6 +381,20 @@ export function ScenarioReviewPage({
     (i.type === 'rec' && i.status === 'Recommend') || i.type === 'vary'
   );
 
+  if (varyItem && varyItem.existingPolicy) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <VaryExistingCoverModal
+          policy={varyItem.existingPolicy}
+          clientName={clientName}
+          partnerName={partnerName}
+          onSave={handleVarySave}
+          onCancel={() => setVaryItem(null)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
@@ -445,17 +496,6 @@ export function ScenarioReviewPage({
           Save to Scenario
         </Button>
       </div>
-
-      {/* Vary modal */}
-      {varyItem && varyItem.existingPolicy && (
-        <VaryExistingCoverModal
-          policy={varyItem.existingPolicy}
-          clientName={clientName}
-          partnerName={partnerName}
-          onSave={handleVarySave}
-          onCancel={() => setVaryItem(null)}
-        />
-      )}
 
       {/* Replace modal */}
       {replaceItem && replaceItem.existingPolicy && (
