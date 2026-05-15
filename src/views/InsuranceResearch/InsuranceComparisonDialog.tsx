@@ -58,6 +58,8 @@ import { ScenarioSettingsModal, getDefaultScenarioSettings } from './ScenarioSet
 import type { ScenarioSettings } from './ScenarioSettingsModal';
 import { NeedsAnalysisPage, getDefaultNeedsAnalysis, computeShortfalls } from './NeedsAnalysisPage';
 import type { NeedsAnalysisData } from './NeedsAnalysisPage';
+import { ScenarioReviewPage } from './ScenarioReviewPage';
+import type { ReviewItem } from './ScenarioReviewPage';
 
 interface Props {
   open: boolean;
@@ -68,7 +70,7 @@ interface Props {
   existingScenarioNames: string[];
 }
 
-type Screen = 'create' | 'personal' | 'editQuote' | 'needsAnalysis' | 1 | 2 | 3 | 4 | 'compare' | 'features' | 'options';
+type Screen = 'create' | 'personal' | 'editQuote' | 'needsAnalysis' | 1 | 2 | 3 | 4 | 'compare' | 'features' | 'options' | 'scenarioReview';
 
 const DETAIL_LABELS: Record<number, string> = {
   1: 'Insurance Details',
@@ -612,16 +614,21 @@ export function InsuranceComparisonDialog({
   }
 
   function handleSaveToScenario() {
+    setScreen('scenarioReview');
+  }
+
+  function handleScenarioReviewComplete(items: ReviewItem[]) {
     const allProviders = [...providers, ...providersMixed];
     const selected = allProviders.filter((p) => p.selected);
-    const policies = buildPoliciesFromSelection(
+    const builtPolicies = buildPoliciesFromSelection(
       selected.length > 0 ? selected : providers.slice(0, 3),
       lifeCover,
       tpd,
       incomeProtection,
       clientName,
     );
-    onComplete(scenarioName, policies);
+    void items;
+    onComplete(scenarioName, builtPolicies);
     resetState();
   }
 
@@ -881,6 +888,21 @@ export function InsuranceComparisonDialog({
               activeTab={optionsTab}
               onTabChange={setOptionsTab}
               onClose={() => setScreen(preOptionsScreen)}
+            />
+          )}
+
+          {/* Scenario Review screen */}
+          {screen === 'scenarioReview' && (
+            <ScenarioReviewPage
+              scenarioName={scenarioName}
+              policies={policies}
+              clientQuoteResults={clientQuoteResults.rows}
+              partnerQuoteResults={partnerQuoteResults.rows}
+              quotes={coverQuotes}
+              clientData={clientData}
+              partnerData={showPartner ? partnerData : null}
+              onBack={() => setScreen(1)}
+              onSaveComplete={handleScenarioReviewComplete}
             />
           )}
         </div>

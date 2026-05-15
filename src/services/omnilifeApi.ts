@@ -535,3 +535,58 @@ export async function searchSupplierOccupations(
       classBUS: String(item.classBUS ?? ''),
     }));
 }
+
+// ── Gained and Lost (Replacement comparison) ───────────────────────────────
+
+export interface GainedLostSubFeature {
+  code: string;
+  recommendedValue: string;
+  comparedValue?: string;
+}
+
+export interface GainedLostFeature {
+  code: string;
+  name: string;
+  coverType: string;
+  needType: string;
+  subFeatures: GainedLostSubFeature[];
+}
+
+export interface GainedLostResponse {
+  featuresGained: GainedLostFeature[];
+  featuresLost: GainedLostFeature[];
+  featuresImproved: GainedLostFeature[];
+  featuresDecreased: GainedLostFeature[];
+}
+
+export interface GainedLostRequest {
+  compared: {
+    supplierCode: string;
+    revisionDate?: string;
+    products: Record<string, string>;
+  };
+  recommended: {
+    supplierCode: string;
+    revisionDate?: string;
+    products: Record<string, string>;
+  };
+}
+
+export async function postGainedAndLost(body: GainedLostRequest): Promise<GainedLostResponse> {
+  const params = new URLSearchParams({ coverNeedType: 'NeedType', includeSubFeatures: 'true' });
+  const res = await fetch(`/api/gained-and-lost?${params.toString()}`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OmniLife /research/portfolio/gainedAndLost returned ${res.status}${text ? ': ' + text : ''}`);
+  }
+
+  return res.json();
+}

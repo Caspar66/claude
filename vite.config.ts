@@ -135,6 +135,15 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/gained-and-lost': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => p.replace('/api/gained-and-lost', '/research/portfolio/gainedAndLost'),
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         '/api/portfolio-features': {
           target,
           changeOrigin: true,
