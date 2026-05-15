@@ -1,18 +1,13 @@
 import { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
 import type { QuoteResultRow } from './quoteResultsData';
 import type { ExistingPolicy, ExistingCover, PremiumFrequency, ClientFormData } from './insuranceData';
 import { COVER_TYPE_LABELS, PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, coverToNeedCode } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import { VaryExistingCoverModal } from './VaryExistingCoverModal';
 import { ReplacementModal } from './ReplacementModal';
+import { ProductDetailsModal } from './ProductDetailsModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -140,34 +135,29 @@ const STATUS_COLORS: Record<ReviewStatus, string> = {
   'Vary to Existing': 'bg-purple-100 text-purple-800',
 };
 
-function StatusBadge({ status }: { status: ReviewStatus }) {
-  return (
-    <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${STATUS_COLORS[status]}`}>
-      {status}
-    </span>
-  );
-}
-
 // ── Expandable row ──────────────────────────────────────────────────────────
 
 function ReviewRow({
   item,
   onStatusChange,
+  onViewDetails,
   clientName,
   partnerName,
 }: {
   item: ReviewItem;
   onStatusChange: (id: string, status: ReviewStatus) => void;
+  onViewDetails: (item: ReviewItem) => void;
   clientName: string;
   partnerName: string | null;
 }) {
   const [expanded, setExpanded] = useState(false);
   const lifeInsuredName = item.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
 
-  const statusOptions: ReviewStatus[] | null =
+  const statusOptions: ReviewStatus[] =
     item.type === 'existing' ? ['Hold', 'Replace', 'Cancel', 'Vary', 'Exclude'] :
     item.type === 'rec' ? ['Recommend', 'Not Accepted'] :
-    null;
+    item.type === 'alt' ? ['Alternative', 'Not Accepted'] :
+    ['Recommend', 'Not Accepted', 'Alternative', 'Hold', 'Replace', 'Cancel', 'Vary', 'Exclude', 'Vary to Existing'];
 
   return (
     <>
@@ -194,29 +184,24 @@ function ReviewRow({
           <span className="text-xs text-slate-400 ml-1">pa</span>
         </td>
         <td className="px-3 py-3 text-center">
-          <StatusBadge status={item.status} />
+          <select
+            className={`px-2 py-0.5 rounded-full text-xs font-semibold border-0 cursor-pointer focus:outline-none focus:ring-1 focus:ring-teal-500 ${STATUS_COLORS[item.status]}`}
+            value={item.status}
+            onChange={(e) => onStatusChange(item.id, e.target.value as ReviewStatus)}
+          >
+            {statusOptions.map((s) => (
+              <option key={s} value={s}>{s}</option>
+            ))}
+          </select>
         </td>
         <td className="px-3 py-3 text-center">
-          {statusOptions ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button className="text-slate-400 hover:text-slate-600 p-1 rounded hover:bg-slate-100">
-                  <MoreVertical size={14} />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {statusOptions.map((s) => (
-                  <DropdownMenuItem
-                    key={s}
-                    onClick={() => onStatusChange(item.id, s)}
-                    className={item.status === s ? 'font-bold' : ''}
-                  >
-                    {s}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+          <button
+            onClick={() => onViewDetails(item)}
+            className="text-teal-600 hover:text-teal-800 p-1 rounded hover:bg-teal-50 inline-flex items-center gap-1 text-xs font-medium"
+            title="View Details"
+          >
+            <Eye size={14} />
+          </button>
         </td>
       </tr>
       {expanded && item.existingPolicy && (
@@ -316,6 +301,7 @@ export function ScenarioReviewPage({
 
   const [varyItem, setVaryItem] = useState<ReviewItem | null>(null);
   const [replaceItem, setReplaceItem] = useState<ReviewItem | null>(null);
+  const [detailsItem, setDetailsItem] = useState<ReviewItem | null>(null);
 
   const clientName = `${clientData.firstName} ${clientData.lastName}`.trim() || 'Client';
   const partnerName = partnerData ? `${partnerData.firstName} ${partnerData.lastName}`.trim() || 'Partner' : null;
@@ -432,7 +418,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {existingItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
             ))}
 
             {/* Recommendations */}
@@ -444,7 +430,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {recItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
             ))}
 
             {/* Vary to Existing */}
@@ -456,7 +442,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {varyItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
             ))}
 
             {/* Alternatives */}
@@ -468,7 +454,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {altItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
             ))}
 
             {items.length === 0 && (
@@ -505,6 +491,20 @@ export function ScenarioReviewPage({
           clientName={clientName}
           partnerName={partnerName}
           onClose={() => setReplaceItem(null)}
+        />
+      )}
+
+      {/* Product Details modal */}
+      {detailsItem && (
+        <ProductDetailsModal
+          item={detailsItem}
+          clientName={clientName}
+          partnerName={partnerName}
+          onSave={(updated) => {
+            setItems((prev) => prev.map((i) => i.id === updated.id ? updated : i));
+            setDetailsItem(null);
+          }}
+          onClose={() => setDetailsItem(null)}
         />
       )}
     </div>
