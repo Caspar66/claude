@@ -979,6 +979,7 @@ function ResultRow({
 
         {/* Rec / Alt */}
         <td className="px-2 py-2.5 text-center" onClick={(e) => e.stopPropagation()}>
+          {row.existingCover ? null : (
           <div className="flex items-center gap-1 justify-center">
             <button
               className={`px-2 py-0.5 text-[11px] font-medium rounded border transition-colors ${
@@ -1001,6 +1002,7 @@ function ResultRow({
               Alt
             </button>
           </div>
+          )}
         </td>
       </tr>
 
