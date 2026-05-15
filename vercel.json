@@ -1,9 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/product-options", "destination": "/api/product-options" },
-    { "source": "/api/quote-portfolio-features", "destination": "/api/quote-portfolio-features" },
-    { "source": "/api/quote-portfolio", "destination": "/api/quote-portfolio" },
-    { "source": "/api/portfolio-features", "destination": "/api/portfolio-features" },
+    { "source": "/api/:path*", "destination": "/api/:path*" },
     { "source": "/((?!api/).*)", "destination": "/index.html" }
   ]
 }
