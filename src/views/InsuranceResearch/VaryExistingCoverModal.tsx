@@ -261,7 +261,7 @@ export function VaryExistingCoverModal({ policy, clientName, partnerName, onSave
                         </td>
                         <td className="py-1.5 px-2">
                           {vis.super ? (
-                            <select className="border border-gray-300 rounded px-1 py-1" value={c.super ?? 'No'} readOnly disabled>
+                            <select className="border border-gray-300 rounded px-1 py-1" value={c.super ?? 'No'} disabled>
                               <option value="Yes">Yes</option>
                               <option value="No">No</option>
                             </select>

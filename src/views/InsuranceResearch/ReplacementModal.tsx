@@ -92,7 +92,7 @@ function FeatureGroup({
                   <div className="font-medium text-slate-800">{f.name}</div>
                   {f.coverType && (
                     <span className="text-slate-500 text-[10px]">
-                      {COVER_TYPE_LABELS[f.coverType] ?? f.coverType}
+                      {(COVER_TYPE_LABELS as Record<string, string>)[f.coverType] ?? f.coverType}
                     </span>
                   )}
                   {f.subFeatures.length > 0 && (
@@ -238,7 +238,7 @@ export function ReplacementModal({
             <div className="mt-2 flex flex-wrap gap-1.5">
               {existingItem.covers.map((c, i) => (
                 <span key={i} className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded text-[10px] font-medium">
-                  {COVER_TYPE_LABELS[c.type] ?? c.type}
+                  {(COVER_TYPE_LABELS as Record<string, string>)[c.type] ?? c.type}
                   {c.sumInsured ? ` $${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
                 </span>
               ))}
