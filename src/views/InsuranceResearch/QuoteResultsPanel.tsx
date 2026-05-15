@@ -223,6 +223,7 @@ function AdditionalInfoPanel({
   quoteRequestBody,
   onClose,
   onValidated,
+  initialValidated,
   onRequoteWithOccupation,
   requotingOccupation,
 }: {
