@@ -323,8 +323,8 @@ export function InsuranceComparisonDialog({
       };
       setLastQuoteRequestBody(mergedBody);
 
-      const clientRows = allRows.filter((r) => quotes.find((q, qi) => coverQuotes.indexOf(q) === r.quoteIndex)?.lifeInsured === 'client' ?? true);
-      const clientExcl = allExcluded.filter((e) => quotes.find((q, qi) => coverQuotes.indexOf(q) === e.quoteIndex)?.lifeInsured === 'client' ?? true);
+      const clientRows = allRows.filter((r) => (quotes.find((q) => coverQuotes.indexOf(q) === r.quoteIndex)?.lifeInsured ?? 'client') === 'client');
+      const clientExcl = allExcluded.filter((e) => (quotes.find((q) => coverQuotes.indexOf(q) === e.quoteIndex)?.lifeInsured ?? 'client') === 'client');
       const partnerRows = allRows.filter((r) => quotes.find((q) => coverQuotes.indexOf(q) === r.quoteIndex)?.lifeInsured === 'partner');
       const partnerExcl = allExcluded.filter((e) => quotes.find((q) => coverQuotes.indexOf(q) === e.quoteIndex)?.lifeInsured === 'partner');
 

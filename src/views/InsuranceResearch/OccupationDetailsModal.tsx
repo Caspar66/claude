@@ -45,7 +45,7 @@ export function OccupationDetailsModal({
   const [searching, setSearching] = useState(false);
   const [results, setResults] = useState<SupplierOccupation[]>([]);
   const [selectedOcc, setSelectedOcc] = useState<SupplierOccupation | null>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
   const hasClasses = Object.values(occupationClasses).some(Boolean);
 
   useEffect(() => {
