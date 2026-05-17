@@ -47,21 +47,45 @@ function allFeatureCodes(data: GainedLostResponse): FeatureCheck[] {
   return codes;
 }
 
+function deduplicateFeatures(features: GainedLostFeature[]): GainedLostFeature[] {
+  const map = new Map<string, GainedLostFeature>();
+  for (const f of features) {
+    const existing = map.get(f.code);
+    if (existing) {
+      const seenSubCodes = new Set(existing.subFeatures.map((s) => s.code));
+      for (const sf of f.subFeatures) {
+        if (!seenSubCodes.has(sf.code)) {
+          existing.subFeatures.push(sf);
+          seenSubCodes.add(sf.code);
+        }
+      }
+    } else {
+      map.set(f.code, { ...f, subFeatures: [...f.subFeatures] });
+    }
+  }
+  return Array.from(map.values());
+}
+
 function FeatureGroup({
   title,
   colorClass,
   features,
   featureChecks,
   onToggle,
+  existingInsurer,
+  recommendedInsurer,
 }: {
   title: string;
   colorClass: string;
   features: GainedLostFeature[];
   featureChecks: FeatureCheck[];
   onToggle: (code: string) => void;
+  existingInsurer: string;
+  recommendedInsurer: string;
 }) {
   const [expanded, setExpanded] = useState(true);
-  if (features.length === 0) return null;
+  const dedupedFeatures = deduplicateFeatures(features);
+  if (dedupedFeatures.length === 0) return null;
 
   return (
     <div className="mb-3">
@@ -70,39 +94,52 @@ function FeatureGroup({
         className={`flex items-center gap-1.5 w-full text-left px-2 py-1.5 rounded text-xs font-semibold ${colorClass}`}
       >
         {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {title} ({features.length})
+        {title} ({dedupedFeatures.length})
       </button>
       {expanded && (
         <div className="ml-1 mt-1 space-y-0.5">
-          {features.map((f) => {
+          {dedupedFeatures.map((f) => {
             const check = featureChecks.find((c) => c.featureCode === f.code);
+            const visibleSubs = f.subFeatures.filter(
+              (sf) => (sf.comparedValue && sf.comparedValue.trim()) || (sf.recommendedValue && sf.recommendedValue.trim())
+            );
             return (
-              <div key={f.code} className="flex items-start gap-2 px-2 py-1 rounded hover:bg-slate-50 text-xs">
-                <button
-                  onClick={() => onToggle(f.code)}
-                  className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
-                    check?.checked
-                      ? 'bg-teal-600 border-teal-600 text-white'
-                      : 'border-slate-300 bg-white'
-                  }`}
-                >
-                  {check?.checked && <Check size={10} />}
-                </button>
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-slate-800">{f.name}</div>
-                  {f.subFeatures.length > 0 && (
-                    <div className="mt-1 space-y-0.5">
-                      {f.subFeatures.map((sf) => (
-                        <div key={sf.code} className="flex gap-3 text-[10px] text-slate-600 pl-2 border-l border-slate-200">
-                          <span className="text-slate-400 min-w-[60px]">Existing:</span>
-                          <span>{sf.comparedValue || '—'}</span>
-                          <span className="text-slate-400 min-w-[60px]">New:</span>
-                          <span>{sf.recommendedValue || '—'}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+              <div key={f.code}>
+                <div className="flex items-start gap-2 px-2 py-1 rounded hover:bg-slate-50 text-xs">
+                  <button
+                    onClick={() => onToggle(f.code)}
+                    className={`mt-0.5 w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+                      check?.checked
+                        ? 'bg-teal-600 border-teal-600 text-white'
+                        : 'border-slate-300 bg-white'
+                    }`}
+                  >
+                    {check?.checked && <Check size={10} />}
+                  </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium text-slate-800">{f.name}</div>
+                  </div>
                 </div>
+                {visibleSubs.length > 0 && (
+                  <div className="ml-8 mt-0.5 mb-1 space-y-0.5">
+                    {visibleSubs.map((sf) => (
+                      <div key={sf.code} className="pl-3 border-l-2 border-slate-200 py-0.5">
+                        {sf.comparedValue && sf.comparedValue.trim() && (
+                          <div className="text-[10px] text-slate-600">
+                            <span className="text-slate-400">Existing:</span>{' '}
+                            <span className="font-medium">{existingInsurer}</span> — {sf.comparedValue}
+                          </div>
+                        )}
+                        {sf.recommendedValue && sf.recommendedValue.trim() && (
+                          <div className="text-[10px] text-slate-600">
+                            <span className="text-slate-400">New:</span>{' '}
+                            <span className="font-medium">{recommendedInsurer}</span> — {sf.recommendedValue}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             );
           })}
@@ -370,6 +407,8 @@ export function ReplacementModal({
                           features={comparison.data.featuresGained}
                           featureChecks={comparison.featureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          existingInsurer={existingItem.insurer}
+                          recommendedInsurer={candidate.insurer}
                         />
                         <FeatureGroup
                           title="Features Improved"
@@ -377,6 +416,8 @@ export function ReplacementModal({
                           features={comparison.data.featuresImproved}
                           featureChecks={comparison.featureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          existingInsurer={existingItem.insurer}
+                          recommendedInsurer={candidate.insurer}
                         />
                         <FeatureGroup
                           title="Features Lost"
@@ -384,6 +425,8 @@ export function ReplacementModal({
                           features={comparison.data.featuresLost}
                           featureChecks={comparison.featureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          existingInsurer={existingItem.insurer}
+                          recommendedInsurer={candidate.insurer}
                         />
                         <FeatureGroup
                           title="Features Decreased"
@@ -391,6 +434,8 @@ export function ReplacementModal({
                           features={comparison.data.featuresDecreased}
                           featureChecks={comparison.featureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          existingInsurer={existingItem.insurer}
+                          recommendedInsurer={candidate.insurer}
                         />
                         {comparison.data.featuresGained.length === 0 &&
                          comparison.data.featuresImproved.length === 0 &&
