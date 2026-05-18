@@ -333,7 +333,7 @@ export function MapProductModal({ open, onClose, policy, onSave }: Props) {
     const portfolio: ResearchPortfolio = {
       supplierCode: selectedPortfolio.supplierCode,
       revisionDate,
-      existingCover: !manualLinkMode,
+      existingCover: true,
       premiumInsideSuperAnnualised: parseFloat(premiumInside) || 0,
       premiumOutsideSuperAnnualised: parseFloat(premiumOutside) || 0,
       stampDutyInsideSuperAnnualised: parseFloat(stampDutyInside) || 0,
