@@ -147,7 +147,7 @@
 
 <u>Acceptance Criteria</u>
 
-* The Current Situation section displays a collapsible panel with two tabs: "Existing" and "Needs Analysis"
+* The Current Situation section displays a collapsible panel showing existing policies
 * Advisers can add an existing cover by clicking the "Add Existing Cover" button
 * An "Actions" dropdown provides bulk operations: Remove All, Mark All As Review
 * Existing policies are displayed in a table grouped by life insured (Client/Partner) with columns:

@@ -11,7 +11,6 @@ import type { ExistingPolicy, ExistingCoverType, ResearchPortfolio } from './ins
 import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, totalPolicyPremiumPerAnnum } from './insuranceData';
 import { MapProductModal } from './MapProductModal';
 
-type Tab = 'existing' | 'needsAnalysis';
 type ActionStatus = 'Not Considered' | 'Review';
 const ACTIONS: ActionStatus[] = ['Not Considered', 'Review'];
 
@@ -39,7 +38,6 @@ function formatSum(s: string): string {
 }
 
 export function CurrentSituationSection({ policies, clientName, partnerName, onAddCover, onChangePolicies }: Props) {
-  const [tab, setTab] = useState<Tab>('existing');
   const [collapsed, setCollapsed] = useState(false);
   const [reviewPolicyId, setReviewPolicyId] = useState<string | null>(null);
 
@@ -78,23 +76,8 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
 
       {!collapsed && (
         <div className="bg-white">
-          {/* Tabs + Add button row */}
-          <div className="flex items-center justify-between border-b border-gray-200 px-2">
-            <div className="flex">
-              <button
-                onClick={() => setTab('existing')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'existing' ? 'border-teal-700 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-              >
-                Existing
-              </button>
-              <button
-                onClick={() => setTab('needsAnalysis')}
-                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${tab === 'needsAnalysis' ? 'border-teal-700 text-teal-700' : 'border-transparent text-slate-500 hover:text-slate-700'}`}
-              >
-                Needs Analysis
-              </button>
-            </div>
-            {tab === 'existing' && (
+          {/* Add button row */}
+          <div className="flex items-center justify-end border-b border-gray-200 px-2">
               <div className="flex items-center gap-2 py-2">
                 <Button
                   size="sm"
@@ -115,11 +98,9 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-            )}
           </div>
 
-          {/* Tab content */}
-          {tab === 'existing' ? (
+          {/* Existing policies content */}
             <div>
               {/* Table header */}
               <div className="grid grid-cols-[40px_2fr_1fr_1fr_1fr_130px] gap-2 px-3 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-700">
@@ -228,11 +209,6 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                 );
               })}
             </div>
-          ) : (
-            <div className="px-3 py-8 text-center text-sm text-slate-400">
-              Needs Analysis content will appear here.
-            </div>
-          )}
         </div>
       )}
 
