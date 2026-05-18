@@ -1488,51 +1488,222 @@
 
 <u>Acceptance Criteria</u>
 
-* The quote results panel is displayed on the right side of the insurance comparison screen
-* Results are displayed in a table with the following columns:
-  * Checkbox (select for comparison)
-  * Expand toggle
-  * Insurer (logo and name, with portfolio name below)
-  * Products (comma-separated product names)
-  * Premiums (total premium with frequency label)
-    * Below the total, a Super breakdown line shows: Super premium + stamp duty at the super frequency
-    * Below that, a Non-Super breakdown line shows: Non-Super premium + stamp duty at the non-super frequency
-    * Breakdown lines are only shown when their total is not zero
-  * Cumulative Premiums (projected total over the premium projection period)
-  * Feature Score (colour-coded badge: green >80, yellow 50-80, red <50)
-  * Value Score (colour-coded badge: same scale)
-  * Rec/Alt (recommendation toggle buttons, mutually exclusive)
-* Advisers can search results by insurer name or product name using a text search field
-* Advisers can sort results by: Premium, Cumulative Premium, Feature Score, or Value Score
-* Advisers can toggle sort direction between ascending and descending
-* Advisers can expand a row to view detailed product information in a resizable right-side panel (280-600px width) with tabs:
-  * Summary: Premium breakdown, line items, stamp duty, total with validation status, commission table (upfront/ongoing percentages and annualised values), Validate Premium button
-  * Notes: Strengths (top features) and Limitations (bottom features)
-  * Links: PDS and TMD download links
-* Advisers can select multiple products using checkboxes for comparison
-* A "Select All" checkbox selects/deselects all visible results
-* Existing cover Research portfolios (existingCover: true, portfolioType: "Research") are included in the results table:
-  * Sorted to the bottom of the table
-  * Display an "EXISTING" badge
-  * Cumulative Premiums column shows "N/A"
-  * Value Score column shows "N/A"
-  * All other columns display normally
+The Quote Results screen is the primary workspace for reviewing generated quotes. It is composed of four distinct layout regions: a Client Summary Bar, a Navigation Bar, a Quote Details sidebar (left), and the Results Panel (centre/right). When a result row is selected, an Additional Information panel opens on the right.
 
-**Excluded Products Section:**
-* Products that cannot meet the specified needs are displayed in a collapsible "Excluded Products" section below the main results
-* Excluded products table shows:
-  * Insurer (logo and name)
-  * Portfolio name
-  * Reasons for exclusion (expandable list of error messages, via Exclusion Reasons Modal)
-  * PDS link (if available)
-  * TMD link (if available)
-* The section only appears if there are excluded products
+**4.1.1 — Client Summary Bar**
 
-**Actions:**
-* "Compare Products" button navigates to the Product Comparison page with selected products
-* "View / Compare Features" button navigates to the Features Comparison page (disabled when no specific quotes selected)
-* Download Report button
-* Toggle buttons for: Graphs/Charts view, Occupation Rating display
+* Displayed as a dark (slate-700) horizontal bar at the top of the results screen
+* Contains toggle buttons for each life insured:
+  * Client button — displays client first + last name; highlighted (blue-600 background) when active
+  * Partner button — displays partner first + last name; highlighted (purple-600 background) when active; only shown for Client & Partner cases
+* Toggling the active client:
+  * Switches all quote results, quote cards, and sidebar data to the selected life insured
+  * Resets the selected quote indices (returns to "All Quotes" view)
+* Displays read-only attribute badges for the active life insured:
+  * Age (e.g. "Age 61")
+  * Gender (e.g. "Male")
+  * Smoker status (e.g. "Non Smoker")
+  * Annual income (e.g. "Income $100,000")
+  * Occupation (e.g. "Accountant")
+* Each badge is displayed as a rounded chip with a slate-600 background
+
+**4.1.2 — Navigation Bar**
+
+* Displayed below the Client Summary Bar as a light (gray-100) horizontal bar
+* Contains:
+  * "← Personal Details" back link — returns to the Personal Details screen
+  * Loading indicator — shows a spinner and "Fetching quotes…" text while quotes are being generated
+  * Error indicator — shows "Quote error: [message]" in red when a quote request fails
+  * "Save to Scenario" button (teal, right-aligned) — navigates to the Scenario Review page (see story 4.5)
+
+**4.1.3 — Quote Details Sidebar (Left Panel)**
+
+* Fixed width: 320px, white background, separated by a right border
+* Header: "Quote Details" label on a gray-50 background
+
+* **"All Quotes" Toggle:**
+  * Displayed as a full-width button at the top of the list
+  * When active (no specific quotes selected): teal-50 background, teal border, teal-800 text
+  * When inactive: blue-600 text link style with hover underline
+  * Clicking "All Quotes" clears the selected quote indices, showing combined results for all quotes belonging to the active life insured
+
+* **Quote Cards** (one per quote for the active life insured):
+  * Each card is a bordered container with a header row and a content area
+  * Card header (slate-100 background):
+    * Checkbox — teal when selected, outline when not; clicking toggles the quote's inclusion in filtered results
+    * Quote name — bold text; clickable to toggle selection; shows teal-700 when selected, blue-600 link style when not
+    * "Life Insured: [Name]" sub-label (10px, slate-500)
+    * Edit button (SquarePen icon) — opens the Needs Editor for this quote
+  * Card content:
+    * Needs summary lines — one row per need, showing:
+      * Need label with structure (e.g. "Life / Variable age-stepped", "TPD Linked / Variable age-stepped", "IP / Variable age-stepped / WP 30 days / BP To age 65")
+      * Value (e.g. "$500,000", "$4,687/mo"); omitted if zero
+    * Linked needs (TPD Extension, Trauma Extension, TPD Ext. to Trauma) are displayed as indented lines beneath their parent
+    * "No needs configured" placeholder when the quote has no needs
+    * Premium frequency row (10px text, bordered top):
+      * "Super: [Frequency]" (e.g. "Super: Monthly")
+      * "Non-Super: [Frequency]" (e.g. "Non-Super: Monthly")
+    * Quote generated date row (only shown after quotes have been generated):
+      * "Quote Generated on [DD/MM/YYYY]" in italic slate-400 text
+      * "Requote" button (indigo-700 outline, small) — re-runs the quote for this specific quote only
+      * While requoting, the button shows a spinning RefreshCw icon and is disabled
+
+**4.1.4 — Results Toolbar**
+
+* Displayed above the results table as a horizontal bar (gray-50 background)
+* Contains the following controls (left to right):
+  * "All GRAPHS" toggle button — toggles between table view and graph view; teal when active, outline when inactive
+  * "Occupation Rating" toggle button — toggles occupation rating display; teal when active, outline when inactive
+  * "VIEW / COMPARE FEATURES" button — navigates to the Features Comparison page (see story 4.2)
+    * Disabled (grayed out) when "All Quotes" is selected (no specific quote filter active)
+    * Includes an ExternalLink icon
+  * "DOWNLOAD REPORT" button (outline) — downloads a report of the current results; includes a Download icon
+  * "Compare Products" button (teal, solid) — navigates to the Product Comparison page with selected (checked) products; includes a FileText icon
+  * Flexible spacer
+  * Search field (right-aligned):
+    * Placeholder: "Search by product or insurer"
+    * Search icon (magnifying glass) on the left inside the input
+    * Filters the results table and excluded products in real-time by matching against supplier name, portfolio name, and product names (case-insensitive)
+
+**4.1.5 — Results Table**
+
+* Displayed as a full-width scrollable table with a sticky header row
+* **Table Header** (sortable columns):
+  * Checkbox — "Select All" toggle; teal when all rows are selected
+  * Insurer — sortable, displays sort arrow icon
+  * Products — sortable, displays sort arrow icon
+  * Premiums — sortable (right-aligned), displays sort arrow icon
+  * [N]y Cumulative Premiums — sortable (right-aligned), displays sort arrow icon; column header dynamically includes the projection years from scenario settings (e.g. "15y Cumulative Premiums")
+  * Feature Score — sortable (centre-aligned)
+  * Value Score — sortable (centre-aligned)
+  * Rec — non-sortable (centre-aligned)
+* Sorting:
+  * Clicking a column header toggles between ascending and descending
+  * Default sort: Premium ascending
+  * Existing cover rows are always sorted to the bottom regardless of sort order
+
+* **Table Rows** (one per included portfolio):
+  * **Checkbox** — teal when selected; clicking toggles the row's selected state (used for Compare Products)
+  * **Insurer** — displays the supplier logo (with fallback to uppercase initials in a bordered square if the logo fails to load)
+  * **Products:**
+    * "EXISTING" badge (amber-100 background, amber-800 text, rounded-full) — shown only for existing cover rows
+    * Portfolio name — teal-700 font-medium text
+    * Product names — 10px slate-500 text, comma-separated, line-clamped to 2 lines
+  * **Premiums:**
+    * Total premium amount — bold text; green with a check icon when validated
+    * Frequency label — 10px text below the amount:
+      * Shows the common frequency label if Super and Non-Super frequencies match (e.g. "pf" for fortnightly)
+      * Shows "Annualised" if both Super and Non-Super components exist at different frequencies
+      * Shows the single applicable frequency if only one component exists
+    * Super breakdown (10px text, shown only when Super premium > 0):
+      * Format: "Super ([freq]) $[amount]" (e.g. "Super (pf) $21.15")
+    * Non-Super breakdown (10px text, shown only when Non-Super premium > 0):
+      * Format: "Non Super ([freq]) $[amount]" (e.g. "Non Super (pf) $22.77")
+  * **Cumulative Premiums:**
+    * Calculated by summing annualised premiums (premium + stamp duty) across all projection years
+    * Displays "N/A" for existing cover rows
+  * **Feature Score:**
+    * Colour-coded badge: green background (score > 80), yellow (50–80), red (< 50)
+    * Displays the raw integer score
+  * **Value Score:**
+    * Same colour-coding as Feature Score
+    * Displays "N/A" for existing cover rows
+  * **Rec / Alt:**
+    * Two small toggle buttons ("Rec" and "Alt"), mutually exclusive
+    * Active state: indigo-600 background with white text
+    * Inactive state: white background with slate-500 text, slate-300 border
+    * Clicking an active button deselects it (sets recommendation to null)
+    * Hidden for existing cover rows
+
+* **Row Interaction:**
+  * Clicking anywhere on a row (except the checkbox or Rec/Alt buttons) selects it and opens the Additional Information panel
+  * Selected row is highlighted with an indigo-50 background and a 2px indigo left border
+  * Rows with a checked checkbox show a teal-50 background
+  * Hover state: light slate-50 background
+
+* **Empty State:**
+  * When search returns no results: "No results match your search." centred text
+
+**4.1.6 — Excluded Products Section**
+
+* Displayed below the results table, separated by a top border
+* Only shown when there are excluded products matching the current search/filter
+* **Collapsible header:**
+  * Orange-50 background with hover to orange-100
+  * Chevron icon (right when collapsed, down when expanded) in orange-600
+  * Label: "EXCLUDED PRODUCTS ([count])" in orange-800 bold text
+  * Default state: collapsed
+* **Excluded products table** (when expanded):
+  * One row per excluded portfolio, columns:
+    * Insurer — logo + supplier name + portfolio name (stacked)
+    * "Reasons for Exclusion" link — teal underlined text; clicking opens the Exclusion Reasons Modal (see story 4.3)
+    * Error messages — red text, one per line
+    * PDS link — teal underlined text; opens the PDS URL in a new tab
+    * TMD link — teal underlined text; opens the TMD URL in a new tab
+
+**4.1.7 — Additional Information Panel (Right Sidebar)**
+
+* Opens when a result row is clicked; closes when the X button is clicked or a different row is selected
+* **Resizable:** draggable left border; constrained between 280px and 600px; default width 360px
+* **Header:** indigo-900 background with white text: "Additional Information : [Supplier Name]"; close button (X icon) on the right
+
+* **Supplier & Product Section:**
+  * Insurer logo (large: 56x56 with border)
+  * Portfolio name — bold text
+  * Product names — 11px slate-500 text
+
+* **Details Section:**
+  * Occupation — label + clickable teal link showing the occupation description; clicking opens the Occupation Details Modal (see story 4.4)
+  * TPD Occ Class — label + blue-600 text; only shown when available
+
+* **Tabs:**
+  * "Summary" tab — always present; default active tab for new quotes
+  * "Notes" tab — only shown when topFeatures or bottomFeatures exist
+  * "Links" tab — only shown when PDS or TMD links exist; default active tab for existing cover rows
+  * Active tab indicator: indigo-600 bottom border
+
+* **Summary Tab:**
+  * **Premium Breakdown:**
+    * When detailed breakdown data is available:
+      * **Super section** (shown only when Super premium > 0):
+        * "Super" heading (bold)
+        * Line items: description + amount (indented)
+        * Stamp Duty line (if > 0)
+        * "[Frequency] Sub Total" row (bold, bordered top)
+      * **Non-super section** (shown only when Non-Super premium > 0):
+        * "Non-super" heading (with "(linked to Super)" suffix when both sections are present)
+        * Line items: description + amount (indented)
+        * Stamp Duty line (if > 0)
+        * "[Frequency] Sub Total" row (bold, bordered top)
+    * When no detailed breakdown data is available:
+      * Simple list of premium line items (product name → amount)
+    * **Total Premium Footer:**
+      * Full-width rounded bar
+      * Emerald-700 background when validated, indigo-900 when not
+      * Shows a check icon when validated
+      * Label: "Total [Frequency] Premium" or "Total Annualised Premium" when frequencies differ
+      * Value: formatted total premium amount
+  * **Validate Premium button:**
+    * Only shown when validation is available for this portfolio and not yet validated
+    * Full-width outline button: "Validate Premium" (teal border)
+    * While validating: "Validating…" (disabled)
+    * On failure: "Failed to validate — Retry" (red border)
+    * On success: the Total Premium Footer turns emerald and shows a check icon; the button is hidden
+  * **Commissions Table:**
+    * Only shown when commission data is available
+    * Table header: "Commissions" | commission label (e.g. "Hybrid: 100%") | "Annualised"
+    * Upfront row: label "Upfront:" | percentage (e.g. "66%") | annualised dollar amount (e.g. "$300.04")
+    * Ongoing row: label "Ongoing:" | percentage (e.g. "22%") | annualised dollar amount (e.g. "$100.10")
+
+* **Notes Tab:**
+  * **Strengths** section — heading "Strengths" (bold), followed by a list of top features:
+    * Each item: bold heading name + summary text
+  * **Limitations** section — heading "Limitations" (bold), followed by a list of bottom features:
+    * Each item: bold heading name + summary text
+
+* **Links Tab:**
+  * PDS link — Download icon + "Product Disclosure Statement (PDS)" as a blue hyperlink opening in a new tab
+  * TMD link — Download icon + "Target Market Determination (TMD)" as a blue hyperlink opening in a new tab
 
 <u>Designs</u>
 
@@ -1542,6 +1713,9 @@
 
 * Premium annualisation uses frequency multipliers: Yearly=1, Half-yearly=2, Quarterly=4, Monthly=12, Fortnightly=26, Weekly=52
 * When Super and Non-Super frequencies differ, each component is annualised separately before being summed
+* Frequency-keyed premium maps (FreqPremiumMap) are used throughout; the displayed premium is looked up using the quote's configured Super and Non-Super frequencies
+* Commission annualised values are calculated as: commission amount at the non-super frequency × the corresponding annual multiplier
+* Premium validation calls the OmniLife Validation API with the portfolio code and full quote request body; "Success" response marks the row as validated
 
 ---
 
