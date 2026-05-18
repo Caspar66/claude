@@ -815,9 +815,10 @@
 <u>Acceptance Criteria</u>
 
 * The Workspace Preferences modal is accessible from the Settings icon on the Cover Selection section header
-* The modal displays a tabbed interface with the following tabs: General, Life, TPD Extension, Trauma Extension, TPD Standalone, Trauma Standalone, Income Protection, Business Expenses, Needle Stick
+* The modal displays a tabbed interface with the following tabs: General, Life, TPD Extension, Trauma Extension, TPD Standalone, Trauma Standalone, TPD Extension to Trauma, Income Protection, Business Expenses, Needle Stick
 * Changes are saved when the adviser clicks "Save" and persist across all new quotes created within the workspace
 * A "Reset to Defaults" button restores all preferences to the system defaults listed below
+* Preferences control dropdown defaults only; currency amounts (Sum Insured, Monthly Benefit) are not included as they vary per client
 
 **General Tab:**
 * Super Frequency
@@ -830,9 +831,6 @@
   * Default: Monthly
 
 **Life Tab:**
-* Sum Insured
-  * Mandatory, Currency field
-  * Default: $500,000
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
@@ -851,9 +849,6 @@
   * Default: Include if possible
 
 **TPD Extension Tab:**
-* Sum Insured
-  * Mandatory, Currency field
-  * Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
@@ -884,9 +879,6 @@
   * Default: Include if possible
 
 **Trauma Extension Tab:**
-* Sum Insured
-  * Mandatory, Currency field
-  * Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
@@ -917,9 +909,6 @@
   * Default: Cheapest
 
 **TPD Standalone Tab:**
-* Sum Insured
-  * Mandatory, Currency field
-  * Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
@@ -942,9 +931,6 @@
   * Default: Include if possible
 
 **Trauma Standalone Tab:**
-* Sum Insured
-  * Mandatory, Currency field
-  * Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
@@ -966,10 +952,7 @@
   * Options: Cheapest, Best, Intermediate
   * Default: Cheapest
 
-**TPD Extension to Trauma Tab (within Trauma Standalone):**
-* Sum Insured
-  * Mandatory, Currency field
-  * Default: $0
+**TPD Extension to Trauma Tab:**
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
@@ -992,9 +975,6 @@
   * Default: Include if possible
 
 **Income Protection Tab:**
-* Monthly Benefit
-  * Mandatory, Currency field
-  * Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable
@@ -1037,9 +1017,6 @@
   * Default: Cheapest
 
 **Business Expenses Tab:**
-* Monthly Benefit
-  * Mandatory, Currency field
-  * Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable
@@ -1050,9 +1027,6 @@
   * Default: 30 days
 
 **Needle Stick Tab:**
-* Sum Insured
-  * Mandatory, Currency field
-  * Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Variable
@@ -1069,7 +1043,7 @@
 
 <u>Security and Technical Considerations</u>
 
-* Workspace preferences are stored locally and applied at quote creation time; they do not retroactively update existing quotes
+* Workspace preferences are stored in localStorage and applied at quote creation time; they do not retroactively update existing quotes
 
 ---
 

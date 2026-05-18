@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { ChevronUp, ChevronDown, Settings, Plus, Trash2, SquarePen, Copy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { NeedsQuote, TrmFields, TrsFields } from './needsTypes';
-import { getNeedCode, NEED_CODE_LABELS, LINKED_NEED_LABELS } from './needsTypes';
+import type { NeedsQuote, TrmFields, TrsFields, WorkspacePreferences } from './needsTypes';
+import { getNeedCode, NEED_CODE_LABELS, LINKED_NEED_LABELS, savePreferences } from './needsTypes';
+import { WorkspacePreferencesModal } from './WorkspacePreferencesModal';
 
 interface Props {
   quotes: NeedsQuote[];
@@ -12,10 +13,13 @@ interface Props {
   onEditQuote: (quoteId: string) => void;
   onChangeQuotes: (quotes: NeedsQuote[]) => void;
   quoteGeneratedDates?: Record<string, string>;
+  workspacePrefs: WorkspacePreferences;
+  onChangePrefs: (prefs: WorkspacePreferences) => void;
 }
 
-export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQuote, onEditQuote, onChangeQuotes, quoteGeneratedDates }: Props) {
+export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQuote, onEditQuote, onChangeQuotes, quoteGeneratedDates, workspacePrefs, onChangePrefs }: Props) {
   const [collapsed, setCollapsed] = useState(false);
+  const [prefsOpen, setPrefsOpen] = useState(false);
 
   function copyQuote(id: string) {
     const source = quotes.find((q) => q.id === id);
@@ -65,16 +69,19 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
 
   return (
     <div className="mx-5 my-4 border border-gray-200 rounded overflow-hidden">
-      <button
-        onClick={() => setCollapsed(!collapsed)}
-        className="w-full flex items-center justify-between px-4 py-2.5 bg-slate-400/70 text-white"
-      >
-        <span className="text-sm font-bold">Cover Selection</span>
+      <div className="flex items-center justify-between px-4 py-2.5 bg-slate-400/70 text-white">
+        <button onClick={() => setCollapsed(!collapsed)} className="flex items-center gap-2">
+          <span className="text-sm font-bold">Cover Selection</span>
+        </button>
         <div className="flex items-center gap-2">
-          <Settings size={14} className="text-white/80" />
-          {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          <button onClick={(e) => { e.stopPropagation(); setPrefsOpen(true); }} title="Workspace Preferences">
+            <Settings size={14} className="text-white/80 hover:text-white" />
+          </button>
+          <button onClick={() => setCollapsed(!collapsed)}>
+            {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+          </button>
         </div>
-      </button>
+      </div>
 
       {!collapsed && (
         <div className="bg-white">
@@ -159,6 +166,13 @@ export function CoverSelectionSection({ quotes, clientName, partnerName, onAddQu
             </div>
           )}
         </div>
+      )}
+      {prefsOpen && (
+        <WorkspacePreferencesModal
+          prefs={workspacePrefs}
+          onSave={(p) => { savePreferences(p); onChangePrefs(p); setPrefsOpen(false); }}
+          onClose={() => setPrefsOpen(false)}
+        />
       )}
     </div>
   );

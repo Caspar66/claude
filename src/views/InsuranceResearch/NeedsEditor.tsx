@@ -8,7 +8,7 @@ import type {
   NeedsQuote, Need, NeedCode, LinkedNeedCode, QuoteFrequency,
   TrmFields, TpeFields, TreFields, TpsFields, TrsFields, TprFields,
   IncFields, BusFields, NesFields, ChtFields, ChtChild,
-  FieldValue,
+  FieldValue, WorkspacePreferences,
   Structure4, Structure3, Structure2,
   Rollover, PremiumWaiver, OccupationType,
   ThreeWay, FourWay, Priority,
@@ -45,6 +45,7 @@ interface Props {
   clientName: string;
   partnerName: string | null;
   shortfalls?: { client: NeedsShortfall; partner: NeedsShortfall };
+  workspacePrefs?: WorkspacePreferences;
   onSave: (quote: NeedsQuote) => void;
   onCancel: () => void;
 }
@@ -374,7 +375,7 @@ function ShortfallBadge({ label, value, monthly }: { label: string; value: numbe
   );
 }
 
-export function NeedsEditor({ quote, clientName, partnerName, shortfalls, onSave, onCancel }: Props) {
+export function NeedsEditor({ quote, clientName, partnerName, shortfalls, workspacePrefs, onSave, onCancel }: Props) {
   const [draft, setDraft] = useState<NeedsQuote>(quote);
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set(quote.needs.map((n) => getNeedCode(n))));
   const [showJson, setShowJson] = useState(false);
@@ -393,7 +394,7 @@ export function NeedsEditor({ quote, clientName, partnerName, shortfalls, onSave
   // ── Need list management ──────────────────────────────────────
 
   function addNeed(code: NeedCode) {
-    setDraft((d) => ({ ...d, needs: [...d.needs, createNeed(code)] }));
+    setDraft((d) => ({ ...d, needs: [...d.needs, createNeed(code, workspacePrefs)] }));
     setExpanded((prev) => new Set(prev).add(code));
   }
 
@@ -411,7 +412,7 @@ export function NeedsEditor({ quote, clientName, partnerName, shortfalls, onSave
     setDraft((d) => {
       const needs = [...d.needs];
       const trm = (needs[trmIdx] as { TRM: TrmFields }).TRM;
-      needs[trmIdx] = { TRM: addLinkedNeedTRM(trm, code) };
+      needs[trmIdx] = { TRM: addLinkedNeedTRM(trm, code, workspacePrefs) };
       return { ...d, needs };
     });
     setExpanded((prev) => new Set(prev).add(`TRM-${code}`));
@@ -446,7 +447,7 @@ export function NeedsEditor({ quote, clientName, partnerName, shortfalls, onSave
     setDraft((d) => {
       const needs = [...d.needs];
       const trs = (needs[trsIdx] as { TRS: TrsFields }).TRS;
-      needs[trsIdx] = { TRS: addLinkedNeedTRS(trs, 'TPR') };
+      needs[trsIdx] = { TRS: addLinkedNeedTRS(trs, 'TPR', workspacePrefs) };
       return { ...d, needs };
     });
     setExpanded((prev) => new Set(prev).add('TRS-TPR'));

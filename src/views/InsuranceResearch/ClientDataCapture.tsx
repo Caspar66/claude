@@ -6,8 +6,8 @@ import { useOccupations } from '@/hooks/useOccupations';
 import type { OccupationOption } from '@/services/omnilifeApi';
 import type { ClientFormData, EmploymentStatus, ExistingPolicy, HealthDiscount, Loadings } from './insuranceData';
 import { EMPLOYMENT_STATUS_LABELS, HEALTH_DISCOUNT_LABELS, hasLoadings } from './insuranceData';
-import type { NeedsQuote } from './needsTypes';
-import { createNeedsQuote } from './needsTypes';
+import type { NeedsQuote, WorkspacePreferences } from './needsTypes';
+import { createNeedsQuote, loadPreferences } from './needsTypes';
 import { OccupationRatingsModal } from './OccupationRatingsModal';
 import { CurrentSituationSection } from './CurrentSituationSection';
 import { CoverSelectionSection } from './CoverSelectionSection';
@@ -382,6 +382,7 @@ export function ClientDataCapture({
   const [loadingsTarget, setLoadingsTarget] = useState<'client' | 'partner' | null>(null);
   const [addCoverOpen, setAddCoverOpen] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const [workspacePrefs, setWorkspacePrefs] = useState<WorkspacePreferences>(() => loadPreferences());
 
   const clientDisplayName = `${clientData.lastName || 'Client'}, ${clientData.firstName || ''}`.trim().replace(/,$/, '');
   const partnerDisplayName = partnerData ? `${partnerData.lastName || 'Partner'}, ${partnerData.firstName || ''}`.trim().replace(/,$/, '') : null;
@@ -392,7 +393,7 @@ export function ClientDataCapture({
   }
 
   function handleAddQuote() {
-    const newQuote = createNeedsQuote(`Quote ${coverQuotes.length + 1}`);
+    const newQuote = createNeedsQuote(`Quote ${coverQuotes.length + 1}`, 'client', workspacePrefs);
     onChangeQuotes([...coverQuotes, newQuote]);
     setEditingQuoteId(newQuote.id);
   }
@@ -450,6 +451,7 @@ export function ClientDataCapture({
         clientName={clientDisplayName}
         partnerName={partnerDisplayName}
         shortfalls={needsShortfalls}
+        workspacePrefs={workspacePrefs}
         onSave={handleSaveQuote}
         onCancel={() => setEditingQuoteId(null)}
       />
@@ -540,6 +542,8 @@ export function ClientDataCapture({
         onEditQuote={(id) => setEditingQuoteId(id)}
         onChangeQuotes={handleChangeQuotes}
         quoteGeneratedDates={quoteGeneratedDates}
+        workspacePrefs={workspacePrefs}
+        onChangePrefs={setWorkspacePrefs}
       />
 
       {/* Action buttons */}

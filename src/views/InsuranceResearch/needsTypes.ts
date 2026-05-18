@@ -238,47 +238,103 @@ export const GENDER_LABELS: Record<Gender, string> = {
   M: 'Male', F: 'Female',
 };
 
+// ── Workspace Preferences ─────────────────────────────────────────────────
+
+export interface WorkspacePreferences {
+  general: {
+    superFrequency: QuoteFrequency;
+    nonSuperFrequency: QuoteFrequency;
+  };
+  trm: { structure: Structure4; owner: OwnerTRM; rollover: Rollover; premiumWaiver: PremiumWaiver };
+  tpe: { structure: Structure4; owner: OwnerTPE; rollover: Rollover; occupationType: OccupationType; lifeBuyBack: LifeBuyBackTPE; doubleTPD: ThreeWay; premiumWaiver: PremiumWaiver };
+  tre: { structure: Structure4; lifeBuyBack: LifeBuyBackTRE; doubleTrauma: ThreeWay; traumaReinstatement: ThreeWay; premiumWaiver: PremiumWaiver; babyCare: FourWay; priority: Priority };
+  tps: { structure: Structure4; owner: OwnerTPE; rollover: Rollover; occupationType: OccupationType; premiumWaiver: PremiumWaiver };
+  trs: { structure: Structure4; traumaReinstatement: ThreeWay; premiumWaiver: PremiumWaiver; babyCare: FourWay; priority: Priority };
+  tpr: { structure: Structure4; owner: OwnerINC; rollover: Rollover; occupationType: OccupationType; premiumWaiver: PremiumWaiver };
+  inc: { structure: Structure3; owner: OwnerINC; rollover: Rollover; agreedValue: AgreedValue; accidentBenefit: FourWay; increaseClaimBenefit: FourWay; waitingPeriod: WaitingPeriodINC; benefitPeriod: BenefitPeriodINC; initialReplacementRatio: ReplacementRatio; priority: Priority };
+  bus: { structure: Structure3; waitingPeriod: WaitingPeriodBUS };
+  nes: { structure: Structure2 };
+}
+
+const PREFS_KEY = 'workspace-preferences';
+
+export function getDefaultPreferences(): WorkspacePreferences {
+  return {
+    general: { superFrequency: 'M', nonSuperFrequency: 'M' },
+    trm: { structure: 'S', owner: 'O', rollover: 'N', premiumWaiver: 'I' },
+    tpe: { structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', lifeBuyBack: 'L', doubleTPD: 'X', premiumWaiver: 'I' },
+    tre: { structure: 'S', lifeBuyBack: 'L', doubleTrauma: 'X', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C' },
+    tps: { structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', premiumWaiver: 'I' },
+    trs: { structure: 'S', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C' },
+    tpr: { structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', premiumWaiver: 'I' },
+    inc: { structure: 'S', owner: 'O', rollover: 'N', agreedValue: 'N', accidentBenefit: 'X', increaseClaimBenefit: 'X', waitingPeriod: '30', benefitPeriod: '65', initialReplacementRatio: 'A', priority: 'C' },
+    bus: { structure: 'S', waitingPeriod: '30' },
+    nes: { structure: 'S' },
+  };
+}
+
+export function loadPreferences(): WorkspacePreferences {
+  try {
+    const raw = localStorage.getItem(PREFS_KEY);
+    if (raw) return { ...getDefaultPreferences(), ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return getDefaultPreferences();
+}
+
+export function savePreferences(prefs: WorkspacePreferences): void {
+  localStorage.setItem(PREFS_KEY, JSON.stringify(prefs));
+}
+
 // ── Default factories ──────────────────────────────────────────────────────
 
-export function defaultTrm(): TrmFields {
-  return { sumInsured: 500000, structure: 'S', owner: 'O', rollover: 'N', premiumWaiver: 'I', linkedNeeds: [], productCodes: {} };
+export function defaultTrm(p?: WorkspacePreferences): TrmFields {
+  const d = p?.trm ?? getDefaultPreferences().trm;
+  return { sumInsured: 500000, structure: d.structure, owner: d.owner, rollover: d.rollover, premiumWaiver: d.premiumWaiver, linkedNeeds: [], productCodes: {} };
 }
-export function defaultTpe(): TpeFields {
-  return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', lifeBuyBack: 'L', doubleTPD: 'X', premiumWaiver: 'I' };
+export function defaultTpe(p?: WorkspacePreferences): TpeFields {
+  const d = p?.tpe ?? getDefaultPreferences().tpe;
+  return { sumInsured: 0, structure: d.structure, owner: d.owner, rollover: d.rollover, occupationType: d.occupationType, lifeBuyBack: d.lifeBuyBack, doubleTPD: d.doubleTPD, premiumWaiver: d.premiumWaiver };
 }
-export function defaultTre(): TreFields {
-  return { sumInsured: 0, structure: 'S', lifeBuyBack: 'L', doubleTrauma: 'X', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C' };
+export function defaultTre(p?: WorkspacePreferences): TreFields {
+  const d = p?.tre ?? getDefaultPreferences().tre;
+  return { sumInsured: 0, structure: d.structure, lifeBuyBack: d.lifeBuyBack, doubleTrauma: d.doubleTrauma, traumaReinstatement: d.traumaReinstatement, premiumWaiver: d.premiumWaiver, babyCare: d.babyCare, priority: d.priority };
 }
-export function defaultTps(): TpsFields {
-  return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', premiumWaiver: 'I', productCodes: {} };
+export function defaultTps(p?: WorkspacePreferences): TpsFields {
+  const d = p?.tps ?? getDefaultPreferences().tps;
+  return { sumInsured: 0, structure: d.structure, owner: d.owner, rollover: d.rollover, occupationType: d.occupationType, premiumWaiver: d.premiumWaiver, productCodes: {} };
 }
-export function defaultTrs(): TrsFields {
-  return { sumInsured: 0, structure: 'S', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C', linkedNeeds: [], productCodes: {} };
+export function defaultTrs(p?: WorkspacePreferences): TrsFields {
+  const d = p?.trs ?? getDefaultPreferences().trs;
+  return { sumInsured: 0, structure: d.structure, traumaReinstatement: d.traumaReinstatement, premiumWaiver: d.premiumWaiver, babyCare: d.babyCare, priority: d.priority, linkedNeeds: [], productCodes: {} };
 }
-export function defaultTpr(): TprFields {
-  return { sumInsured: 0, structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', premiumWaiver: 'I' };
+export function defaultTpr(p?: WorkspacePreferences): TprFields {
+  const d = p?.tpr ?? getDefaultPreferences().tpr;
+  return { sumInsured: 0, structure: d.structure, owner: d.owner, rollover: d.rollover, occupationType: d.occupationType, premiumWaiver: d.premiumWaiver };
 }
-export function defaultInc(): IncFields {
-  return { monthlyBenefit: 0, superContributionOption: 0, structure: 'S', owner: 'O', rollover: 'N', agreedValue: 'N', accidentBenefit: 'X', increaseClaimBenefit: 'X', waitingPeriod: '30', benefitPeriod: '65', initialReplacementRatio: 'A', priority: 'C', productCodes: {} };
+export function defaultInc(p?: WorkspacePreferences): IncFields {
+  const d = p?.inc ?? getDefaultPreferences().inc;
+  return { monthlyBenefit: 0, superContributionOption: 0, structure: d.structure, owner: d.owner, rollover: d.rollover, agreedValue: d.agreedValue, accidentBenefit: d.accidentBenefit, increaseClaimBenefit: d.increaseClaimBenefit, waitingPeriod: d.waitingPeriod, benefitPeriod: d.benefitPeriod, initialReplacementRatio: d.initialReplacementRatio, priority: d.priority, productCodes: {} };
 }
-export function defaultBus(): BusFields {
-  return { monthlyBenefit: 0, structure: 'S', waitingPeriod: '30', benefitPeriod: '1', productCodes: {} };
+export function defaultBus(p?: WorkspacePreferences): BusFields {
+  const d = p?.bus ?? getDefaultPreferences().bus;
+  return { monthlyBenefit: 0, structure: d.structure, waitingPeriod: d.waitingPeriod, benefitPeriod: '1', productCodes: {} };
 }
-export function defaultNes(): NesFields {
-  return { sumInsured: 0, structure: 'S', productCodes: {} };
+export function defaultNes(p?: WorkspacePreferences): NesFields {
+  const d = p?.nes ?? getDefaultPreferences().nes;
+  return { sumInsured: 0, structure: d.structure, productCodes: {} };
 }
 export function defaultCht(): ChtFields {
   return { children: [] };
 }
 
-export function createNeed(code: NeedCode): Need {
+export function createNeed(code: NeedCode, prefs?: WorkspacePreferences): Need {
   switch (code) {
-    case 'TRM': return { TRM: defaultTrm() };
-    case 'TPS': return { TPS: defaultTps() };
-    case 'TRS': return { TRS: defaultTrs() };
-    case 'INC': return { INC: defaultInc() };
-    case 'BUS': return { BUS: defaultBus() };
-    case 'NES': return { NES: defaultNes() };
+    case 'TRM': return { TRM: defaultTrm(prefs) };
+    case 'TPS': return { TPS: defaultTps(prefs) };
+    case 'TRS': return { TRS: defaultTrs(prefs) };
+    case 'INC': return { INC: defaultInc(prefs) };
+    case 'BUS': return { BUS: defaultBus(prefs) };
+    case 'NES': return { NES: defaultNes(prefs) };
     case 'CHT': return { CHT: defaultCht() };
   }
 }
@@ -301,15 +357,15 @@ export function hasLinkedNeed(parent: TrmFields | TrsFields, code: LinkedNeedCod
   return parent.linkedNeeds.some((ln) => code in ln);
 }
 
-export function addLinkedNeedTRM(trm: TrmFields, code: 'TPE' | 'TRE'): TrmFields {
+export function addLinkedNeedTRM(trm: TrmFields, code: 'TPE' | 'TRE', prefs?: WorkspacePreferences): TrmFields {
   if (hasLinkedNeed(trm, code)) return trm;
-  const ln = code === 'TPE' ? { TPE: defaultTpe() } : { TRE: defaultTre() };
+  const ln = code === 'TPE' ? { TPE: defaultTpe(prefs) } : { TRE: defaultTre(prefs) };
   return { ...trm, linkedNeeds: [...trm.linkedNeeds, ln] };
 }
 
-export function addLinkedNeedTRS(trs: TrsFields, code: 'TPR'): TrsFields {
+export function addLinkedNeedTRS(trs: TrsFields, code: 'TPR', prefs?: WorkspacePreferences): TrsFields {
   if (hasLinkedNeed(trs, code)) return trs;
-  return { ...trs, linkedNeeds: [...trs.linkedNeeds, { TPR: defaultTpr() }] };
+  return { ...trs, linkedNeeds: [...trs.linkedNeeds, { TPR: defaultTpr(prefs) }] };
 }
 
 export function removeLinkedNeed(parent: TrmFields, code: LinkedNeedCode): TrmFields;
@@ -395,15 +451,16 @@ export interface NeedsQuote {
   requiredFeatures: Record<string, string[]>;
 }
 
-export function createNeedsQuote(name: string, lifeInsured: 'client' | 'partner' = 'client'): NeedsQuote {
+export function createNeedsQuote(name: string, lifeInsured: 'client' | 'partner' = 'client', prefs?: WorkspacePreferences): NeedsQuote {
+  const g = prefs?.general ?? getDefaultPreferences().general;
   return {
     id: crypto.randomUUID(),
     name,
     lifeInsured,
     needs: [],
     compareAllCombinations: true,
-    superFrequency: 'M',
-    nonSuperFrequency: 'M',
+    superFrequency: g.superFrequency,
+    nonSuperFrequency: g.nonSuperFrequency,
     requiredFeatures: {},
   };
 }
