@@ -5,6 +5,8 @@ import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Check } from 'lucide-react';
 import { useSuppliers } from '@/hooks/useSuppliers';
 import type { CommissionChoice, CampaignOption } from '@/services/omnilifeApi';
+import type { WorkspacePreferences } from './needsTypes';
+import { getDefaultScenarioPrefs } from './needsTypes';
 
 function formatCommissionLabel(c: CommissionChoice): string {
   const name = c.name || c.code;
@@ -23,13 +25,14 @@ export interface ScenarioSettings {
   campaignBySupplier: Record<string, string[]>;
 }
 
-export function getDefaultScenarioSettings(): ScenarioSettings {
+export function getDefaultScenarioSettings(prefs?: WorkspacePreferences): ScenarioSettings {
+  const d = prefs?.scenario ?? getDefaultScenarioPrefs();
   return {
-    projectionYears: '15',
-    indexationRate: 0,
-    aplSource: 'adviser',
-    minimumCommission: false,
-    commissionBySupplier: {},
+    projectionYears: d.projectionYears,
+    indexationRate: d.indexationRate,
+    aplSource: d.aplSource,
+    minimumCommission: d.minimumCommission,
+    commissionBySupplier: { ...d.commissionBySupplier },
     campaignBySupplier: {},
   };
 }

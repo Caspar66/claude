@@ -48,7 +48,8 @@ import type {
   DisplayOption,
   ExistingPolicy,
 } from './insuranceData';
-import type { NeedsQuote } from './needsTypes';
+import type { NeedsQuote, WorkspacePreferences } from './needsTypes';
+import { loadPreferences } from './needsTypes';
 import { NeedsEditor } from './NeedsEditor';
 import { buildPortfolioRequest, buildPortfolioQueryParams } from './portfolioRequest';
 import { postQuotePortfolio } from '@/services/omnilifeApi';
@@ -208,8 +209,8 @@ export function InsuranceComparisonDialog({
   // Editing a quote from the results page
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
-  // Scenario settings
-  const [scenarioSettings, setScenarioSettings] = useState<ScenarioSettings>(getDefaultScenarioSettings());
+  // Scenario settings (initialized from workspace preferences)
+  const [scenarioSettings, setScenarioSettings] = useState<ScenarioSettings>(() => getDefaultScenarioSettings(loadPreferences()));
   const [scenarioSettingsOpen, setScenarioSettingsOpen] = useState(false);
 
   // Needs analysis
@@ -267,7 +268,7 @@ export function InsuranceComparisonDialog({
     setEditingQuoteId(null);
     setQuoteGeneratedDates({});
     setRequotingQuoteId(null);
-    setScenarioSettings(getDefaultScenarioSettings());
+    setScenarioSettings(getDefaultScenarioSettings(loadPreferences()));
     setScenarioSettingsOpen(false);
     setNeedsAnalysis(getDefaultNeedsAnalysis());
   }

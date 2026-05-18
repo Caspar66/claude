@@ -815,7 +815,7 @@
 <u>Acceptance Criteria</u>
 
 * The Workspace Preferences modal is accessible from the Settings icon on the Cover Selection section header
-* The modal displays a tabbed interface with the following tabs: General, Life, TPD Extension, Trauma Extension, TPD Standalone, Trauma Standalone, TPD Extension to Trauma, Income Protection, Business Expenses, Needle Stick
+* The modal displays a tabbed interface with the following tabs: General, Global Options, Commissions, Life, TPD Extension, Trauma Extension, TPD Standalone, Trauma Standalone, TPD Extension to Trauma, Income Protection, Business Expenses, Needle Stick
 * Changes are saved when the adviser clicks "Save" and persist across all new quotes created within the workspace
 * A "Reset to Defaults" button restores all preferences to the system defaults listed below
 * Preferences control dropdown defaults only; currency amounts (Sum Insured, Monthly Benefit) are not included as they vary per client
@@ -829,6 +829,49 @@
   * Mandatory, Dropdown
   * Options: Weekly, Fortnightly, Monthly, Quarterly, Half Yearly, Yearly
   * Default: Monthly
+
+**Global Options Tab:**
+* Premium Projection Duration
+  * Mandatory, Dropdown
+  * Options: 3 Years, 5 Years, 10 Years, 15 Years, 20 Years
+  * Default: 15 Years
+  * Controls the number of years used for premium projection calculations
+* Indexation
+  * Mandatory, Number input with % suffix
+  * Range: 0 to 100 (step 0.01)
+  * Default: 0
+  * Annual indexation rate applied to premiums
+* Approved Product List
+  * Mandatory, Dropdown
+  * Options: Adviser, User
+  * Default: Adviser
+  * Determines which APL is used for quoting
+* Minimum Commission Preference
+  * Mandatory, Dropdown
+  * Options: Yes, No
+  * Default: No
+  * When set to Yes, all providers are automatically assigned their minimum (0%) commission structure
+  * A warning banner is displayed on the Commissions tab when enabled
+
+**Commissions Tab:**
+* Displays a table of all available insurance providers with one row per provider
+* Table columns:
+  * Provider (logo and name)
+  * Commission Structure (editable dropdown per provider)
+  * Initial (read-only percentage display)
+  * Renewal (read-only percentage display)
+* Commission Structure
+  * Mandatory, Dropdown per provider
+  * Options: populated dynamically from the Suppliers API (each provider's `commissionOptions`)
+  * Options display format: "[Structure] ([Upfront]% / [Ongoing]%): [Name]"
+  * Default: each provider's default commission code from the API
+* When Minimum Commission Preference is enabled:
+  * All dropdowns are disabled (greyed out)
+  * All providers are set to their minimum commission code (0% upfront / 0% ongoing)
+  * An amber banner displays: "Minimum Commission Preference is enabled — all providers set to minimum (0%) commission."
+* Initial and Renewal columns display the upfront and ongoing commission percentages (2 decimal places)
+* A dash "—" is shown if the rate is not available
+* These defaults are applied to the Scenario Settings when a new scenario is created
 
 **Life Tab:**
 * Structure

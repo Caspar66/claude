@@ -240,11 +240,20 @@ export const GENDER_LABELS: Record<Gender, string> = {
 
 // ── Workspace Preferences ─────────────────────────────────────────────────
 
+export interface WorkspaceScenarioDefaults {
+  projectionYears: string;
+  indexationRate: number;
+  aplSource: 'adviser' | 'user';
+  minimumCommission: boolean;
+  commissionBySupplier: Record<string, string>;
+}
+
 export interface WorkspacePreferences {
   general: {
     superFrequency: QuoteFrequency;
     nonSuperFrequency: QuoteFrequency;
   };
+  scenario: WorkspaceScenarioDefaults;
   trm: { structure: Structure4; owner: OwnerTRM; rollover: Rollover; premiumWaiver: PremiumWaiver };
   tpe: { structure: Structure4; owner: OwnerTPE; rollover: Rollover; occupationType: OccupationType; lifeBuyBack: LifeBuyBackTPE; doubleTPD: ThreeWay; premiumWaiver: PremiumWaiver };
   tre: { structure: Structure4; lifeBuyBack: LifeBuyBackTRE; doubleTrauma: ThreeWay; traumaReinstatement: ThreeWay; premiumWaiver: PremiumWaiver; babyCare: FourWay; priority: Priority };
@@ -258,9 +267,20 @@ export interface WorkspacePreferences {
 
 const PREFS_KEY = 'workspace-preferences';
 
+export function getDefaultScenarioPrefs(): WorkspaceScenarioDefaults {
+  return {
+    projectionYears: '15',
+    indexationRate: 0,
+    aplSource: 'adviser',
+    minimumCommission: false,
+    commissionBySupplier: {},
+  };
+}
+
 export function getDefaultPreferences(): WorkspacePreferences {
   return {
     general: { superFrequency: 'M', nonSuperFrequency: 'M' },
+    scenario: getDefaultScenarioPrefs(),
     trm: { structure: 'S', owner: 'O', rollover: 'N', premiumWaiver: 'I' },
     tpe: { structure: 'S', owner: 'O', rollover: 'N', occupationType: 'A', lifeBuyBack: 'L', doubleTPD: 'X', premiumWaiver: 'I' },
     tre: { structure: 'S', lifeBuyBack: 'L', doubleTrauma: 'X', traumaReinstatement: 'X', premiumWaiver: 'I', babyCare: 'I', priority: 'C' },

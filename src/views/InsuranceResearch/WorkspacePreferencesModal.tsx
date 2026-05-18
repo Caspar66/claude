@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSuppliers } from '@/hooks/useSuppliers';
+import type { CommissionChoice } from '@/services/omnilifeApi';
 import type { WorkspacePreferences } from './needsTypes';
 import {
   getDefaultPreferences,
@@ -17,10 +19,12 @@ const FREQ_LABELS: Record<string, string> = {
   W: 'Weekly', F: 'Fortnightly', M: 'Monthly', Q: 'Quarterly', H: 'Half Yearly', Y: 'Yearly',
 };
 
-type TabKey = 'general' | 'trm' | 'tpe' | 'tre' | 'tps' | 'trs' | 'tpr' | 'inc' | 'bus' | 'nes';
+type TabKey = 'general' | 'globalOptions' | 'commissions' | 'trm' | 'tpe' | 'tre' | 'tps' | 'trs' | 'tpr' | 'inc' | 'bus' | 'nes';
 
 const TABS: { key: TabKey; label: string }[] = [
   { key: 'general', label: 'General' },
+  { key: 'globalOptions', label: 'Global Options' },
+  { key: 'commissions', label: 'Commissions' },
   { key: 'trm', label: 'Life' },
   { key: 'tpe', label: 'TPD Extension' },
   { key: 'tre', label: 'Trauma Extension' },
@@ -91,6 +95,14 @@ export function WorkspacePreferencesModal({ prefs, onSave, onClose }: Props) {
                 <Sel label="Super Frequency" value={draft.general.superFrequency} options={FREQ_LABELS} onChange={(v) => update('general', { superFrequency: v as WorkspacePreferences['general']['superFrequency'] })} />
                 <Sel label="Non-Super Frequency" value={draft.general.nonSuperFrequency} options={FREQ_LABELS} onChange={(v) => update('general', { nonSuperFrequency: v as WorkspacePreferences['general']['nonSuperFrequency'] })} />
               </>
+            )}
+
+            {tab === 'globalOptions' && (
+              <GlobalOptionsTab draft={draft} onChange={setDraft} />
+            )}
+
+            {tab === 'commissions' && (
+              <CommissionsTab draft={draft} onChange={setDraft} />
             )}
 
             {tab === 'trm' && (
@@ -195,6 +207,156 @@ export function WorkspacePreferencesModal({ prefs, onSave, onClose }: Props) {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ── Global Options tab ──────────────────────────────────────────────────────
+
+const PROJECTION_OPTIONS: Record<string, string> = {
+  '3': '3 Years', '5': '5 Years', '10': '10 Years', '15': '15 Years', '20': '20 Years',
+};
+
+const APL_OPTIONS: Record<string, string> = { adviser: 'Adviser', user: 'User' };
+const MIN_COMM_OPTIONS: Record<string, string> = { no: 'No', yes: 'Yes' };
+
+function GlobalOptionsTab({ draft, onChange }: { draft: WorkspacePreferences; onChange: (d: WorkspacePreferences) => void }) {
+  const s = draft.scenario;
+
+  function patch(p: Partial<WorkspacePreferences['scenario']>) {
+    onChange({ ...draft, scenario: { ...s, ...p } });
+  }
+
+  return (
+    <>
+      <Sel label="Premium Projection Duration" value={s.projectionYears} options={PROJECTION_OPTIONS} onChange={(v) => patch({ projectionYears: v })} />
+      <div className="flex items-center justify-between py-2 border-b border-gray-100">
+        <span className="text-xs text-slate-700">Indexation</span>
+        <div className="flex items-center gap-1">
+          <input
+            type="number"
+            step="0.01"
+            min="0"
+            max="100"
+            className="border border-slate-300 rounded px-2 py-1 text-xs bg-white w-[80px] text-right focus:outline-none focus:ring-1 focus:ring-blue-500"
+            value={s.indexationRate}
+            onChange={(e) => patch({ indexationRate: parseFloat(e.target.value) || 0 })}
+          />
+          <span className="text-xs text-slate-500">%</span>
+        </div>
+      </div>
+      <Sel label="Approved Product List" value={s.aplSource} options={APL_OPTIONS} onChange={(v) => patch({ aplSource: v as 'adviser' | 'user' })} />
+      <Sel label="Minimum Commission Preference" value={s.minimumCommission ? 'yes' : 'no'} options={MIN_COMM_OPTIONS} onChange={(v) => patch({ minimumCommission: v === 'yes' })} />
+    </>
+  );
+}
+
+// ── Commissions tab ─────────────────────────────────────────────────────────
+
+function formatCommLabel(c: CommissionChoice): string {
+  const name = c.name || c.code;
+  if (c.structure && c.upfrontPercentage !== undefined && c.ongoingPercentage !== undefined) {
+    return `${c.structure} (${Math.round(c.upfrontPercentage)}% / ${Math.round(c.ongoingPercentage)}%): ${name}`;
+  }
+  return name;
+}
+
+function CommissionsTab({ draft, onChange }: { draft: WorkspacePreferences; onChange: (d: WorkspacePreferences) => void }) {
+  const { suppliers, loading, error } = useSuppliers();
+  const [initialised, setInitialised] = useState(false);
+  const isMinimum = draft.scenario.minimumCommission;
+
+  useEffect(() => {
+    if (initialised || suppliers.length === 0) return;
+    const hasExisting = Object.keys(draft.scenario.commissionBySupplier).length > 0;
+    if (!hasExisting) {
+      const seed: Record<string, string> = {};
+      for (const s of suppliers) {
+        if (s.defaultCommissionCode) seed[s.code] = s.defaultCommissionCode;
+      }
+      onChange({ ...draft, scenario: { ...draft.scenario, commissionBySupplier: seed } });
+    }
+    setInitialised(true);
+  }, [suppliers, initialised, draft, onChange]);
+
+  useEffect(() => {
+    if (!isMinimum || suppliers.length === 0) return;
+    const updated: Record<string, string> = { ...draft.scenario.commissionBySupplier };
+    let changed = false;
+    for (const s of suppliers) {
+      const choices = s.commissionOptions?.length ? s.commissionOptions : s.defaultCommissionCode ? [{ code: s.defaultCommissionCode, name: s.defaultCommissionCode }] : [];
+      const minCode = choices.find((c) => c.upfrontPercentage === 0 && c.ongoingPercentage === 0)?.code
+        ?? (s.minimumCommissionCode || undefined);
+      if (minCode && updated[s.code] !== minCode) {
+        updated[s.code] = minCode;
+        changed = true;
+      }
+    }
+    if (changed) onChange({ ...draft, scenario: { ...draft.scenario, commissionBySupplier: updated } });
+  }, [isMinimum, suppliers]);
+
+  function updateCommission(supplierCode: string, commCode: string) {
+    if (isMinimum) return;
+    onChange({ ...draft, scenario: { ...draft.scenario, commissionBySupplier: { ...draft.scenario.commissionBySupplier, [supplierCode]: commCode } } });
+  }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12 gap-2 text-xs text-slate-400">
+        <Loader2 size={14} className="animate-spin" /> Loading commission options…
+      </div>
+    );
+  }
+
+  if (error) {
+    return <div className="px-4 py-3 text-xs text-amber-700 bg-amber-50">Could not load suppliers — {error}</div>;
+  }
+
+  return (
+    <div>
+      {isMinimum && (
+        <div className="px-4 py-2 bg-amber-50 border-b border-amber-200 text-xs text-amber-700">
+          Minimum Commission Preference is enabled — all providers set to minimum (0%) commission.
+        </div>
+      )}
+      <div className="grid grid-cols-[140px_1fr_90px_90px] gap-2 px-4 py-2 border-b border-gray-200 bg-gray-50 text-xs font-bold text-slate-600">
+        <div>Provider</div>
+        <div>Commission Structure</div>
+        <div className="text-center">Initial</div>
+        <div className="text-center">Renewal</div>
+      </div>
+      {suppliers.map((s) => {
+        const choices = s.commissionOptions?.length ? s.commissionOptions : s.defaultCommissionCode ? [{ code: s.defaultCommissionCode, name: s.defaultCommissionCode }] : [];
+        const selectedCode = draft.scenario.commissionBySupplier[s.code] ?? s.defaultCommissionCode ?? '';
+        const selected = choices.find((c) => c.code === selectedCode);
+        return (
+          <div key={s.code} className={`grid grid-cols-[140px_1fr_90px_90px] gap-2 px-4 py-2 border-b border-gray-100 items-center ${isMinimum ? 'opacity-60' : ''}`}>
+            <div className="flex items-center gap-2">
+              {s.logo ? (
+                <img src={s.logo} alt={s.name} className="w-8 h-5 object-contain" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+              ) : (
+                <span className="text-xs font-bold text-slate-700">{s.name.slice(0, 4)}</span>
+              )}
+              <span className="text-xs font-medium text-slate-700 truncate">{s.name}</span>
+            </div>
+            <select
+              className={`border border-slate-300 rounded px-2 py-1 text-xs w-full max-w-[260px] focus:outline-none focus:ring-1 focus:ring-blue-500 ${isMinimum ? 'bg-gray-100 cursor-not-allowed' : 'bg-white'}`}
+              value={selectedCode}
+              onChange={(e) => updateCommission(s.code, e.target.value)}
+              disabled={isMinimum}
+            >
+              {choices.map((c) => <option key={c.code} value={c.code}>{formatCommLabel(c)}</option>)}
+              {choices.length === 0 && <option value="">No options</option>}
+            </select>
+            <div className="text-center text-[10px] text-slate-600">
+              {selected?.upfrontPercentage !== undefined ? `${selected.upfrontPercentage.toFixed(2)}%` : '—'}
+            </div>
+            <div className="text-center text-[10px] text-slate-600">
+              {selected?.ongoingPercentage !== undefined ? `${selected.ongoingPercentage.toFixed(2)}%` : '—'}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
