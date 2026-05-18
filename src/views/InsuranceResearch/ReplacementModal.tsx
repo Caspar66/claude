@@ -15,10 +15,16 @@ interface FeatureCheck {
   checked: boolean;
 }
 
+interface SubFeatureCheck {
+  key: string;
+  checked: boolean;
+}
+
 interface ComparisonResult {
   candidateId: string;
   data: GainedLostResponse;
   featureChecks: FeatureCheck[];
+  subFeatureChecks: SubFeatureCheck[];
 }
 
 // ── Props ───────────────────────────────────────────────────────────────────
@@ -33,18 +39,29 @@ interface Props {
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-function allFeatureCodes(data: GainedLostResponse): FeatureCheck[] {
-  const codes: FeatureCheck[] = [];
-  const seen = new Set<string>();
+function buildChecks(data: GainedLostResponse): { featureChecks: FeatureCheck[]; subFeatureChecks: SubFeatureCheck[] } {
+  const featureChecks: FeatureCheck[] = [];
+  const subFeatureChecks: SubFeatureCheck[] = [];
+  const seenFeatures = new Set<string>();
+  const seenSubs = new Set<string>();
   for (const list of [data.featuresGained, data.featuresImproved, data.featuresLost, data.featuresDecreased]) {
     for (const f of list) {
-      if (!seen.has(f.code)) {
-        seen.add(f.code);
-        codes.push({ featureCode: f.code, checked: true });
+      if (!seenFeatures.has(f.code)) {
+        seenFeatures.add(f.code);
+        featureChecks.push({ featureCode: f.code, checked: true });
+      }
+      for (const sf of f.subFeatures) {
+        const hasContent = (sf.comparedValue && sf.comparedValue.trim()) || (sf.recommendedValue && sf.recommendedValue.trim());
+        if (!hasContent) continue;
+        const key = `${f.code}::${sf.code}`;
+        if (!seenSubs.has(key)) {
+          seenSubs.add(key);
+          subFeatureChecks.push({ key, checked: true });
+        }
       }
     }
   }
-  return codes;
+  return { featureChecks, subFeatureChecks };
 }
 
 function deduplicateFeatures(features: GainedLostFeature[]): GainedLostFeature[] {
@@ -71,7 +88,9 @@ function FeatureGroup({
   colorClass,
   features,
   featureChecks,
+  subFeatureChecks,
   onToggle,
+  onToggleSub,
   existingInsurer,
   recommendedInsurer,
 }: {
@@ -79,7 +98,9 @@ function FeatureGroup({
   colorClass: string;
   features: GainedLostFeature[];
   featureChecks: FeatureCheck[];
+  subFeatureChecks: SubFeatureCheck[];
   onToggle: (code: string) => void;
+  onToggleSub: (key: string) => void;
   existingInsurer: string;
   recommendedInsurer: string;
 }) {
@@ -121,23 +142,39 @@ function FeatureGroup({
                   </div>
                 </div>
                 {visibleSubs.length > 0 && (
-                  <div className="ml-8 mt-0.5 mb-1 space-y-0.5">
-                    {visibleSubs.map((sf) => (
-                      <div key={sf.code} className="pl-3 border-l-2 border-slate-200 py-0.5">
-                        {sf.comparedValue && sf.comparedValue.trim() && (
-                          <div className="text-[10px] text-slate-600">
-                            <span className="text-slate-400">Existing:</span>{' '}
-                            <span className="font-medium">{existingInsurer}</span> — {sf.comparedValue}
+                  <div className="ml-8 mt-0.5 mb-1 space-y-1">
+                    {visibleSubs.map((sf) => {
+                      const subKey = `${f.code}::${sf.code}`;
+                      const subCheck = subFeatureChecks.find((sc) => sc.key === subKey);
+                      return (
+                        <div key={sf.code} className="flex items-start gap-2 pl-1 py-0.5 rounded hover:bg-slate-50">
+                          <button
+                            onClick={() => onToggleSub(subKey)}
+                            className={`mt-0.5 w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
+                              subCheck?.checked
+                                ? 'bg-teal-600 border-teal-600 text-white'
+                                : 'border-slate-300 bg-white'
+                            }`}
+                          >
+                            {subCheck?.checked && <Check size={8} />}
+                          </button>
+                          <div className="flex-1 min-w-0">
+                            {sf.comparedValue && sf.comparedValue.trim() && (
+                              <div className="text-[10px] text-slate-600">
+                                <span className="text-slate-400">Existing:</span>{' '}
+                                <span className="font-medium">{existingInsurer}</span> — {sf.comparedValue}
+                              </div>
+                            )}
+                            {sf.recommendedValue && sf.recommendedValue.trim() && (
+                              <div className="text-[10px] text-slate-600">
+                                <span className="text-slate-400">New:</span>{' '}
+                                <span className="font-medium">{recommendedInsurer}</span> — {sf.recommendedValue}
+                              </div>
+                            )}
                           </div>
-                        )}
-                        {sf.recommendedValue && sf.recommendedValue.trim() && (
-                          <div className="text-[10px] text-slate-600">
-                            <span className="text-slate-400">New:</span>{' '}
-                            <span className="font-medium">{recommendedInsurer}</span> — {sf.recommendedValue}
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -200,8 +237,8 @@ export function ReplacementModal({
           products: candidate.productCodes,
         },
       });
-      const featureChecks = allFeatureCodes(data);
-      setComparisons((prev) => new Map(prev).set(id, { candidateId: id, data, featureChecks }));
+      const { featureChecks, subFeatureChecks } = buildChecks(data);
+      setComparisons((prev) => new Map(prev).set(id, { candidateId: id, data, featureChecks, subFeatureChecks }));
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Failed to load comparison';
       setErrors((prev) => new Map(prev).set(id, msg));
@@ -219,6 +256,21 @@ export function ReplacementModal({
         ...existing,
         featureChecks: existing.featureChecks.map((c) =>
           c.featureCode === featureCode ? { ...c, checked: !c.checked } : c
+        ),
+      });
+      return next;
+    });
+  }
+
+  function toggleSubFeatureCheck(candidateId: string, subKey: string) {
+    setComparisons((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(candidateId);
+      if (!existing) return prev;
+      next.set(candidateId, {
+        ...existing,
+        subFeatureChecks: existing.subFeatureChecks.map((sc) =>
+          sc.key === subKey ? { ...sc, checked: !sc.checked } : sc
         ),
       });
       return next;
@@ -406,7 +458,9 @@ export function ReplacementModal({
                           colorClass="bg-emerald-50 text-emerald-800"
                           features={comparison.data.featuresGained}
                           featureChecks={comparison.featureChecks}
+                          subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
@@ -415,7 +469,9 @@ export function ReplacementModal({
                           colorClass="bg-blue-50 text-blue-800"
                           features={comparison.data.featuresImproved}
                           featureChecks={comparison.featureChecks}
+                          subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
@@ -424,7 +480,9 @@ export function ReplacementModal({
                           colorClass="bg-red-50 text-red-800"
                           features={comparison.data.featuresLost}
                           featureChecks={comparison.featureChecks}
+                          subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
@@ -433,7 +491,9 @@ export function ReplacementModal({
                           colorClass="bg-amber-50 text-amber-800"
                           features={comparison.data.featuresDecreased}
                           featureChecks={comparison.featureChecks}
+                          subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
+                          onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
