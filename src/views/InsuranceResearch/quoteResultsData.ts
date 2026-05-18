@@ -51,6 +51,29 @@ export interface OccupationClasses {
   be?: string;
 }
 
+export interface ResolvedCover {
+  needCode: string;
+  isLinked: boolean;
+  parentNeedCode?: string;
+  sumInsured?: number;
+  monthlyBenefit?: number;
+  structure?: string;
+  owner?: string;
+  occupationType?: string;
+  waitingPeriod?: string;
+  benefitPeriod?: string;
+  definition?: string;
+  rollover?: string;
+  premiumWaiver?: string;
+  lifeBuyBack?: string;
+  doubleTPD?: string;
+  doubleTrauma?: string;
+  traumaReinstatement?: string;
+  babyCare?: string;
+  priority?: string;
+  agreedValue?: string;
+}
+
 export interface QuoteResultRow {
   id: string;
   quoteIndex: number;
@@ -90,6 +113,7 @@ export interface QuoteResultRow {
   topFeatures: FeatureItem[];
   bottomFeatures: FeatureItem[];
   validationAvailable: boolean;
+  resolvedCovers: ResolvedCover[];
 }
 
 // ── Premium computation helpers ─────────────────────────────────────────────
@@ -314,6 +338,67 @@ function parsePortfolio(
     }
   }
 
+  const resolvedCovers: ResolvedCover[] = [];
+  if (Array.isArray(p.products)) {
+    for (const pr of p.products as Record<string, unknown>[]) {
+      const rn = pr.resolvedNeeds;
+      if (!Array.isArray(rn)) continue;
+      for (const needObj of rn as Record<string, unknown>[]) {
+        if (!needObj || typeof needObj !== 'object') continue;
+        for (const [needCode, fieldsRaw] of Object.entries(needObj)) {
+          if (!fieldsRaw || typeof fieldsRaw !== 'object') continue;
+          const fields = fieldsRaw as Record<string, unknown>;
+          resolvedCovers.push({
+            needCode,
+            isLinked: false,
+            sumInsured: typeof fields.sumInsured === 'number' ? fields.sumInsured : undefined,
+            monthlyBenefit: typeof fields.monthlyBenefit === 'number' ? fields.monthlyBenefit : undefined,
+            structure: asStr(fields.structure) || undefined,
+            owner: asStr(fields.owner) || undefined,
+            occupationType: asStr(fields.occupationType) || undefined,
+            waitingPeriod: asStr(fields.waitingPeriod) || undefined,
+            benefitPeriod: asStr(fields.benefitPeriod) || undefined,
+            definition: asStr(fields.definition) || undefined,
+            rollover: asStr(fields.rollover) || undefined,
+            premiumWaiver: asStr(fields.premiumWaiver) || undefined,
+            agreedValue: asStr(fields.agreedValue) || undefined,
+          });
+          const linked = fields.linkedNeeds;
+          if (Array.isArray(linked)) {
+            for (const lnObj of linked as Record<string, unknown>[]) {
+              if (!lnObj || typeof lnObj !== 'object') continue;
+              for (const [lnCode, lnFieldsRaw] of Object.entries(lnObj)) {
+                if (!lnFieldsRaw || typeof lnFieldsRaw !== 'object') continue;
+                const lnFields = lnFieldsRaw as Record<string, unknown>;
+                resolvedCovers.push({
+                  needCode: lnCode,
+                  isLinked: true,
+                  parentNeedCode: needCode,
+                  sumInsured: typeof lnFields.sumInsured === 'number' ? lnFields.sumInsured : undefined,
+                  monthlyBenefit: typeof lnFields.monthlyBenefit === 'number' ? lnFields.monthlyBenefit : undefined,
+                  structure: asStr(lnFields.structure) || undefined,
+                  owner: asStr(lnFields.owner) || undefined,
+                  occupationType: asStr(lnFields.occupationType) || undefined,
+                  waitingPeriod: asStr(lnFields.waitingPeriod) || undefined,
+                  benefitPeriod: asStr(lnFields.benefitPeriod) || undefined,
+                  definition: asStr(lnFields.definition) || undefined,
+                  rollover: asStr(lnFields.rollover) || undefined,
+                  premiumWaiver: asStr(lnFields.premiumWaiver) || undefined,
+                  lifeBuyBack: asStr(lnFields.lifeBuyBack) || undefined,
+                  doubleTPD: asStr(lnFields.doubleTPD) || undefined,
+                  doubleTrauma: asStr(lnFields.doubleTrauma) || undefined,
+                  traumaReinstatement: asStr(lnFields.traumaReinstatement) || undefined,
+                  babyCare: asStr(lnFields.babyCare) || undefined,
+                  priority: asStr(lnFields.priority) || undefined,
+                });
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   const premiumBreakdown: PremiumBreakdownItem[] = [];
   const rawBreakdown = (pt as Record<string, unknown>).breakdown;
   if (Array.isArray(rawBreakdown)) {
@@ -380,6 +465,7 @@ function parsePortfolio(
     topFeatures,
     bottomFeatures,
     validationAvailable,
+    resolvedCovers,
   };
 }
 

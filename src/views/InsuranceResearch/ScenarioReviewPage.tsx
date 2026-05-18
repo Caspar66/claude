@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { ArrowLeft, ChevronDown, ChevronRight, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { QuoteResultRow } from './quoteResultsData';
+import type { QuoteResultRow, ResolvedCover } from './quoteResultsData';
+import { getNeedLabel } from './quoteResultsData';
 import type { ExistingPolicy, ExistingCover, PremiumFrequency, ClientFormData } from './insuranceData';
 import { COVER_TYPE_LABELS, PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, coverToNeedCode } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
@@ -25,7 +26,13 @@ export interface ReviewItem {
   lifeInsured: 'client' | 'partner';
   existingPolicy?: ExistingPolicy;
   quoteRow?: QuoteResultRow;
-  covers: { type: string; definition?: string; sumInsured: string; owner?: string }[];
+  covers: {
+    type: string;
+    definition?: string;
+    sumInsured: string;
+    owner?: string;
+    resolved?: ResolvedCover;
+  }[];
   supplierCode: string;
   revisionDate?: string;
   productCodes: Record<string, string>;
@@ -104,16 +111,24 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[]): ReviewIt
         frequency: PREMIUM_FREQUENCY_LABELS[nonSuperFreq],
         lifeInsured: q?.lifeInsured ?? 'client',
         quoteRow: r,
-        covers: r.premiumBreakdown.length > 0
-          ? r.premiumBreakdown.map((bd, idx) => {
-              const lineItem = r.premiumLineItems[idx];
-              return {
-                type: bd.description.split(' / ')[0] || bd.description,
-                definition: bd.description,
-                sumInsured: lineItem ? `${lineItem.amount}` : '',
-              };
-            })
-          : r.products.split(', ').map((p) => ({ type: p, sumInsured: '' })),
+        covers: r.resolvedCovers.length > 0
+          ? r.resolvedCovers.map((rc) => ({
+              type: getNeedLabel(rc.needCode),
+              definition: rc.definition,
+              sumInsured: rc.sumInsured != null ? `${rc.sumInsured}` : rc.monthlyBenefit != null ? `${rc.monthlyBenefit}` : '',
+              owner: rc.owner,
+              resolved: rc,
+            }))
+          : r.premiumBreakdown.length > 0
+            ? r.premiumBreakdown.map((bd, idx) => {
+                const lineItem = r.premiumLineItems[idx];
+                return {
+                  type: bd.description.split(' / ')[0] || bd.description,
+                  definition: bd.description,
+                  sumInsured: lineItem ? `${lineItem.amount}` : '',
+                };
+              })
+            : r.products.split(', ').map((p) => ({ type: p, sumInsured: '' })),
         supplierCode: r.supplierCode,
         revisionDate: r.revisionDate,
         productCodes: r.productCodes,
