@@ -705,15 +705,6 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
             <Download size={12} />
             DOWNLOAD REPORT
           </Button>
-          <Button
-            size="sm"
-            className="bg-teal-700 hover:bg-teal-800 text-white text-xs h-7 gap-1.5"
-            onClick={onCompareProducts}
-          >
-            <FileText size={12} />
-            Compare Products
-          </Button>
-
           <div className="flex-1" />
 
           {/* Search */}

@@ -1557,7 +1557,6 @@ The Quote Results screen is the primary workspace for reviewing generated quotes
     * Disabled (grayed out) when "All Quotes" is selected (no specific quote filter active)
     * Includes an ExternalLink icon
   * "DOWNLOAD REPORT" button (outline) — downloads a report of the current results; includes a Download icon
-  * "Compare Products" button (teal, solid) — navigates to the Product Comparison page with selected (checked) products; includes a FileText icon
   * Flexible spacer
   * Search field (right-aligned):
     * Placeholder: "Search by product or insurer"
