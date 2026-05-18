@@ -171,66 +171,83 @@
   * Life Insured name
 * If no existing policies exist, the message "No existing policies" is displayed
 
-**Adding/Editing an Existing Policy:**
+**Adding/Editing an Existing Policy (Full-Page Form):**
+
+* The Add/Edit Existing Cover screen is a full-page form (not a modal) with the same layout design as the Vary Existing Cover page
+* The screen has a title bar with "Add Existing Cover" or "Edit Existing Cover" title and Save/Cancel buttons
+* An error banner is displayed above the form when validation fails (dismissible)
 * The following fields are available:
+
   * Provider
-    * Mandatory
-    * Searchable dropdown
+    * Optional
+    * Searchable autocomplete input with dropdown suggestions
+    * Fetches suppliers from useLegacySuppliers() on mount
+    * Shows loading spinner while fetching
+    * Typing filters suppliers (case-insensitive, max 20 shown)
     * Empty by default
   * Policy Description
-    * Mandatory
+    * Optional
     * Text field
     * Empty by default
   * Life Insured
     * Mandatory
-    * Radio: Client / Partner
+    * Dropdown: Client name / Partner name
+    * Partner option only shown if partner data exists
     * Default: Client
-  * For each cover added:
-    * Cover Type
-      * Mandatory
-      * Dropdown
-      * Options: Life, TPD, Trauma, IP, BE, SBI, ChildCover, Needlestick
-    * Sum Insured
-      * Mandatory
-      * Currency field
-      * Empty by default
-    * Premium Style
-      * Optional
-      * Dropdown (Stepped, Blended, Level, etc.)
-    * Super
-      * Mandatory
-      * Toggle: Yes / No
-      * Conditional: only shown for cover types that support super ownership
-    * Ownership
-      * Mandatory
-      * Dropdown
-      * Options vary by cover type:
-        * Life: Non-Super, SMSF, Super
-        * TPD/Trauma: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
-        * IP/BE: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
-        * SBI/ChildCover/Needlestick: Non-Super, Super
-    * Definition
-      * Conditional: shown for TPD and IP
-      * Dropdown
-      * TPD options: Any, Own, Super-linked, ADL
-      * IP options: Indemnity, Agreed Value
-    * Stand Alone
-      * Conditional: shown for TPD and Trauma
-      * Toggle: Yes / No
-    * Waiting Period
-      * Conditional: shown for IP and BE
-      * Dropdown: 14-730 days
-    * Benefit Period
-      * Conditional: shown for IP
-      * Dropdown: 1 year to age 70
-  * Premium Split section:
-    * Super Premium (currency input)
-    * Super Stamp Duty (currency input)
-    * Super Frequency (dropdown: Yearly, Half-yearly, Quarterly, Monthly, Fortnightly, Weekly)
-    * Non-Super Premium (currency input)
-    * Non-Super Stamp Duty (currency input)
-    * Non-Super Frequency (dropdown: same options)
-    * Total Premium is calculated automatically
+
+* **Premium Details Section:**
+  * Displayed in a grid with columns: Premium, Stamp Duty, Frequency
+  * Super row:
+    * Premium (currency input, decimal, default: '0')
+    * Stamp Duty (currency input, decimal, default: '0')
+    * Frequency (dropdown: Yearly, Half-yearly, Quarterly, Monthly, Fortnightly, Weekly; default: Monthly)
+  * Non-Super row:
+    * Premium (currency input, decimal, default: '0')
+    * Stamp Duty (currency input, decimal, default: '0')
+    * Frequency (dropdown: same options; default: Monthly)
+  * Total Premium row:
+    * Read-only calculated field
+    * Annualises both premium rows using frequency multipliers then sums
+    * If frequencies differ: displayed as annual
+    * Otherwise: displayed in the original frequency
+    * Format: "$X,XXX.XX / frequency_label"
+
+* **Cover Details Table (Horizontal Scrolling):**
+  * 8 fixed cover type rows displayed in order: Life, TPD, Trauma, IP, BE, SBI, ChildCover, Needlestick
+  * Columns vary by cover type (conditional visibility):
+
+  | Column | Life | TPD | Trauma | IP | BE | SBI | ChildCover | Needlestick |
+  |--------|------|-----|--------|----|----|-----|------------|-------------|
+  | Sum Insured | Y | Y | Y | Y | Y | Y | Y | Y |
+  | Premium Style | Y | Y | Y | Y | Y | Y | - | - |
+  | Ownership | Y | Y | - | Y | - | - | - | - |
+  | Super (read-only) | Y | Y | - | Y | - | - | - | - |
+  | Definition | - | Y | - | Y | - | - | - | - |
+  | Stand Alone | - | Y | Y | - | - | - | - | - |
+  | Flexi-Linked | - | Y | Y | - | - | - | - | - |
+  | Super-Linked | - | - | - | Y | - | Y | - | - |
+  | Waiting Period | - | - | - | Y | Y | - | - | - |
+  | Benefit Period | - | - | - | Y | - | - | - | - |
+  | Add. Death Cover | - | - | - | - | - | Y | - | - |
+
+  * **Conditional logic:**
+    * Super field: Derived from Ownership (S/J/K/M = Yes, O = No); read-only
+    * Stand Alone and Flexi-Linked: Mutually exclusive (setting one to Yes forces the other to No)
+    * TPD Ownership SMSF SuperLink (K): Only available when Trauma exists with Stand Alone = Yes
+    * Definition options: TPD = Any, Own, Super-linked, ADL; IP = Indemnity, Agreed Value
+    * Premium Style options: Life/TPD/Trauma = Variable age-stepped, Blended, Variable to age 65, Variable to age 70; IP/BE/SBI = Variable age-stepped, Blended, Variable to age
+    * Waiting Period options: IP = 14-730 days; BE = 14-90 days
+    * Benefit Period options: IP only = 1 year to age 70
+
+* **Validation Rules:**
+  * At least one premium (super or non-super) must be greater than 0
+  * Ownership is required for cover types where ownership is visible (Life, TPD, IP) and sum insured > 0
+  * Only covers with sum insured > 0 are included in the saved policy
+
+* **Save Output:**
+  * Creates an ExistingPolicy with a generated id (`pol-${Date.now()}`)
+  * Action defaults to "Not Considered"
+  * Provider defaults to "Unknown" if left empty
 
 <u>Designs</u>
 
@@ -247,39 +264,70 @@
 <u>Acceptance Criteria</u>
 
 * Advisers can click the Link icon on an existing policy to open the Map Product Modal
-* The modal allows the adviser to select:
-  * Supplier filter
-    * Optional
-    * Text field
-    * Placeholder: "Search Suppliers"
-    * Filters the supplier dropdown as the user types
-  * Supplier
-    * Mandatory
-    * Dropdown (populated from API)
-    * Shows loading spinner while fetching
-    * Shows error message if API fails
-  * PDS Issue Date
-    * Mandatory
-    * Dropdown (populated from selected supplier's revision dates, formatted as DD MMM YYYY)
-    * Only shown when a supplier is selected
-  * Manually Link Cover
-    * Optional
-    * Checkbox toggle
-    * Default: unchecked (auto-mode based on existing covers)
-    * Only shown when supplier and date are selected
-  * Product Selection (per cover type)
-    * Dropdown per active cover section (e.g. Life, TPD, Trauma, IP)
-    * Options populated from API based on selected supplier and date
-    * Extension checkboxes where applicable (e.g. "Include TPD Extension")
-    * Shows loading spinner while fetching products
-  * Total Annual Premium
-    * Displayed in a table with columns: Super, Non Super, Premium (total)
-    * Rows: Premium, Stamp Duty
-    * Super and Non Super fields are editable currency inputs
-    * Premium column is calculated automatically
-* The adviser clicks "Add" to link the policy (disabled if required fields are incomplete)
+* The modal has two operational modes: Auto-mode (default) and Manual-mode (toggled via checkbox)
+
+**Supplier & Portfolio Selection:**
+* Supplier filter
+  * Optional
+  * Text field
+  * Placeholder: "Search Suppliers"
+  * Filters the supplier dropdown as the user types (case-insensitive)
+* Supplier
+  * Mandatory
+  * Dropdown (populated from Legacy Portfolios API)
+  * Shows loading spinner while fetching
+  * Shows error message if API fails
+  * Selecting a supplier resets revision date, products, and selections
+* PDS Issue Date
+  * Mandatory
+  * Dropdown (populated from selected supplier's revision dates, formatted as DD MMM YYYY)
+  * Only shown when a supplier is selected
+  * Selecting a date triggers product fetch via Legacy Products API
+* Manually Link Cover
+  * Optional
+  * Checkbox toggle
+  * Default: unchecked (auto-mode based on existing covers)
+  * Only shown when supplier and date are selected
+  * Toggling resets product selections
+
+**Auto-Mode (Default):**
+* Covers from the existing policy are automatically grouped into linked/standalone combinations:
+  * Life Group: Life (TRM) as primary, with optional TPD Extension (TPE) if TPD exists and is not standalone, and optional Trauma Extension (TRE) if Trauma exists and is not standalone
+  * Standalone Trauma + Linked TPD: Trauma Standalone (TRS) as primary with TPD Extension (TPR)
+  * Individual Covers: All remaining covers mapped to their need codes (e.g. standalone TPD to TPS, IP to INC, BE to BUS)
+* Active sections are filtered to match the policy's cover groups
+* Products are filtered by ownership match and extension support
+* Extension checkboxes are shown only if the selected product supports them
+
+**Manual-Mode:**
+* Shows all 7 cover type sections: Life, TPD, Trauma, Income Protection, Business Expenses, Needle Stick, Child Trauma
+* Each section has a product dropdown populated from the Legacy Products API
+* Extension checkboxes where applicable:
+  * Life: "Include TPD Extension", "Include Trauma Extension"
+  * Trauma: "Include Total and Permanent Disability extension"
+* Products filtered to those supporting the section's cover type and all selected extensions
+
+**Total Annual Premium:**
+* Displayed when supplier and date are selected
+* Table with columns: Super, Non Super, Premium (total)
+* Rows: Premium, Stamp Duty
+* Super and Non Super fields are editable currency inputs
+* Premium column is calculated automatically (sum of Super + Non Super)
+* Default values derived from the existing policy's annualised premiums
+
+**Save & Validation:**
+* The Add button is disabled until:
+  * Auto-mode: All active sections have a product selected
+  * Manual-mode: At least one product is selected
+* All research portfolios have `existingCover` set to `true` regardless of mode
 * Linked policies display a green "Linked" badge in the Current Situation table
 * Only linked policies are included in the research portfolios sent to the quote API
+
+**State Restoration:**
+* When re-opening a previously linked policy, the modal restores:
+  * Supplier selection, revision date, manual link mode
+  * Product selections and extension flags
+  * Premium and stamp duty values
 
 <u>Designs</u>
 
@@ -618,12 +666,16 @@
     * Below that, a Non-Super breakdown line shows: Non-Super premium + stamp duty at the non-super frequency
     * Breakdown lines are only shown when their total is not zero
   * Cumulative Premiums (projected total over the premium projection period)
-  * Feature Score (colour-coded badge: green for high scores, red for low)
+  * Feature Score (colour-coded badge: green >80, yellow 50-80, red <50)
   * Value Score (colour-coded badge: same scale)
+  * Rec/Alt (recommendation toggle buttons, mutually exclusive)
 * Advisers can search results by insurer name or product name using a text search field
 * Advisers can sort results by: Premium, Cumulative Premium, Feature Score, or Value Score
 * Advisers can toggle sort direction between ascending and descending
-* Advisers can expand a row to view detailed product information
+* Advisers can expand a row to view detailed product information in a resizable right-side panel (280-600px width) with tabs:
+  * Summary: Premium breakdown, line items, stamp duty, total with validation status, commission table (upfront/ongoing percentages and annualised values), Validate Premium button
+  * Notes: Strengths (top features) and Limitations (bottom features)
+  * Links: PDS and TMD download links
 * Advisers can select multiple products using checkboxes for comparison
 * A "Select All" checkbox selects/deselects all visible results
 * Existing cover Research portfolios (existingCover: true, portfolioType: "Research") are included in the results table:
@@ -638,13 +690,14 @@
 * Excluded products table shows:
   * Insurer (logo and name)
   * Portfolio name
-  * Reasons for exclusion (expandable list of error messages)
+  * Reasons for exclusion (expandable list of error messages, via Exclusion Reasons Modal)
   * PDS link (if available)
   * TMD link (if available)
 * The section only appears if there are excluded products
 
 **Actions:**
 * "Compare Products" button navigates to the Product Comparison page with selected products
+* "View / Compare Features" button navigates to the Features Comparison page (disabled when no specific quotes selected)
 * Download Report button
 * Toggle buttons for: Graphs/Charts view, Occupation Rating display
 
@@ -663,34 +716,40 @@
 
 <u>Acceptance Criteria</u>
 
-* Advisers can select multiple products from the quote results and click "Compare Products" to open the Product Comparison page
+* Advisers can select multiple products from the quote results and click "View / Compare Features" to open the Features Comparison page
 * The page calls the OmniLife Portfolio Features API with the selected products' supplier codes, product codes, and revision dates
 * While loading, a spinner is displayed with the message "Fetching product features..."
 * If the API call fails, an error message is displayed with a "Back to Quotes" button
 * Features are displayed in a table with:
   * A sticky left column showing the feature name ("Comparison Parameter")
-  * One column per selected product showing the supplier name, product names, annual premium, and feature score badge
+  * One column per selected product (180-260px wide) showing the supplier name, product names, annual premium, feature score badge, and PDS/SPDS date
   * Existing products are indicated with an "Existing" badge in the column header
 * Features are grouped hierarchically:
-  * Heading level (collapsible, bold uppercase text)
-  * Sub-heading level (shown only when there are multiple sub-headings or the sub-heading is not "General")
-  * Feature level (individual rows)
+  * Need Type level (collapsible, indigo background with white text, showing need type label and feature count)
+  * Heading level (collapsible, slate background with weighting label: Lowest/Low/Moderate/High/Highest)
+  * Feature level (individual rows with per-product cells)
 * Each feature cell displays:
-  * A colour-coded score badge (if the feature has a weighting score greater than zero)
-  * Feature text describing the specifics
-  * A dash "—" if the product does not have the feature
+  * Strengths section (emerald-700 label)
+  * Limitations section (amber-700 label)
+  * Commentary section (blue-700 label)
+  * Feature Text section (slate-500 label)
+  * A dash "---" if the product does not have the feature
 * Advisers can search features by name using a text search field
 * Advisers can toggle a Filters panel (slide-out from right, 320px wide) with:
-  * Feature Text toggle (YES/NO) — shows/hides detailed feature text
-  * Differences Only toggle (YES/NO) — filters to only show features that differ between products
-  * Feature Score toggle (YES/NO) — shows/hides score badges in column headers
+  * Feature Text toggle (YES/NO) --- shows/hides detailed feature text
+  * Differences Only toggle (YES/NO) --- filters to only show features that differ between products
+  * Feature Score toggle (YES/NO) --- shows/hides score badges in column headers
+  * Show Profile Features checkbox
+  * Show Benefit Features checkbox
+  * Show Definition Features checkbox
   * Categories section:
     * Search field to filter categories
     * Select All checkbox
-    * Individual checkboxes for each feature heading
-* Advisers can collapse/expand individual heading groups by clicking the heading row
-* The bottom bar displays a summary: "Comparing X product(s) across Y categories"
-* Advisers can click "Download Comparison Report" to generate a printable report in a new window
+    * Individual checkboxes for each feature heading (scrollable list, max 240px)
+  * Reset and Done buttons
+* Advisers can collapse/expand individual need type and heading groups
+* The bottom bar displays a summary: "Comparing X product(s) across Y feature(s) in Z cover(s)"
+* Advisers can click "Download Comparison Report" to generate a printable report
 
 <u>Designs</u>
 
@@ -710,9 +769,12 @@
 <u>Acceptance Criteria</u>
 
 * Advisers can access the Options panel from the Settings dropdown in the comparison dialog
-* The Options panel has four tabs: Policy Defaults, Insurer Options, Insurer Logins, and per-cover-type tabs (Life, TPD, Trauma, Income Protection, Business Expenses)
+* The Options panel has three main sections: Defaults, Insurer Options, and Insurer Logins
+* A mode switcher allows toggling between "Adviser defaults" and "My defaults"
 
-**Policy Defaults Tab:**
+**Defaults Section (6 tabs: Policy Defaults, Life, TPD, Trauma, Income Protection, Business Expenses):**
+
+*Policy Defaults Tab:*
 * Premium Projection Duration
   * Mandatory
   * Dropdown
@@ -756,18 +818,19 @@
   * Default: No
   * Displays a warning note when set to Yes
 
-**Per-Cover-Type Tabs (Life, TPD, Trauma, Income Protection, Business Expenses):**
+*Per-Cover-Type Tabs (Life, TPD, Trauma, Income Protection, Business Expenses):*
 * Each tab provides default values for the corresponding cover type's form fields (sum insured, structure, waiver, ownership, etc.)
 * Defaults match the field options listed in the Quote Configuration section (3.1)
 
-**Insurer Options Tab:**
-* Displays a list of insurers grouped by fund type
-* For each insurer:
+**Insurer Options Section:**
+* Displays a list of insurers in a left sidebar grouped by fund type with select/deselect all per group
+* For each insurer (right panel):
   * Enabled/Disabled checkbox
   * Default Commission selector (options populated from API)
   * Product list with individual enable/disable checkboxes
+* Real-time supplier filtering
 
-**Insurer Logins Tab:**
+**Insurer Logins Section:**
 * Supported insurers: AIA, TAL, Zurich Active, Zurich
 * For AIA:
   * Adviser Code
@@ -783,6 +846,7 @@
     * Optional
     * Password field
     * Empty by default
+* Delete credentials capability for each insurer
 
 <u>Designs</u>
 
@@ -795,40 +859,326 @@
 
 ---
 
-## 9. Navigation & Application Shell
+## 6. Scenario Review
 
-### 9.1 Advisers can navigate between application areas so that they can efficiently manage their workflow
+### 6.1 Advisers can review and finalise insurance recommendations so that they can save a complete scenario
 
 <u>Acceptance Criteria</u>
 
-* The top navigation bar displays:
-  * Application logo
-  * Navigation links: Dashboard, Plans, Reviews, Clients
-  * Version stamp
-  * Help, Link, and Notification bell icons
-  * User profile (name, role, avatar)
-* The following routes are available:
-  * /scenarios — Scenario Index
-  * /scenarios/:id — Scenario Details
-  * /scenarios/:id/research/insurance — Insurance Research
-  * /scenarios/:id/plan/:platformId/edit — Edit Existing Plan
-  * /scenarios/:id/plan/:platformId/investments/add — Add Investment
-  * /scenarios/:id/plan/:platformId/fees — Edit Fees
-  * /scenarios/:id/add-existing — Add Existing Plan
-  * /scenarios/:id/add-proposal — Add Proposal Type
-  * /scenarios/:id/proposals/plan-review/new — New Plan Review
-  * /scenarios/:id/proposals/plan-review/:proposalId — Edit Plan Review
-  * /research/plans — Plan List
-  * /research/plans/new — Add Plan
-  * /research/plans/:planId — Plan Detail
-  * /research/plans/:planId/derive — Derive Plan
-  * /research/investment-data — Investment Data
-  * /clients — Client Page
-  * /management/reference-data/investment-research — Management Portal
+* The Scenario Review page is accessed by clicking "Save to Scenario" from the quote results screen
+* The page displays a header breadcrumb showing "Insurance Research > Scenarios > [Scenario Name]" with a back button
+* Products are displayed in a table with columns:
+  * Expand toggle (chevron icon to show/hide cover details)
+  * Policy Details (insurer logo, policy name, insurer name)
+  * Life Insured (client or partner name)
+  * Premium p.a. (formatted currency with "pa" suffix)
+  * Status (inline editable dropdown)
+  * View Details (Eye icon button, opens Product Details Modal)
+
+* Products are grouped into sections with colour-coded headers:
+  * Existing Covers (amber background, count shown)
+  * Recommendations (emerald background, count shown)
+  * Vary to Existing (purple background, count shown)
+  * Alternatives (blue background, count shown)
+
+* The Status dropdown options vary by item type:
+  * Existing Policies: Hold, Replace, Cancel, Vary, Exclude
+  * Recommended Products: Recommend, Not Accepted
+  * Alternative Products: Alternative, Not Accepted
+  * Varied Products: All statuses (Recommend, Not Accepted, Alternative, Hold, Replace, Cancel, Vary, Exclude, Vary to Existing)
+
+* Status colours are applied to the inline dropdown:
+  * Recommend: Emerald
+  * Not Accepted: Slate
+  * Alternative: Blue
+  * Hold: Amber
+  * Replace: Red
+  * Cancel: Red
+  * Vary: Purple
+  * Exclude: Slate
+  * Vary to Existing: Purple
+
+* **Status-Triggered Actions:**
+  * Setting an existing policy to "Vary" opens the Vary Existing Cover page (full-page, replaces the review table)
+  * Setting an existing policy to "Replace" updates the status and opens the Replacement Analysis Modal
+  * All other statuses apply directly without triggering additional modals
+
+* **Expandable Cover Details:**
+  * For existing policies: Nested table showing Type, Definition, Owner, Life Insured, Benefit Amount (all read-only)
+  * For quote results: Same table structure, populated from resolved needs when available (fallback to premium breakdown)
+
+* **Cover Data Sources for Recommended/Alternative Items:**
+  * When the quote API returns `resolvedNeeds` on products, covers are built from these with full detail (need code label, definition, sum insured, owner, waiting period, benefit period)
+  * Fallback: Covers built from `premiumBreakdown` descriptions and `premiumLineItems`
+  * Final fallback: Covers built from comma-separated products string
+
+* Footer contains "Back to Quotes" and "Save to Scenario" buttons
+* If no products exist, the message "No products to review. Go back and tag products as Rec or Alt." is displayed
 
 <u>Designs</u>
 
 * To be added
+
+<u>Security and Technical Considerations</u>
+
+* Premium annualisation uses frequency multipliers consistent with the rest of the application
+
+---
+
+### 6.2 Advisers can view and edit product details so that they can review the full premium and cover breakdown
+
+<u>Acceptance Criteria</u>
+
+* Clicking the Eye icon on any review row opens the Product Details Modal (720px wide, max 85vh)
+* The modal header displays "Product Details" with a close button (X)
+
+**Top-Level Fields:**
+* Policy Name
+  * Editable text field
+  * Default: item label (portfolio/policy name)
+* Policy Status
+  * Read-only display field
+  * Shows the current status of the item
+* Underwriter
+  * Editable text field
+  * Default: insurer name
+
+**Three-Tab Interface:**
+
+*Details Tab:*
+* Premium (Super) --- Read-only, shows super premium amount
+* Super Frequency --- Dropdown selector with all frequency options (Yearly, Half-yearly, Quarterly, Monthly, Fortnightly, Weekly)
+* Date Generated --- Read-only, shows current date in DD/MM/YYYY format
+* Premium (Non-Super) --- Read-only, shows non-super premium amount
+* Non-Super Frequency --- Dropdown selector
+* Policy Fee --- Read-only, only shown if greater than 0
+* Total Premium --- Read-only calculated field (sum of all premiums and stamp duties)
+* Total Premium Frequency --- Dropdown selector
+
+*Cover Tab (Read-Only Table):*
+* Type --- Cover type name (from resolved need label or premium breakdown)
+* Definition --- Full cover definition
+* Owner --- Resolved from owner code (Non-Super, SMSF, Super, SuperLink, SMSF SuperLink) or fallback to life insured name
+* Life Insured --- Name of life insured
+* Benefit Amount --- Sum insured formatted as currency
+* Waiting Period --- Formatted from resolved cover data (e.g. "30 days")
+* Benefit Period --- Formatted from resolved cover data (e.g. "Age 65" or "5 years")
+* Eye icon action button --- Opens Cover Details sub-modal for that specific cover row
+
+*Fees Tab (Read-Only Table):*
+* Two rows: Premium Year 1, Premium Renewal
+* Columns: Premium Period, Comm. Premium ($), Comm. Frequency, Comm. (%), Comm. ($), Include (checkmark)
+* All cells displayed with grey background (read-only)
+* Include column shows a teal checkmark icon
+
+**Footer:**
+* Close button (outline) --- closes without saving
+* Save button (teal) --- saves edited Policy Name and Underwriter back to the review item
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None
+
+---
+
+### 6.3 Advisers can view individual cover details so that they can inspect the full resolved needs data for each cover
+
+<u>Acceptance Criteria</u>
+
+* Clicking the Eye icon on a cover row in the Product Details Modal Cover tab opens the Cover Details sub-modal (680px wide, z-index 60 to stack above the parent modal)
+* The modal header displays "Product Details" with a close button (X)
+* All fields are read-only, displayed in a 3-column grid layout:
+
+  * Row 1: Cover Type, Cover Structure, Owner
+  * Row 2: Life Insured, Premium Structure, Is Super
+  * Row 3: Benefit Amount, Definition, Benefit Status
+  * Row 4: Benefit Frequency, Benefit Period, Waiting Period
+  * Row 5 (conditional): Occupation Type (only shown if occupation type data exists)
+
+* **Field Derivation Logic:**
+  * Cover Type: Human-readable need label (e.g. "Life", "TPD", "Income Protection")
+  * Cover Structure: "Linked" if the cover is a linked extension, "Standalone" otherwise
+  * Owner: Resolved from owner code using ownership labels (O = Non-Super, M = SMSF, S = Super, J = SuperLink, K = SMSF SuperLink)
+  * Premium Structure: Resolved from structure code (S = Variable age-stepped, B = Blended, L = Variable to age 65, 70 = Variable to age 70)
+  * Is Super: "True" if owner code is S, J, K, or M; "False" otherwise
+  * Benefit Amount: Formatted as currency with 2 decimal places
+  * Definition: From resolved cover definition field
+  * Benefit Status: The parent review item's current status (e.g. "Recommend", "Replace")
+  * Benefit Frequency: "Monthly" if the cover has a monthly benefit, "Single" otherwise
+  * Benefit Period: Formatted as "X years" for values <= 5, "Age X" for values > 5
+  * Waiting Period: Formatted as "X days"
+  * Occupation Type: Resolved from occupation code (A = Any, O = Own, H = Homemaker, D = ADL, E = Best available)
+
+* Footer contains a Close button only (no save action)
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None
+
+---
+
+### 6.4 Advisers can vary existing policies so that they can model changes to current coverage
+
+<u>Acceptance Criteria</u>
+
+* When an existing policy's status is set to "Vary" in the Scenario Review page, the Vary Existing Cover page replaces the review table (full-page layout, not a modal)
+* The page has a title bar displaying "Vary Existing Policy" with Save and Cancel buttons
+
+**Policy Header Fields (3-column grid):**
+* Provider --- Read-only text field showing existing policy provider
+* Policy Description --- Editable text field
+* Life Insured --- Read-only text field showing client or partner name
+
+**Premium Details Section:**
+* Grid layout with column headers: Premium, Stamp Duty, Frequency
+* Super row:
+  * Premium (editable currency input)
+  * Stamp Duty (editable currency input)
+  * Frequency (dropdown: all frequency options)
+* Non-Super row:
+  * Premium (editable currency input)
+  * Stamp Duty (editable currency input)
+  * Frequency (dropdown: all frequency options)
+* Total Premium summary:
+  * Read-only calculated display
+  * Annualises both rows, sums them, then converts back to the appropriate frequency
+  * If frequencies differ, defaults to annual display
+
+**Cover Details Table:**
+* Same structure and conditional column visibility as the Add Existing Cover table (see section 2.4)
+* 8 cover type rows: Life, TPD, Trauma, IP, BE, SBI, ChildCover, Needlestick
+* All cover fields are editable (Sum Insured, Premium Style, Ownership, Definition, Stand Alone, Flexi-Linked, Super-Linked, Waiting Period, Benefit Period, Add. Death Cover)
+* Mutual exclusivity rules apply for Stand Alone / Flexi-Linked
+* Super field is read-only (derived from Ownership)
+
+**Validation:**
+* At least one premium (super or non-super) must be greater than 0
+* Error displayed in an amber dismissible banner above the form
+
+**Save Behaviour:**
+* Creates a new varied policy (new id: `vary-${Date.now()}`, action: "Review")
+* Only includes covers with sum insured > 0
+* The original existing policy status is set to "Vary"
+* A new "Vary to Existing" item is added to the review table
+* The page returns to the Scenario Review table
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None
+
+---
+
+### 6.5 Advisers can analyse replacement options so that they can compare existing cover with recommended products
+
+<u>Acceptance Criteria</u>
+
+* When an existing policy's status is set to "Replace" in the Scenario Review page, the Replacement Analysis Modal opens (900px wide, max 85vh)
+* The modal header displays "Replacement Analysis" with a subtitle showing the existing policy details (insurer, label, life insured)
+
+**Existing Cover Summary (Amber Background):**
+* Displays: Insurer name, Life Insured name, Premium p.a. (formatted currency)
+* Cover badges showing each cover type label with sum insured amount
+* "Link Products" text link (placeholder for linking to Map Product Modal)
+
+**Replacement Candidate Selection:**
+* Section header: "Select Replacement Products (X available)"
+* Scrollable list (max 120px) of recommended and varied products for the same life insured
+* Each candidate row shows:
+  * Checkbox (toggle selection)
+  * Insurer logo
+  * Product name and insurer name
+  * Type badge: "Recommend" (emerald) or "Vary to Existing" (purple)
+  * Loading spinner while comparison data is fetching
+  * Error message if API call fails
+* When a candidate is selected and has covers, an expanded section below shows a cover table (Type, Definition, Owner, Life Insured, Benefit Amount)
+
+**Three-Tab Interface:**
+
+*Differences in Benefits Tab:*
+* For each selected candidate, displays a comparison section with header "vs. [Insurer] --- [Product Name]"
+* Feature groups shown:
+  * Features Gained (emerald background)
+  * Features Improved (blue background)
+  * Features Lost (red background)
+  * Features Decreased (amber background)
+* Each group shows a collapsible header with feature count (deduplicated by code)
+* Features within each group have:
+  * Parent checkbox (toggles feature inclusion)
+  * Feature name
+  * Sub-feature items (indented, each with their own checkbox) showing:
+    * "Existing: [Existing Insurer] --- [compared value]" (only if compared value is non-blank)
+    * "New: [Recommended Insurer] --- [recommended value]" (only if recommended value is non-blank)
+* **Deduplication:** Features with the same code appearing across multiple cover types are merged into a single entry, with their sub-features combined (sub-feature codes also deduplicated)
+* **Sub-feature filtering:** Sub-features are only shown when comparedValue or recommendedValue is non-blank
+* Empty states: "Select a replacement product above to see differences in benefits." (no candidate selected), "No feature differences found." (comparison loaded with no differences)
+* Loading state: "Loading comparison..." with spinner
+
+*Costs of Replacement Tab:*
+* Free-form editable textarea (200px height)
+* Placeholder text guides the adviser on what to include (exit fees, loyalty benefits, waiting periods, exclusions, premium differences)
+
+*Reasons for Replacement Tab:*
+* Free-form editable textarea (200px height)
+* Placeholder text guides the adviser on what to include (changed needs, better features, cost savings, improved definitions, insurer financial strength)
+
+**Footer:**
+* Close button (outline)
+* Save button (teal)
+
+**API Integration:**
+* Selecting a candidate triggers a call to `postGainedAndLost()` with the existing item's supplier/revision/products and the candidate's supplier/revision/products
+* Results are cached per candidate (subsequent toggle on/off does not re-fetch)
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* The gained-and-lost API is called with parameters: coverNeedType=NeedType, includeSubFeatures=true
+
+---
+
+## 7. Resolved Needs Data
+
+### 7.1 The system parses resolved needs from the quote API so that cover details reflect the actual product configuration
+
+<u>Acceptance Criteria</u>
+
+* The quote portfolio API response includes `resolvedNeeds` on each product within a portfolio
+* Each resolved need is an object keyed by the need code (e.g. `{ TRM: { sumInsured: 500000, structure: "S", ... } }`)
+* The system parses resolved needs into a `ResolvedCover` structure with the following fields:
+  * needCode (TRM, TPE, TRE, TPS, TRS, TPR, INC, BUS, NES, CHT)
+  * isLinked (true if this is a linked extension under a parent need)
+  * parentNeedCode (the parent need code if linked)
+  * sumInsured (numeric amount)
+  * monthlyBenefit (numeric amount, for IP/BUS covers)
+  * structure (S = Variable age-stepped, B = Blended, L = Level, 70 = Level to age 70)
+  * owner (O = Non-Super, M = SMSF, S = Super, J = SuperLink, K = SMSF SuperLink)
+  * occupationType (A = Any, O = Own, H = Homemaker, D = ADL, E = Best available)
+  * waitingPeriod (days: 14, 30, 60, 90, 180, 365, 730)
+  * benefitPeriod (years/age: 1, 2, 5, 55, 60, 65, 67, 70)
+  * definition (cover definition text)
+  * rollover, premiumWaiver, lifeBuyBack, doubleTPD, doubleTrauma, traumaReinstatement, babyCare, priority, agreedValue
+* Linked needs are flattened alongside their parent needs (parsed from the `linkedNeeds` array within each resolved need)
+* Resolved covers are stored on `QuoteResultRow.resolvedCovers`
+* The Scenario Review page uses resolved covers to build richer cover details (with need code labels, owner codes, waiting/benefit periods) when available
+
+<u>Designs</u>
+
+* N/A --- data layer only
 
 <u>Security and Technical Considerations</u>
 
@@ -856,9 +1206,9 @@
   * Related Entities (table with filters)
   * Research (with sub-tabs: Insurance, Investment)
 
-**Research Tab — Insurance Sub-tab:**
+**Research Tab --- Insurance Sub-tab:**
 * The Insurance sub-tab is active by default within the Research tab
-* Displays the full Insurance Research content (same as the standalone Insurance Research page — see section 2.1)
+* Displays the full Insurance Research content (same as the standalone Insurance Research page --- see section 2.1)
 * Advisers can view, create, edit, and delete insurance comparison scenarios
 * Scenario table columns, dropdown actions, and "Add" functionality are identical to the standalone Insurance Research page
 * Advisers can navigate from a scenario row into the full insurance comparison workflow (Personal Details, Quote Configuration, Quote Results, Product Comparison)
@@ -871,3 +1221,90 @@
 <u>Security and Technical Considerations</u>
 
 * None
+
+---
+
+## 9. Navigation & Application Shell
+
+### 9.1 Advisers can navigate between application areas so that they can efficiently manage their workflow
+
+<u>Acceptance Criteria</u>
+
+* The top navigation bar displays:
+  * Application logo
+  * Navigation links: Dashboard, Plans, Reviews, Clients
+  * Version stamp
+  * Help, Link, and Notification bell icons
+  * User profile (name, role, avatar)
+* The following routes are available:
+  * /scenarios --- Scenario Index
+  * /scenarios/:id --- Scenario Details
+  * /scenarios/:id/research/insurance --- Insurance Research
+  * /scenarios/:id/plan/:platformId/edit --- Edit Existing Plan
+  * /scenarios/:id/plan/:platformId/investments/add --- Add Investment
+  * /scenarios/:id/plan/:platformId/fees --- Edit Fees
+  * /scenarios/:id/add-existing --- Add Existing Plan
+  * /scenarios/:id/add-proposal --- Add Proposal Type
+  * /scenarios/:id/proposals/plan-review/new --- New Plan Review
+  * /scenarios/:id/proposals/plan-review/:proposalId --- Edit Plan Review
+  * /research/plans --- Plan List
+  * /research/plans/new --- Add Plan
+  * /research/plans/:planId --- Plan Detail
+  * /research/plans/:planId/derive --- Derive Plan
+  * /research/investment-data --- Investment Data
+  * /clients --- Client Page
+  * /management/reference-data/investment-research --- Management Portal
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None
+
+---
+
+## 10. API Integration & Infrastructure
+
+### 10.1 The system proxies API requests to the OmniLife platform so that client-side code can access data without CORS issues
+
+<u>Acceptance Criteria</u>
+
+* All API requests are proxied through `/api/*` endpoints:
+  * Dev: Vite dev server proxy (vite.config.ts)
+  * Production: Single consolidated Vercel serverless function (`api/proxy.ts`) with a rewrite rule in `vercel.json`
+* The serverless function consolidation keeps the deployment under the Vercel Hobby plan limit of 12 functions
+* The Vercel rewrite rule maps `/api/:path(.*)` to `/api/proxy?_path=:path` for reliable path routing
+
+**API Endpoints:**
+
+| Client Route | Upstream OmniLife Route | Method | Cache |
+|---|---|---|---|
+| `/api/occupations` | `/occupations` | GET | 3600s |
+| `/api/occupation-mappings/{id}` | `/occupations/{id}/mappings` | GET | 3600s |
+| `/api/legacy-suppliers` | `/legacy/suppliers` | POST | 3600s |
+| `/api/legacy-portfolios` | `/legacy/portfolios` | POST | 3600s |
+| `/api/legacy-products` | `/legacy/products` | POST | 3600s |
+| `/api/suppliers` | `/suppliers` | GET | 3600s |
+| `/api/supplier-occupations/{code}/occupations` | `/suppliers/{code}/occupations` | GET | 300s |
+| `/api/quote-portfolio` | `/quote/portfolio` | POST | None |
+| `/api/quote-portfolio/{code}/quoteValidation` | `/quote/portfolio/{code}/quoteValidation` | POST | None |
+| `/api/quote-portfolio-features` | `/quote/portfolio/{codes}/features` | POST | None |
+| `/api/product-options` | `/quote/portfolio/{portfolioCode}/productOptions` | POST | None |
+| `/api/gained-and-lost` | `/research/portfolio/gainedAndLost` | POST | None |
+| `/api/portfolio-features` | `/research/portfolio/features` | POST | None |
+
+* Authentication: Basic Auth credentials (USERNAME/PASSWORD from environment variables) forwarded to OmniLife UAT base URL
+* Static data endpoints (occupations, suppliers, legacy data) are cached for 3600 seconds
+* Supplier occupation search is cached for 300 seconds
+* Quote operation endpoints have no caching
+
+<u>Designs</u>
+
+* N/A --- infrastructure only
+
+<u>Security and Technical Considerations</u>
+
+* API credentials are stored as environment variables and never exposed to the client
+* The proxy pattern prevents CORS issues and keeps the OmniLife base URL hidden from the browser
