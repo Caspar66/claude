@@ -416,6 +416,7 @@
 
 * Clicking "Edit" on a quote row in the Cover Selection table (or the pencil icon) opens the Needs Editor as a full-page view replacing the Personal Details page
 * The page has a header bar titled "Needs Editor — [Quote Name]" with a back arrow to return without saving
+* All dropdown and currency field defaults are populated from the Workspace Preferences (see story 2.9); the values listed below are the system defaults when no preferences have been configured
 
 **Header Fields:**
 * Quote Name
@@ -431,18 +432,18 @@
   * Mandatory
   * Dropdown
   * Options: Weekly, Fortnightly, Monthly, Quarterly, Half Yearly, Yearly
-  * Default: Monthly
+  * Default: Based on Workspace preferences
 * Non-Super Frequency
   * Mandatory
   * Dropdown
   * Options: Weekly, Fortnightly, Monthly, Quarterly, Half Yearly, Yearly
-  * Default: Monthly
+  * Default: Based on Workspace preferences
 
 **+ Add Need Button:**
 * Displays a dropdown menu listing available need types that have not yet been added
 * Available need types: Life, TPD Standalone, Trauma Standalone, Income Protection, Business Expenses, Needle Stick, Child Trauma
 * The button is hidden when all 7 need types have been added
-* Adding a need creates it with default values and automatically expands its section
+* Adding a need creates it with default values from Workspace preferences and automatically expands its section
 
 **Need Sections:**
 * Each added need is displayed as a collapsible card with:
@@ -453,229 +454,229 @@
 
 **Life (TRM):**
 * Sum Insured
-  * Mandatory, Currency field, Default: $500,000
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Owner
   * Mandatory, Dropdown
   * Options: Non-Super, SMSF, Super
-  * Default: Non-Super
+  * Default: Based on Workspace preferences
 * Rollover
   * Mandatory, Dropdown
   * Options: Include if possible, Exclude
-  * Default: Exclude
+  * Default: Based on Workspace preferences
 * Premium Waiver
   * Mandatory, Dropdown
   * Options: Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 
 **TPD Extension to Life (TPE) — linked to Life:**
 * Added via "+ Add Need" or by linking from the Life section
 * Sum Insured
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Owner
   * Mandatory, Dropdown
   * Options: Non-Super, SMSF, Super, SuperLink
-  * Default: Non-Super
+  * Default: Based on Workspace preferences
 * Rollover
   * Mandatory, Dropdown
   * Options: Include if possible, Exclude
-  * Default: Exclude
+  * Default: Based on Workspace preferences
 * Occupation Type
   * Mandatory, Dropdown
   * Options: Any, Own, Homemaker, ADL, Best available
-  * Default: Any
+  * Default: Based on Workspace preferences
 * Life Buy Back
   * Mandatory, Dropdown
   * Options: Lowest premium, Fastest available, None, Immediate, 1 year
-  * Default: Lowest premium
+  * Default: Based on Workspace preferences
 * Double TPD
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include, Exclude
-  * Default: Exclude if possible
+  * Default: Based on Workspace preferences
 * Premium Waiver
   * Mandatory, Dropdown
   * Options: Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 
 **Trauma Extension to Life (TRE) — linked to Life:**
 * Sum Insured
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Life Buy Back
   * Mandatory, Dropdown
   * Options: Lowest premium, Fastest available, None, 1 year, 3 years
-  * Default: Lowest premium
+  * Default: Based on Workspace preferences
 * Double Trauma
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include, Exclude
-  * Default: Exclude if possible
+  * Default: Based on Workspace preferences
 * Trauma Reinstatement
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include, Exclude
-  * Default: Exclude if possible
+  * Default: Based on Workspace preferences
 * Premium Waiver
   * Mandatory, Dropdown
   * Options: Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 * Baby Care
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 * Priority
   * Mandatory, Dropdown
   * Options: Cheapest, Best, Intermediate
-  * Default: Cheapest
+  * Default: Based on Workspace preferences
 
 **TPD Standalone (TPS):**
 * Sum Insured
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Owner
   * Mandatory, Dropdown
   * Options: Non-Super, SMSF, Super, SuperLink
-  * Default: Non-Super
+  * Default: Based on Workspace preferences
 * Rollover
   * Mandatory, Dropdown
   * Options: Include if possible, Exclude
-  * Default: Exclude
+  * Default: Based on Workspace preferences
 * Occupation Type
   * Mandatory, Dropdown
   * Options: Any, Own, Homemaker, ADL, Best available
-  * Default: Any
+  * Default: Based on Workspace preferences
 * Premium Waiver
   * Mandatory, Dropdown
   * Options: Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 
 **Trauma Standalone (TRS):**
 * Sum Insured
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Trauma Reinstatement
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include, Exclude
-  * Default: Exclude if possible
+  * Default: Based on Workspace preferences
 * Premium Waiver
   * Mandatory, Dropdown
   * Options: Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 * Baby Care
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 * Priority
   * Mandatory, Dropdown
   * Options: Cheapest, Best, Intermediate
-  * Default: Cheapest
+  * Default: Based on Workspace preferences
 
 **TPD Extension to Trauma (TPR) — linked to Trauma Standalone:**
 * Sum Insured
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Owner
   * Mandatory, Dropdown
   * Options: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
-  * Default: Non-Super
+  * Default: Based on Workspace preferences
 * Rollover
   * Mandatory, Dropdown
   * Options: Include if possible, Exclude
-  * Default: Exclude
+  * Default: Based on Workspace preferences
 * Occupation Type
   * Mandatory, Dropdown
   * Options: Any, Own, Homemaker, ADL, Best available
-  * Default: Any
+  * Default: Based on Workspace preferences
 * Premium Waiver
   * Mandatory, Dropdown
   * Options: Include if possible, Include, Exclude
-  * Default: Include if possible
+  * Default: Based on Workspace preferences
 
 **Income Protection (INC):**
 * Monthly Benefit
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Super Contribution
   * Mandatory, Currency field, Default: $0
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Owner
   * Mandatory, Dropdown
   * Options: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
-  * Default: Non-Super
+  * Default: Based on Workspace preferences
 * Rollover
   * Mandatory, Dropdown
   * Options: Include if possible, Exclude
-  * Default: Exclude
+  * Default: Based on Workspace preferences
 * Agreed Value
   * Mandatory, Dropdown
   * Options: Indemnity if possible, Indemnity
-  * Default: Indemnity
+  * Default: Based on Workspace preferences
 * Accident Benefit
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include if possible, Include, Exclude
-  * Default: Exclude if possible
+  * Default: Based on Workspace preferences
 * Increase Claim Benefit
   * Mandatory, Dropdown
   * Options: Exclude if possible, Include if possible, Include, Exclude
-  * Default: Exclude if possible
+  * Default: Based on Workspace preferences
 * Waiting Period
   * Mandatory, Dropdown
   * Options: 14 days, 30 days, 60 days, 90 days, 180 days, 1 year, 2 years
-  * Default: 30 days
+  * Default: Based on Workspace preferences
 * Benefit Period
   * Mandatory, Dropdown
   * Options: 1 year, 2 years, 5 years, To age 55, To age 60, To age 65, To age 67, To age 70
-  * Default: To age 65
+  * Default: Based on Workspace preferences
 * Replacement Ratio
   * Mandatory, Dropdown
   * Options: Any, Greater than 75%, 70% to 75%, 60% to 69%, Less than 60%
-  * Default: Any
+  * Default: Based on Workspace preferences
 * Priority
   * Mandatory, Dropdown
   * Options: Cheapest, Best, Intermediate
-  * Default: Cheapest
+  * Default: Based on Workspace preferences
 
 **Business Expenses (BUS):**
 * Monthly Benefit
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Blended, Variable
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 * Waiting Period
   * Mandatory, Dropdown
   * Options: 14 days, 30 days, 60 days, 90 days
-  * Default: 30 days
+  * Default: Based on Workspace preferences
 * Benefit Period
   * Read-only
   * Fixed: 1 year
 
 **Needle Stick (NES):**
 * Sum Insured
-  * Mandatory, Currency field, Default: $0
+  * Mandatory, Currency field, Default: Based on Workspace preferences
 * Structure
   * Mandatory, Dropdown
   * Options: Variable age-stepped, Variable
-  * Default: Variable age-stepped
+  * Default: Based on Workspace preferences
 
 **Child Trauma (CHT):**
 * Displays a list of children (maximum 9)
@@ -806,6 +807,269 @@
 <u>Security and Technical Considerations</u>
 
 * None
+
+---
+
+### 2.9 Advisers can configure Workspace preferences so that default values are applied consistently when creating new quotes
+
+<u>Acceptance Criteria</u>
+
+* The Workspace Preferences modal is accessible from the Settings icon on the Cover Selection section header
+* The modal displays a tabbed interface with the following tabs: General, Life, TPD Extension, Trauma Extension, TPD Standalone, Trauma Standalone, Income Protection, Business Expenses, Needle Stick
+* Changes are saved when the adviser clicks "Save" and persist across all new quotes created within the workspace
+* A "Reset to Defaults" button restores all preferences to the system defaults listed below
+
+**General Tab:**
+* Super Frequency
+  * Mandatory, Dropdown
+  * Options: Weekly, Fortnightly, Monthly, Quarterly, Half Yearly, Yearly
+  * Default: Monthly
+* Non-Super Frequency
+  * Mandatory, Dropdown
+  * Options: Weekly, Fortnightly, Monthly, Quarterly, Half Yearly, Yearly
+  * Default: Monthly
+
+**Life Tab:**
+* Sum Insured
+  * Mandatory, Currency field
+  * Default: $500,000
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**TPD Extension Tab:**
+* Sum Insured
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Occupation Type
+  * Mandatory, Dropdown
+  * Options: Any, Own, Homemaker, ADL, Best available
+  * Default: Any
+* Life Buy Back
+  * Mandatory, Dropdown
+  * Options: Lowest premium, Fastest available, None, Immediate, 1 year
+  * Default: Lowest premium
+* Double TPD
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**Trauma Extension Tab:**
+* Sum Insured
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Life Buy Back
+  * Mandatory, Dropdown
+  * Options: Lowest premium, Fastest available, None, 1 year, 3 years
+  * Default: Lowest premium
+* Double Trauma
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Trauma Reinstatement
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+* Baby Care
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Include if possible
+* Priority
+  * Mandatory, Dropdown
+  * Options: Cheapest, Best, Intermediate
+  * Default: Cheapest
+
+**TPD Standalone Tab:**
+* Sum Insured
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Occupation Type
+  * Mandatory, Dropdown
+  * Options: Any, Own, Homemaker, ADL, Best available
+  * Default: Any
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**Trauma Standalone Tab:**
+* Sum Insured
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Trauma Reinstatement
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+* Baby Care
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Include if possible
+* Priority
+  * Mandatory, Dropdown
+  * Options: Cheapest, Best, Intermediate
+  * Default: Cheapest
+
+**TPD Extension to Trauma Tab (within Trauma Standalone):**
+* Sum Insured
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Occupation Type
+  * Mandatory, Dropdown
+  * Options: Any, Own, Homemaker, ADL, Best available
+  * Default: Any
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**Income Protection Tab:**
+* Monthly Benefit
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Agreed Value
+  * Mandatory, Dropdown
+  * Options: Indemnity if possible, Indemnity
+  * Default: Indemnity
+* Accident Benefit
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Exclude if possible
+* Increase Claim Benefit
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Exclude if possible
+* Waiting Period
+  * Mandatory, Dropdown
+  * Options: 14 days, 30 days, 60 days, 90 days, 180 days, 1 year, 2 years
+  * Default: 30 days
+* Benefit Period
+  * Mandatory, Dropdown
+  * Options: 1 year, 2 years, 5 years, To age 55, To age 60, To age 65, To age 67, To age 70
+  * Default: To age 65
+* Replacement Ratio
+  * Mandatory, Dropdown
+  * Options: Any, Greater than 75%, 70% to 75%, 60% to 69%, Less than 60%
+  * Default: Any
+* Priority
+  * Mandatory, Dropdown
+  * Options: Cheapest, Best, Intermediate
+  * Default: Cheapest
+
+**Business Expenses Tab:**
+* Monthly Benefit
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable
+  * Default: Variable age-stepped
+* Waiting Period
+  * Mandatory, Dropdown
+  * Options: 14 days, 30 days, 60 days, 90 days
+  * Default: 30 days
+
+**Needle Stick Tab:**
+* Sum Insured
+  * Mandatory, Currency field
+  * Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Variable
+  * Default: Variable age-stepped
+
+**Footer:**
+* Reset to Defaults button (outline) — restores all tabs to the system defaults listed above
+* Cancel button (outline) — closes without saving
+* Save button (teal) — persists preferences and closes the modal
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* Workspace preferences are stored locally and applied at quote creation time; they do not retroactively update existing quotes
 
 ---
 
