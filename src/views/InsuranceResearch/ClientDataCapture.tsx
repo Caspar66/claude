@@ -459,7 +459,6 @@ export function ClientDataCapture({
   if (addCoverOpen) {
     return (
       <AddCoverPage
-        scenarioTitle={`${clientDisplayName}${partnerDisplayName ? ' & ' + partnerDisplayName : ''}`}
         clientName={clientDisplayName}
         partnerName={partnerDisplayName}
         onSave={handleSaveNewCover}

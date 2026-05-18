@@ -77,7 +77,7 @@ const IP_DEFINITIONS = ['Indemnity', 'Agreed Value'];
 const TPD_DEFINITIONS = ['Any', 'Own', 'Super-linked', 'ADL'];
 
 interface Props {
-  scenarioTitle: string;
+
   clientName: string;
   partnerName: string | null;
   onSave: (policy: ExistingPolicy) => void;
@@ -121,7 +121,7 @@ function sanitizeMoneyInput(s: string): string {
   return clean.slice(0, firstDot + 1) + clean.slice(firstDot + 1).replace(/\./g, '');
 }
 
-export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, onCancel }: Props) {
+export function AddCoverPage({ clientName, partnerName, onSave, onCancel }: Props) {
   const { suppliers: legacySuppliers, loading: suppliersLoading } = useLegacySuppliers();
 
   const [provider, setProvider] = useState('');
@@ -236,10 +236,7 @@ export function AddCoverPage({ scenarioTitle, clientName, partnerName, onSave, o
   return (
     <div className="flex-1 overflow-auto bg-gray-50">
       {/* Title bar */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-white">
-        <h2 className="text-sm font-bold text-slate-800">
-          Risk Researcher: <span className="font-normal">{scenarioTitle}</span>
-        </h2>
+      <div className="flex items-center justify-end px-5 py-3 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-2">
           <Button size="sm" className="bg-indigo-900 hover:bg-indigo-950 text-white text-xs h-8 px-4" onClick={handleSave}>Save</Button>
           <Button size="sm" variant="outline" className="text-xs h-8 px-4" onClick={onCancel}>Cancel</Button>
