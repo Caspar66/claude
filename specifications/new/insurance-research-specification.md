@@ -1047,6 +1047,88 @@
 
 ---
 
+### 2.10 Advisers can configure scenario settings so that quote generation uses the correct projection, commission, and campaign options
+
+<u>Acceptance Criteria</u>
+
+* The Scenario Settings modal is accessible from the Personal Details page (via a settings trigger in the client summary area)
+* The modal has a header titled "Scenario Settings" (indigo background) with a close button (X)
+* The modal displays a tabbed interface with three tabs: Global Options, Commissions, Campaigns
+* Changes are saved when the adviser clicks "Save" and applied to all subsequent quote operations within the scenario
+
+**Global Options Tab:**
+* Premium Projection Duration
+  * Mandatory, Dropdown
+  * Options: 3 Years, 5 Years, 10 Years, 15 Years, 20 Years
+  * Default: 15 Years
+  * Controls the number of years used for premium projection calculations
+* Indexation
+  * Mandatory, Number input with % suffix
+  * Range: 0 to 100 (step 0.01)
+  * Default: 0
+  * Annual indexation rate applied to premiums
+* Approved Product List
+  * Mandatory, Dropdown
+  * Options: Adviser, User
+  * Default: Adviser
+  * Determines which APL is used for quoting
+* Minimum Commission Preference
+  * Mandatory, Dropdown
+  * Options: Yes, No
+  * Default: No
+  * When set to Yes, all providers are automatically assigned their minimum (0%) commission structure
+  * A warning banner is displayed on the Commissions tab when enabled
+
+**Commissions Tab:**
+* Displays a table of all available insurance providers with one row per provider
+* Table columns:
+  * Provider (logo and name)
+  * Commission Structure (editable dropdown per provider)
+  * Initial (read-only percentage display for Lump, Sum, and Income types)
+  * Renewal (read-only percentage display for Lump, Sum, and Income types)
+* Commission Structure
+  * Mandatory, Dropdown per provider
+  * Options: populated dynamically from the Suppliers API (each provider's `commissionOptions`)
+  * Options display format: "[Structure] ([Upfront]% / [Ongoing]%): [Name]"
+  * Default: each provider's default commission code from the API
+* When Minimum Commission Preference is enabled:
+  * All dropdowns are disabled (greyed out)
+  * All providers are set to their minimum commission code (0% upfront / 0% ongoing)
+  * An amber banner displays: "Minimum Commission Preference is enabled — all providers set to minimum (0%) commission."
+* Initial and Renewal columns display commission rates for three types:
+  * LUMP: percentage (2 decimal places)
+  * SUM: percentage (2 decimal places)
+  * INCOME: percentage (2 decimal places)
+  * A dash "—" is shown if the rate is not available
+
+**Campaigns Tab:**
+* Displays a table of all available insurance providers with one row per provider
+* Table columns:
+  * Provider (logo and name)
+  * Campaigns (max 4) (multi-select toggle buttons)
+* Campaign Selection
+  * Optional, Toggle buttons per provider
+  * Options: populated dynamically from the Suppliers API (each provider's `campaignOptions`)
+  * Default: each provider's default campaign code from the API
+  * Maximum 4 campaigns can be selected per provider
+  * Selected campaigns show a teal background with a check icon
+  * When the maximum is reached, unselected buttons are disabled with a tooltip "Maximum 4 campaigns per provider"
+  * A counter displays "[selected]/4" below the buttons
+
+**Footer:**
+* Cancel button (outline) — closes without saving
+* Save button (teal) — persists settings and closes the modal
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* Commission and campaign options are loaded from the Suppliers API; the table displays a loading spinner while fetching and an error message if the API call fails
+
+---
+
 ## 3. Quote Configuration
 
 ### 3.1 Advisers can configure insurance cover requirements so that quotes are generated for the correct products
