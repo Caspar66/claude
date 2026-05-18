@@ -1553,7 +1553,6 @@ The Quote Results screen is the primary workspace for reviewing generated quotes
 * Displayed above the results table as a horizontal bar (gray-50 background)
 * Contains the following controls (left to right):
   * "All GRAPHS" toggle button — toggles between table view and graph view; teal when active, outline when inactive
-  * "Occupation Rating" toggle button — toggles occupation rating display; teal when active, outline when inactive
   * "VIEW / COMPARE FEATURES" button — navigates to the Features Comparison page (see story 4.2)
     * Disabled (grayed out) when "All Quotes" is selected (no specific quote filter active)
     * Includes an ExternalLink icon

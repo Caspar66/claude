@@ -582,7 +582,6 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
   const [excludedCollapsed, setExcludedCollapsed] = useState(true);
   const projectionYears = (quoteRequestBody?.settings as Record<string, unknown> | undefined)?.projectionYears as string | number | undefined;
   const [showGraphs, setShowGraphs] = useState(false);
-  const [showOccRating, setShowOccRating] = useState(false);
   const [validatedRows, setValidatedRows] = useState<Record<string, boolean>>({});
   const [selectedRowId, setSelectedRowId] = useState<string | null>(null);
 
@@ -692,13 +691,6 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
           >
             All GRAPHS
           </button>
-          <button
-            className={`text-xs px-2.5 py-1 rounded border font-medium transition-colors ${showOccRating ? 'bg-teal-700 text-white border-teal-700' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
-            onClick={() => setShowOccRating(!showOccRating)}
-          >
-            Occupation Rating
-          </button>
-
           <button
             type="button"
             className={`inline-flex items-center justify-center gap-1.5 text-xs h-7 px-3 rounded border font-semibold transition-colors ${showAll ? 'bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed' : 'bg-white border-slate-300 text-slate-600 hover:bg-slate-50'}`}
