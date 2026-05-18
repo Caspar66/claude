@@ -410,6 +410,405 @@
 
 ---
 
+### 2.7 Advisers can configure quote covers via the Needs Editor so that they can specify which insurance needs to include in a quote
+
+<u>Acceptance Criteria</u>
+
+* Clicking "Edit" on a quote row in the Cover Selection table (or the pencil icon) opens the Needs Editor as a full-page view replacing the Personal Details page
+* The page has a header bar titled "Needs Editor — [Quote Name]" with a back arrow to return without saving
+
+**Header Fields:**
+* Quote Name
+  * Mandatory
+  * Text field
+  * Default: inherited from the quote (e.g. "Quote 1")
+* Life Insured
+  * Mandatory
+  * Dropdown
+  * Options: Client name, Partner name (partner only shown if partner data exists)
+  * Default: Client
+* Super Frequency
+  * Mandatory
+  * Dropdown
+  * Options: Weekly, Fortnightly, Monthly, Quarterly, Half Yearly, Yearly
+  * Default: Monthly
+* Non-Super Frequency
+  * Mandatory
+  * Dropdown
+  * Options: Weekly, Fortnightly, Monthly, Quarterly, Half Yearly, Yearly
+  * Default: Monthly
+
+**+ Add Need Button:**
+* Displays a dropdown menu listing available need types that have not yet been added
+* Available need types: Life, TPD Standalone, Trauma Standalone, Income Protection, Business Expenses, Needle Stick, Child Trauma
+* The button is hidden when all 7 need types have been added
+* Adding a need creates it with default values and automatically expands its section
+
+**Need Sections:**
+* Each added need is displayed as a collapsible card with:
+  * A header showing the need type label (bold), with a chevron toggle and a trash icon to remove the need
+  * Linked needs are indented below their parent with a teal left border and tinted background
+  * A "Required Features" link below the fields showing selected feature count (opens a modal with feature checkboxes specific to the need type)
+* Advisers can expand/collapse individual need sections by clicking the header
+
+**Life (TRM):**
+* Sum Insured
+  * Mandatory, Currency field, Default: $500,000
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**TPD Extension to Life (TPE) — linked to Life:**
+* Added via "+ Add Need" or by linking from the Life section
+* Sum Insured
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Occupation Type
+  * Mandatory, Dropdown
+  * Options: Any, Own, Homemaker, ADL, Best available
+  * Default: Any
+* Life Buy Back
+  * Mandatory, Dropdown
+  * Options: Lowest premium, Fastest available, None, Immediate, 1 year
+  * Default: Lowest premium
+* Double TPD
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**Trauma Extension to Life (TRE) — linked to Life:**
+* Sum Insured
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Life Buy Back
+  * Mandatory, Dropdown
+  * Options: Lowest premium, Fastest available, None, 1 year, 3 years
+  * Default: Lowest premium
+* Double Trauma
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Trauma Reinstatement
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+* Baby Care
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Include if possible
+* Priority
+  * Mandatory, Dropdown
+  * Options: Cheapest, Best, Intermediate
+  * Default: Cheapest
+
+**TPD Standalone (TPS):**
+* Sum Insured
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Occupation Type
+  * Mandatory, Dropdown
+  * Options: Any, Own, Homemaker, ADL, Best available
+  * Default: Any
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**Trauma Standalone (TRS):**
+* Sum Insured
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Trauma Reinstatement
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include, Exclude
+  * Default: Exclude if possible
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+* Baby Care
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Include if possible
+* Priority
+  * Mandatory, Dropdown
+  * Options: Cheapest, Best, Intermediate
+  * Default: Cheapest
+
+**TPD Extension to Trauma (TPR) — linked to Trauma Standalone:**
+* Sum Insured
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable to age 65, Variable to age 70
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Occupation Type
+  * Mandatory, Dropdown
+  * Options: Any, Own, Homemaker, ADL, Best available
+  * Default: Any
+* Premium Waiver
+  * Mandatory, Dropdown
+  * Options: Include if possible, Include, Exclude
+  * Default: Include if possible
+
+**Income Protection (INC):**
+* Monthly Benefit
+  * Mandatory, Currency field, Default: $0
+* Super Contribution
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable
+  * Default: Variable age-stepped
+* Owner
+  * Mandatory, Dropdown
+  * Options: Non-Super, SMSF, Super, SuperLink, SMSF SuperLink
+  * Default: Non-Super
+* Rollover
+  * Mandatory, Dropdown
+  * Options: Include if possible, Exclude
+  * Default: Exclude
+* Agreed Value
+  * Mandatory, Dropdown
+  * Options: Indemnity if possible, Indemnity
+  * Default: Indemnity
+* Accident Benefit
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Exclude if possible
+* Increase Claim Benefit
+  * Mandatory, Dropdown
+  * Options: Exclude if possible, Include if possible, Include, Exclude
+  * Default: Exclude if possible
+* Waiting Period
+  * Mandatory, Dropdown
+  * Options: 14 days, 30 days, 60 days, 90 days, 180 days, 1 year, 2 years
+  * Default: 30 days
+* Benefit Period
+  * Mandatory, Dropdown
+  * Options: 1 year, 2 years, 5 years, To age 55, To age 60, To age 65, To age 67, To age 70
+  * Default: To age 65
+* Replacement Ratio
+  * Mandatory, Dropdown
+  * Options: Any, Greater than 75%, 70% to 75%, 60% to 69%, Less than 60%
+  * Default: Any
+* Priority
+  * Mandatory, Dropdown
+  * Options: Cheapest, Best, Intermediate
+  * Default: Cheapest
+
+**Business Expenses (BUS):**
+* Monthly Benefit
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Blended, Variable
+  * Default: Variable age-stepped
+* Waiting Period
+  * Mandatory, Dropdown
+  * Options: 14 days, 30 days, 60 days, 90 days
+  * Default: 30 days
+* Benefit Period
+  * Read-only
+  * Fixed: 1 year
+
+**Needle Stick (NES):**
+* Sum Insured
+  * Mandatory, Currency field, Default: $0
+* Structure
+  * Mandatory, Dropdown
+  * Options: Variable age-stepped, Variable
+  * Default: Variable age-stepped
+
+**Child Trauma (CHT):**
+* Displays a list of children (maximum 9)
+* Advisers can add a child by clicking "+ Add Child"
+* Each child has:
+  * Sum Insured
+    * Mandatory, Currency field, Default: $0
+  * Date of Birth
+    * Mandatory, Date picker (YYYY-MM-DD format)
+  * Age
+    * Read-only (calculated from Date of Birth)
+  * Gender
+    * Mandatory, Dropdown
+    * Options: Male, Female
+    * Default: Male
+* Advisers can remove individual children via a trash icon
+
+**Footer:**
+* Preview JSON button (toggle) — shows the serialised needs payload in a dark code panel with a Copy button
+* Cancel button — returns to the Cover Selection table without saving
+* Save Quote button (teal) — saves the configured needs and returns to the Cover Selection table
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None
+
+---
+
+### 2.8 Advisers can perform a needs analysis so that they can calculate insurance shortfalls and inform cover requirements
+
+<u>Acceptance Criteria</u>
+
+* Clicking "Launch Needs Analysis" from the Cover Selection action buttons opens the Needs Analysis page as a full-page view
+* A "← Back to Personal Details" link at the top returns to the Personal Details page
+
+**Sidebar Navigation:**
+* A left sidebar (192px wide) displays tabs for each life insured:
+  * Client Needs (always shown)
+  * Partner Needs (only shown if partner data exists)
+* The active tab is highlighted in blue; clicking a tab switches the main content area
+* Default: Client Needs is active
+
+**Requirements Header:**
+* Displays "Requirements - [Client/Partner name]" as a section title
+* An "Options" button (with a Settings icon) opens the Insurance Selection modal
+
+**Insurance Selection Modal (Options):**
+* A modal with checkboxes to toggle which insurance types are visible as table columns:
+  * Life Insurance
+    * Checkbox, Default: checked
+  * TPD Insurance
+    * Checkbox, Default: checked
+  * Trauma Insurance
+    * Checkbox, Default: checked
+  * Income Protection
+    * Checkbox, Default: checked
+  * Business Expense
+    * Checkbox, Default: unchecked
+* Toggling a checkbox immediately shows/hides the corresponding column in the table
+* A "Done" button closes the modal
+
+**Requirements Table:**
+* The table displays a row-label column on the left, followed by one column for each enabled insurance type (Life, TPD, Trauma, Income Protection pa, Business Expenses pa)
+* All currency input cells are right-aligned, 100px wide, and format as Australian currency on blur
+
+**Capital Requirements Section:**
+* Section header: "Capital Requirements" (slate background)
+* Editable rows for Life, TPD, and Trauma columns:
+  * Liabilities to clear
+    * Optional, Currency field, Default: $0
+  * Future Expenditure Required
+    * Optional, Currency field, Default: $0
+  * Future Education Expenses
+    * Optional, Currency field, Default: $0
+  * Medical costs/Recovery income
+    * Optional, Currency field, Default: $0
+  * Provision for Tax
+    * Optional, Currency field, Default: $0
+  * Other
+    * Optional, Currency field, Default: $0
+* **Total Capital Required** (calculated summary row, slate background):
+  * Life, TPD, Trauma columns: read-only, sum of all Capital Requirements rows for that column
+  * Income Protection column: editable currency field (direct entry of annual income protection need)
+    * Default: 70% of the client's annual income (auto-populated on first load if income > $0)
+  * Business Expenses column: editable currency field (direct entry of annual business expenses need)
+    * Default: $0
+
+**Capital Provisions Section:**
+* Section header: "Capital Provisions" (slate background)
+* Editable rows for Life, TPD, and Trauma columns:
+  * Disposable Assets
+    * Optional, Currency field, Default: $0
+  * Super
+    * Optional, Currency field, Default: $0
+  * Continuing Income
+    * Optional, Currency field, Default: $0
+* **Total Capital Available** (calculated summary row, slate background):
+  * Life, TPD, Trauma columns: read-only, sum of all Capital Provisions rows for that column
+  * Income Protection and Business Expenses columns: not shown
+
+**Insurance Needs Section:**
+* Section header: "Insurance Needs" (slate background)
+* **Total Cover Required** (calculated row):
+  * Life, TPD, Trauma: Maximum of zero or (Total Capital Required minus Total Capital Available)
+  * Income Protection: Direct value from the Income Protection input
+  * Business Expenses: Direct value from the Business Expenses input
+
+**Surplus/Shortfall Row:**
+* Label displayed as underlined blue text ("Surplus/Shortfall")
+* Calculation:
+  * Life, TPD, Trauma: Total Capital Available minus Total Capital Required
+  * Income Protection: Negated Income Protection value (always shown as shortfall)
+  * Business Expenses: Negated Business Expenses value (always shown as shortfall)
+* Negative values are displayed in red; non-negative values in default text colour
+
+**Data Persistence:**
+* All values are persisted in state and maintained when switching between Client and Partner tabs
+* The computed shortfalls are passed to the Needs Editor as reference values when configuring quotes
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None
+
+---
+
 ## 3. Quote Configuration
 
 ### 3.1 Advisers can configure insurance cover requirements so that quotes are generated for the correct products
