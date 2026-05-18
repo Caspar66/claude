@@ -1,12 +1,6 @@
 import { useState } from 'react';
 import { ChevronUp, ChevronDown, Settings, Move, SquarePen, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/components/ui/dropdown-menu';
 import type { ExistingPolicy, ExistingCoverType, ResearchPortfolio } from './insuranceData';
 import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, totalPolicyPremiumPerAnnum } from './insuranceData';
 import { MapProductModal } from './MapProductModal';
@@ -86,17 +80,6 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                 >
                   Add Existing Cover
                 </Button>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="border border-slate-300 rounded px-3 py-1.5 text-xs bg-white hover:bg-slate-50 flex items-center gap-1">
-                      Actions <ChevronDown size={12} />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent>
-                    <DropdownMenuItem onClick={() => onChangePolicies([])}>Remove All</DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onChangePolicies(policies.map((p) => ({ ...p, action: 'Review' })))}>Mark All As Review</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
               </div>
           </div>
 
