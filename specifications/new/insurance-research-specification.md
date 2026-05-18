@@ -338,6 +338,78 @@
 
 ---
 
+### 2.6 Advisers can manage quote sets in the Cover Selection panel so that they can define which covers to quote for each life insured
+
+<u>Acceptance Criteria</u>
+
+* The Cover Selection section is displayed below the Current Situation section on the Personal Details page
+* The section has a collapsible header titled "Cover Selection" with a Settings icon and collapse/expand toggle
+* When collapsed, only the header is visible; when expanded, the full quotes table and action buttons are shown
+* The section defaults to expanded
+
+**Quotes Table:**
+* A "Quotes" label is displayed on the left with a "+ Add Quote" button on the right
+* Quotes are displayed in a table with the following columns:
+  * Actions (row action icons)
+  * Quote Name (inline editable text field)
+  * Life Insured (read-only, displays client or partner name)
+  * Covers (read-only, comma-separated list of enabled cover types e.g. "Life, TPD Extension to Life, Income Protection")
+  * Quoted (read-only, displays the date the quote was last generated, or an em-dash if not yet quoted)
+  * Edit (button to open the quote configuration editor)
+* If no quotes exist, the message "No quotes added yet. Click + Add Quote to begin." is displayed
+
+**Row Actions:**
+* Each quote row has three action icons:
+  * Edit (pencil icon, blue) — opens the quote configuration editor for that quote
+  * Copy (copy icon) — duplicates the quote with " (Copy)" appended to the name, inserted immediately after the original
+  * Delete (trash icon) — removes the quote from the list without confirmation
+
+**Inline Quote Name Editing:**
+* Quote Name
+  * Mandatory
+  * Text field (inline, max width 200px)
+  * Default: auto-incremented name (e.g. "Quote 1", "Quote 2")
+  * Changes are applied immediately (no save button required)
+
+**+ Add Quote Button:**
+* Clicking "+ Add Quote" creates a new quote with:
+  * A unique identifier
+  * An auto-incremented name (e.g. "Quote 1", "Quote 2", based on current count)
+  * Life Insured defaulting to Client
+  * No covers enabled
+  * Super and Non-Super frequency defaulting to Monthly
+* After creation, the quote configuration editor opens automatically for the new quote
+
+**Edit Button:**
+* Clicking "Edit" on a row opens the full-page quote configuration editor (NeedsEditor) for that quote
+* The editor allows the adviser to configure cover types, sum insured amounts, and cover options
+* The editor has Save and Cancel buttons; Save persists changes and returns to the Personal Details page, Cancel discards changes
+
+**Action Buttons (below the quotes table):**
+* Three action buttons are displayed in a centred row:
+  * Launch Needs Analysis
+    * Always enabled
+    * Teal background button
+  * Get Quotes
+    * Teal background button
+    * Disabled when no quotes exist in the Cover Selection table
+    * Tooltip when disabled: "Add at least one quote to the Cover Selection section"
+  * Next
+    * Outline button
+    * Disabled until quotes have been generated (Get Quotes has been run)
+    * Tooltip when disabled: "Run Get Quotes first to view results"
+    * Navigates to the Quote Results page
+
+<u>Designs</u>
+
+* To be added
+
+<u>Security and Technical Considerations</u>
+
+* None
+
+---
+
 ## 3. Quote Configuration
 
 ### 3.1 Advisers can configure insurance cover requirements so that quotes are generated for the correct products
