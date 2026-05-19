@@ -682,6 +682,8 @@ export function ScenarioReviewPage({
           item={detailsItem}
           clientName={clientName}
           partnerName={partnerName}
+          quoteSuperFreq={detailsItem.quoteRow ? (quotes[detailsItem.quoteRow.quoteIndex]?.superFrequency as PremiumFrequency | undefined) : undefined}
+          quoteNonSuperFreq={detailsItem.quoteRow ? (quotes[detailsItem.quoteRow.quoteIndex]?.nonSuperFrequency as PremiumFrequency | undefined) : undefined}
           onSave={(updated) => {
             setItems((prev) => prev.map((i) => i.id === updated.id ? updated : i));
             setDetailsItem(null);

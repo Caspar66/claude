@@ -20,6 +20,8 @@ interface Props {
   item: ReviewItem;
   clientName: string;
   partnerName: string | null;
+  quoteSuperFreq?: PremiumFrequency;
+  quoteNonSuperFreq?: PremiumFrequency;
   onSave: (updated: ReviewItem) => void;
   onClose: () => void;
 }
@@ -178,7 +180,7 @@ function CoverDetailsModal({
 
 // ── Product Details Modal ──────────────────────────────────────────────────
 
-export function ProductDetailsModal({ item, clientName, partnerName, onSave, onClose }: Props) {
+export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperFreq, quoteNonSuperFreq, onSave, onClose }: Props) {
   const [tab, setTab] = useState<DetailsTab>('details');
   const [policyName, setPolicyName] = useState(item.label);
   const [underwriter, setUnderwriter] = useState(item.insurer);
@@ -189,35 +191,53 @@ export function ProductDetailsModal({ item, clientName, partnerName, onSave, onC
   const row = item.quoteRow;
   const existingPolicy = item.existingPolicy;
 
-  const freqKeys = Object.keys(PREMIUM_FREQUENCY_LABELS) as PremiumFrequency[];
-  const defaultFreq: PremiumFrequency = row
-    ? (Object.keys(row.premiumInsideSuper)[0] as PremiumFrequency) || (Object.keys(row.premiumOutsideSuper)[0] as PremiumFrequency) || 'M'
-    : existingPolicy
-      ? existingPolicy.superFrequency
-      : 'M';
-
   const [superFreq, setSuperFreq] = useState<PremiumFrequency>(
-    existingPolicy ? existingPolicy.superFrequency : defaultFreq
+    existingPolicy ? existingPolicy.superFrequency : (quoteSuperFreq ?? 'M')
   );
   const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFrequency>(
-    existingPolicy ? existingPolicy.nonSuperFrequency : defaultFreq
+    existingPolicy ? existingPolicy.nonSuperFrequency : (quoteNonSuperFreq ?? 'M')
   );
 
-  const premSuper = row ? (row.premiumInsideSuper[superFreq] ?? row.premiumInsideSuper[defaultFreq] ?? 0) : (existingPolicy?.premiumSuper ?? 0);
-  const premNonSuper = row ? (row.premiumOutsideSuper[nonSuperFreq] ?? row.premiumOutsideSuper[defaultFreq] ?? 0) : (existingPolicy?.premiumNonSuper ?? 0);
+  const premSuper = row ? (row.premiumInsideSuper[superFreq] ?? 0) : (existingPolicy?.premiumSuper ?? 0);
+  const premNonSuper = row ? (row.premiumOutsideSuper[nonSuperFreq] ?? 0) : (existingPolicy?.premiumNonSuper ?? 0);
   const stampSuper = row ? (row.stampDutyInsideSuper[superFreq] ?? 0) : (existingPolicy?.stampDutySuper ?? 0);
   const stampNonSuper = row ? (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0) : (existingPolicy?.stampDutyNonSuper ?? 0);
   const totalPrem = premSuper + premNonSuper + stampSuper + stampNonSuper;
   const policyFee = row?.policyFee ?? 0;
 
-  const commUpfrontPct = row ? (Object.values(row.commissionUpfrontPercent)[0] ?? 0) : 0;
-  const commUpfrontAmt = row ? (Object.values(row.commissionUpfront)[0] ?? 0) : 0;
-  const commOngoingPct = row ? (Object.values(row.commissionOngoingPercent)[0] ?? 0) : 0;
-  const commOngoingAmt = row ? (Object.values(row.commissionOngoing)[0] ?? 0) : 0;
+  const commFreqInfo = (() => {
+    if (!row) return { freq: superFreq, label: PREMIUM_FREQUENCY_LABELS[superFreq], isAnnualised: false };
+    const hasSuper = (row.premiumInsideSuper[superFreq] ?? 0) > 0 || (row.stampDutyInsideSuper[superFreq] ?? 0) > 0;
+    const hasNonSuper = (row.premiumOutsideSuper[nonSuperFreq] ?? 0) > 0 || (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0) > 0;
+    if (hasSuper && !hasNonSuper) return { freq: superFreq, label: PREMIUM_FREQUENCY_LABELS[superFreq], isAnnualised: false };
+    if (hasNonSuper && !hasSuper) return { freq: nonSuperFreq, label: PREMIUM_FREQUENCY_LABELS[nonSuperFreq], isAnnualised: false };
+    if (hasSuper && hasNonSuper && superFreq !== nonSuperFreq) return { freq: 'Y' as PremiumFrequency, label: 'Yearly', isAnnualised: true };
+    return { freq: superFreq, label: PREMIUM_FREQUENCY_LABELS[superFreq], isAnnualised: false };
+  })();
+
+  const commPremiumY1 = row
+    ? (row.premiumInsideSuper[commFreqInfo.freq] ?? 0) + (row.stampDutyInsideSuper[commFreqInfo.freq] ?? 0)
+      + (row.premiumOutsideSuper[commFreqInfo.freq] ?? 0) + (row.stampDutyOutsideSuper[commFreqInfo.freq] ?? 0)
+    : totalPrem;
+
+  const proj1 = row?.projections[1];
+  const commPremiumRenewal = proj1
+    ? (proj1.premiumInsideSuper[commFreqInfo.freq] ?? 0) + (proj1.stampDutyInsideSuper[commFreqInfo.freq] ?? 0)
+      + (proj1.premiumOutsideSuper[commFreqInfo.freq] ?? 0) + (proj1.stampDutyOutsideSuper[commFreqInfo.freq] ?? 0)
+    : commPremiumY1;
+
+  const commUpfrontPct = row ? (row.commissionUpfrontPercent[commFreqInfo.freq] ?? Object.values(row.commissionUpfrontPercent)[0] ?? 0) : 0;
+  const commUpfrontAmt = row
+    ? (commFreqInfo.isAnnualised ? (row.commissionUpfrontAnnualised ?? row.commissionUpfront['Y'] ?? 0) : (row.commissionUpfront[commFreqInfo.freq] ?? 0))
+    : 0;
+  const commOngoingPct = row ? (row.commissionOngoingPercent[commFreqInfo.freq] ?? Object.values(row.commissionOngoingPercent)[0] ?? 0) : 0;
+  const commOngoingAmt = row
+    ? (commFreqInfo.isAnnualised ? (row.commissionOngoingAnnualised ?? row.commissionOngoing['Y'] ?? 0) : (row.commissionOngoing[commFreqInfo.freq] ?? 0))
+    : 0;
 
   const feeRows = [
-    { period: 'Premium Year 1', premium: premSuper + premNonSuper, freq: PREMIUM_FREQUENCY_LABELS[superFreq], pct: commUpfrontPct, amt: commUpfrontAmt },
-    { period: 'Premium Renewal', premium: premSuper + premNonSuper, freq: PREMIUM_FREQUENCY_LABELS[superFreq], pct: commOngoingPct, amt: commOngoingAmt },
+    { period: 'Premium Year 1', premium: commPremiumY1, freq: commFreqInfo.label, pct: commUpfrontPct, amt: commUpfrontAmt },
+    { period: 'Premium Renewal', premium: commPremiumRenewal, freq: commFreqInfo.label, pct: commOngoingPct, amt: commOngoingAmt },
   ];
 
   function handleSave() {
