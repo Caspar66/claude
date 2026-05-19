@@ -655,7 +655,7 @@ export function InsuranceComparisonDialog({
   return (
     <Dialog open={open} onOpenChange={(v) => !v && handleClose()}>
       <DialogContent className="max-w-[95vw] w-[1760px] p-0 overflow-hidden" style={{ height: '90vh', maxHeight: '90vh' }}>
-        <div className="flex flex-col h-full">
+        <div className="flex flex-col h-full min-h-0">
           {/* Top header bar */}
           <div className="flex items-center justify-between px-4 py-2 bg-slate-800 text-white">
             <div className="flex items-center gap-4 text-xs">
@@ -815,7 +815,7 @@ export function InsuranceComparisonDialog({
               </div>
 
               {/* Main content: tabbed client/quote panel + results table */}
-              <div className="flex flex-1 overflow-hidden">
+              <div className="flex flex-1 overflow-hidden min-h-0">
                 <ClientQuoteTabsPanel
                   clientData={clientData}
                   partnerData={showPartner ? partnerData : null}

@@ -681,8 +681,8 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
 
   // ── Populated state ──────────────────────────────────────────────────────
   return (
-    <div className="flex-1 flex overflow-hidden">
-      <div className="flex-1 flex flex-col overflow-hidden bg-white">
+    <div className="flex-1 flex overflow-hidden min-h-0">
+      <div className="flex-1 flex flex-col overflow-hidden min-h-0 bg-white">
         {/* ── Toolbar ──────────────────────────────────────────────────────── */}
         <div className="flex items-center gap-2 px-4 py-2 border-b border-gray-200 bg-gray-50 flex-wrap">
           <button
