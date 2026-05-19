@@ -200,7 +200,7 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[], clientNam
       return {
         id: r.id,
         type: r.recommendation === 'rec' ? 'rec' as const : 'alt' as const,
-        label: r.portfolioName || r.products,
+        label: r.products || r.portfolioName,
         insurer: r.supplierName,
         insurerLogo: r.supplierLogo,
         status: (r.recommendation === 'rec' ? 'Recommend' : 'Alternative') as ReviewStatus,
