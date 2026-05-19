@@ -53,6 +53,10 @@ function resolve(segments: string[], query: VercelRequest['query']): Route | nul
   if (s0 === 'suppliers' && segments.length === 1)
     return { upstream: '/suppliers', method: 'GET', cache: 'public, max-age=3600' };
 
+  if (s0 === 'supplier-documents' && segments.length === 1) {
+    return { upstream: `/suppliers/documents${forwardQs(query)}`, method: 'GET', cache: 'public, max-age=3600' };
+  }
+
   if (s0 === 'supplier-occupations' && segments.length === 3 && segments[2] === 'occupations') {
     const code = encodeURIComponent(segments[1]);
     const params = new URLSearchParams();
