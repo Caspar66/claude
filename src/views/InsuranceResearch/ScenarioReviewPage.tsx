@@ -1,11 +1,17 @@
 import { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Eye } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronRight, Eye, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { QuoteResultRow, ResolvedCover } from './quoteResultsData';
 import { getNeedLabel } from './quoteResultsData';
 import type { ExistingPolicy, ExistingCover, PremiumFrequency, ClientFormData } from './insuranceData';
 import { COVER_TYPE_LABELS, PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, coverToNeedCode } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
+import {
+  STRUCTURE_4_LABELS, STRUCTURE_3_LABELS,
+  OCCUPATION_LABELS, AGREED_VALUE_LABELS,
+  WAITING_INC_LABELS, WAITING_BUS_LABELS,
+  BENEFIT_INC_LABELS,
+} from './needsTypes';
 import { VaryExistingCoverModal } from './VaryExistingCoverModal';
 import { ReplacementModal } from './ReplacementModal';
 import { ProductDetailsModal } from './ProductDetailsModal';
@@ -26,20 +32,40 @@ export interface ReviewItem {
   lifeInsured: 'client' | 'partner';
   existingPolicy?: ExistingPolicy;
   quoteRow?: QuoteResultRow;
-  covers: {
-    type: string;
-    definition?: string;
-    sumInsured: string;
-    owner?: string;
-    resolved?: ResolvedCover;
-  }[];
+  covers: ReviewCover[];
   supplierCode: string;
   revisionDate?: string;
   productCodes: Record<string, string>;
 }
 
+export interface ReviewCover {
+  type: string;
+  definition?: string;
+  sumInsured: string;
+  owner: string;
+  isSuper: boolean;
+  resolved?: ResolvedCover;
+}
+
 function fmt(n: number) {
   return n.toLocaleString('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 2 });
+}
+
+const STRUCT_MAP: Record<string, string> = { ...STRUCTURE_4_LABELS, ...STRUCTURE_3_LABELS };
+const OCC_MAP: Record<string, string> = OCCUPATION_LABELS;
+const AGR_MAP: Record<string, string> = AGREED_VALUE_LABELS;
+const WP_MAP: Record<string, string> = { ...WAITING_INC_LABELS, ...WAITING_BUS_LABELS };
+const BP_MAP: Record<string, string> = BENEFIT_INC_LABELS;
+
+function resolvedDescription(rc: ResolvedCover): string {
+  const parts: string[] = [];
+  if (rc.structure) parts.push(STRUCT_MAP[rc.structure] ?? rc.structure);
+  if (rc.occupationType && rc.occupationType !== 'A') parts.push(OCC_MAP[rc.occupationType] ?? rc.occupationType);
+  if (rc.agreedValue) parts.push(AGR_MAP[rc.agreedValue] ?? rc.agreedValue);
+  if (rc.definition) parts.push(rc.definition);
+  if (rc.waitingPeriod) parts.push(`WP ${WP_MAP[rc.waitingPeriod] ?? rc.waitingPeriod}`);
+  if (rc.benefitPeriod) parts.push(`BP ${BP_MAP[rc.benefitPeriod] ?? rc.benefitPeriod}`);
+  return parts.join(' / ');
 }
 
 function coverLabel(c: ExistingCover): string {
@@ -52,6 +78,75 @@ function coverLabel(c: ExistingCover): string {
   if (c.waitingPeriod) label += ` / WP ${c.waitingPeriod} days`;
   if (c.benefitPeriod) label += ` / BP to Age ${c.benefitPeriod}`;
   return label;
+}
+
+function isTPDCode(code: string): boolean {
+  return code === 'TPE' || code === 'TPR';
+}
+
+function isIPCode(code: string): boolean {
+  return code === 'INC';
+}
+
+function isSuperLinkOwner(owner?: string): boolean {
+  return owner === 'J' || owner === 'K';
+}
+
+function buildResolvedCovers(resolvedCovers: ResolvedCover[], defaultOwner: string): ReviewCover[] {
+  const result: ReviewCover[] = [];
+  for (const rc of resolvedCovers) {
+    const label = getNeedLabel(rc.needCode);
+    const si = rc.sumInsured != null ? `${rc.sumInsured}` : rc.monthlyBenefit != null ? `${rc.monthlyBenefit}` : '';
+
+    if (isTPDCode(rc.needCode) && rc.owner === 'J') {
+      result.push({
+        type: label,
+        definition: resolvedDescription({ ...rc, occupationType: 'O' }) + ' / Super-linked Own',
+        sumInsured: si,
+        owner: defaultOwner,
+        isSuper: false,
+        resolved: rc,
+      });
+      result.push({
+        type: label,
+        definition: resolvedDescription({ ...rc, occupationType: 'A' }) + ' / Super-linked Any',
+        sumInsured: si,
+        owner: defaultOwner,
+        isSuper: true,
+        resolved: rc,
+      });
+    } else if (isIPCode(rc.needCode) && isSuperLinkOwner(rc.owner)) {
+      const desc = resolvedDescription(rc);
+      result.push({
+        type: 'Super-linked IP',
+        definition: desc.replace(/Variable age-stepped|Blended|Variable/i, 'Super-linked'),
+        sumInsured: si,
+        owner: defaultOwner,
+        isSuper: true,
+        resolved: rc,
+      });
+      result.push({
+        type: getNeedLabel(rc.needCode),
+        definition: desc,
+        sumInsured: si,
+        owner: defaultOwner,
+        isSuper: false,
+        resolved: rc,
+      });
+    } else {
+      const ownerCode = rc.owner ?? '';
+      const isSuper = ownerCode === 'S' || ownerCode === 'M' || ownerCode === 'J' || ownerCode === 'K';
+      result.push({
+        type: label,
+        definition: resolvedDescription(rc),
+        sumInsured: si,
+        owner: defaultOwner,
+        isSuper,
+        resolved: rc,
+      });
+    }
+  }
+  return result;
 }
 
 function buildExistingItems(policies: ExistingPolicy[]): ReviewItem[] {
@@ -78,9 +173,10 @@ function buildExistingItems(policies: ExistingPolicy[]): ReviewItem[] {
         existingPolicy: p,
         covers: p.covers.map((c) => ({
           type: coverToNeedCode(c, p.covers),
-          definition: c.definition,
+          definition: coverLabel(c),
           sumInsured: c.sumInsured,
-          owner: c.ownership,
+          owner: c.ownership ?? '',
+          isSuper: false,
         })),
         supplierCode: p.researchPortfolio?.supplierCode ?? '',
         revisionDate: p.researchPortfolio?.revisionDate,
@@ -89,7 +185,7 @@ function buildExistingItems(policies: ExistingPolicy[]): ReviewItem[] {
     });
 }
 
-function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[]): ReviewItem[] {
+function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[], clientName: string): ReviewItem[] {
   return rows
     .filter((r) => r.recommendation === 'rec' || r.recommendation === 'alt')
     .map((r) => {
@@ -100,6 +196,7 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[]): ReviewIt
       const nonSuperPrem = Object.values(r.premiumOutsideSuper)[0] ?? 0;
       const premiumPa = superPrem * PREMIUM_FREQUENCY_MULTIPLIER[superFreq]
                        + nonSuperPrem * PREMIUM_FREQUENCY_MULTIPLIER[nonSuperFreq];
+      const defaultOwner = clientName;
       return {
         id: r.id,
         type: r.recommendation === 'rec' ? 'rec' as const : 'alt' as const,
@@ -112,13 +209,7 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[]): ReviewIt
         lifeInsured: q?.lifeInsured ?? 'client',
         quoteRow: r,
         covers: r.resolvedCovers.length > 0
-          ? r.resolvedCovers.map((rc) => ({
-              type: getNeedLabel(rc.needCode),
-              definition: rc.definition,
-              sumInsured: rc.sumInsured != null ? `${rc.sumInsured}` : rc.monthlyBenefit != null ? `${rc.monthlyBenefit}` : '',
-              owner: rc.owner,
-              resolved: rc,
-            }))
+          ? buildResolvedCovers(r.resolvedCovers, defaultOwner)
           : r.premiumBreakdown.length > 0
             ? r.premiumBreakdown.map((bd, idx) => {
                 const lineItem = r.premiumLineItems[idx];
@@ -126,9 +217,11 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[]): ReviewIt
                   type: bd.description.split(' / ')[0] || bd.description,
                   definition: bd.description,
                   sumInsured: lineItem ? `${lineItem.amount}` : '',
+                  owner: defaultOwner,
+                  isSuper: false,
                 };
               })
-            : r.products.split(', ').map((p) => ({ type: p, sumInsured: '' })),
+            : r.products.split(', ').map((p) => ({ type: p, sumInsured: '', owner: defaultOwner, isSuper: false })),
         supplierCode: r.supplierCode,
         revisionDate: r.revisionDate,
         productCodes: r.productCodes,
@@ -150,20 +243,61 @@ const STATUS_COLORS: Record<ReviewStatus, string> = {
   'Vary to Existing': 'bg-purple-100 text-purple-800',
 };
 
+// ── Add Custom Owner Modal ─────────────────────────────────────────────────
+
+function AddOwnerModal({ onSave, onClose }: { onSave: (name: string) => void; onClose: () => void }) {
+  const [name, setName] = useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-lg shadow-xl w-80 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-800">Add Custom Owner</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+        </div>
+        <input
+          className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+          placeholder="Owner name..."
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) onSave(name.trim()); }}
+          autoFocus
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onClose} className="text-xs">Cancel</Button>
+          <Button
+            size="sm"
+            className="bg-teal-700 hover:bg-teal-800 text-white text-xs"
+            onClick={() => { if (name.trim()) onSave(name.trim()); }}
+            disabled={!name.trim()}
+          >
+            Save
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Expandable row ──────────────────────────────────────────────────────────
 
 function ReviewRow({
   item,
   onStatusChange,
   onViewDetails,
+  onCoverUpdate,
+  onRequestAddOwner,
   clientName,
   partnerName,
+  customOwners,
 }: {
   item: ReviewItem;
   onStatusChange: (id: string, status: ReviewStatus) => void;
   onViewDetails: (item: ReviewItem) => void;
+  onCoverUpdate: (itemId: string, coverIndex: number, updates: Partial<ReviewCover>) => void;
+  onRequestAddOwner: (itemId: string, coverIndex: number) => void;
   clientName: string;
   partnerName: string | null;
+  customOwners: string[];
 }) {
   const [expanded, setExpanded] = useState(false);
   const lifeInsuredName = item.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
@@ -173,6 +307,28 @@ function ReviewRow({
     item.type === 'rec' ? ['Recommend', 'Not Accepted'] :
     item.type === 'alt' ? ['Alternative', 'Not Accepted'] :
     ['Recommend', 'Not Accepted', 'Alternative', 'Hold', 'Replace', 'Cancel', 'Vary', 'Exclude', 'Vary to Existing'];
+
+  const ownerOptions: string[] = [clientName];
+  if (partnerName && !ownerOptions.includes(partnerName)) ownerOptions.push(partnerName);
+  if (!ownerOptions.includes('SMSF')) ownerOptions.push('SMSF');
+  if (!ownerOptions.includes('Super Fund')) ownerOptions.push('Super Fund');
+  for (const co of customOwners) {
+    if (!ownerOptions.includes(co)) ownerOptions.push(co);
+  }
+
+  function handleOwnerChange(coverIndex: number, value: string) {
+    if (value === '__add__') {
+      onRequestAddOwner(item.id, coverIndex);
+      return;
+    }
+    onCoverUpdate(item.id, coverIndex, { owner: value });
+  }
+
+  function formatBenefitAmount(raw: string): string {
+    if (!raw) return '';
+    const num = parseFloat(raw.replace(/[^0-9.]/g, '') || '0');
+    return num > 0 ? `$${num.toLocaleString('en-AU')}` : '';
+  }
 
   return (
     <>
@@ -219,7 +375,7 @@ function ReviewRow({
           </button>
         </td>
       </tr>
-      {expanded && item.existingPolicy && (
+      {expanded && item.covers.length > 0 && (
         <tr className="bg-slate-50/50">
           <td />
           <td colSpan={5} className="px-6 py-3">
@@ -227,50 +383,42 @@ function ReviewRow({
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="py-1 text-left text-slate-600 font-semibold">Type</th>
-                  <th className="py-1 text-left text-slate-600 font-semibold">Definition</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Description</th>
+                  <th className="py-1 text-center text-slate-600 font-semibold w-14">Super</th>
                   <th className="py-1 text-left text-slate-600 font-semibold">Owner</th>
-                  <th className="py-1 text-left text-slate-600 font-semibold">Life Insured</th>
-                  <th className="py-1 text-right text-slate-600 font-semibold">Benefit Amount</th>
-                </tr>
-              </thead>
-              <tbody>
-                {item.existingPolicy.covers.map((c) => (
-                  <tr key={c.id} className="border-b border-gray-100">
-                    <td className="py-1.5 text-slate-700">{COVER_TYPE_LABELS[c.coverType]}</td>
-                    <td className="py-1.5 text-slate-600">{coverLabel(c)}</td>
-                    <td className="py-1.5 text-slate-600">{lifeInsuredName}</td>
-                    <td className="py-1.5 text-slate-600">{lifeInsuredName}</td>
-                    <td className="py-1.5 text-right text-slate-800 font-medium">{c.sumInsured ? `$${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </td>
-        </tr>
-      )}
-      {expanded && item.quoteRow && (
-        <tr className="bg-slate-50/50">
-          <td />
-          <td colSpan={5} className="px-6 py-3">
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="border-b border-gray-200">
-                  <th className="py-1 text-left text-slate-600 font-semibold">Type</th>
-                  <th className="py-1 text-left text-slate-600 font-semibold">Definition</th>
-                  <th className="py-1 text-left text-slate-600 font-semibold">Owner</th>
-                  <th className="py-1 text-left text-slate-600 font-semibold">Life Insured</th>
                   <th className="py-1 text-right text-slate-600 font-semibold">Benefit Amount</th>
                 </tr>
               </thead>
               <tbody>
                 {item.covers.map((c, idx) => (
                   <tr key={idx} className="border-b border-gray-100">
-                    <td className="py-1.5 text-slate-700">{c.type}</td>
-                    <td className="py-1.5 text-slate-600">{c.definition || c.type}</td>
-                    <td className="py-1.5 text-slate-600">{lifeInsuredName}</td>
-                    <td className="py-1.5 text-slate-600">{lifeInsuredName}</td>
+                    <td className="py-1.5 text-slate-700 font-medium">{c.type}</td>
+                    <td className="py-1.5 text-slate-600">{c.definition || ''}</td>
+                    <td className="py-1.5 text-center">
+                      <input
+                        type="checkbox"
+                        checked={c.isSuper}
+                        onChange={(e) => onCoverUpdate(item.id, idx, { isSuper: e.target.checked })}
+                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5"
+                      />
+                    </td>
+                    <td className="py-1.5">
+                      <select
+                        className="border border-gray-200 rounded px-1.5 py-0.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                        value={ownerOptions.includes(c.owner) ? c.owner : c.owner}
+                        onChange={(e) => handleOwnerChange(idx, e.target.value)}
+                      >
+                        {ownerOptions.map((opt) => (
+                          <option key={opt} value={opt}>{opt}</option>
+                        ))}
+                        {!ownerOptions.includes(c.owner) && (
+                          <option value={c.owner}>{c.owner}</option>
+                        )}
+                        <option value="__add__">+ Add...</option>
+                      </select>
+                    </td>
                     <td className="py-1.5 text-right text-slate-800 font-medium">
-                      {c.sumInsured ? `$${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
+                      {formatBenefitAmount(c.sumInsured)}
                     </td>
                   </tr>
                 ))}
@@ -308,18 +456,20 @@ export function ScenarioReviewPage({
   onBack,
   onSaveComplete,
 }: Props) {
+  const clientName = `${clientData.firstName} ${clientData.lastName}`.trim() || 'Client';
+  const partnerName = partnerData ? `${partnerData.firstName} ${partnerData.lastName}`.trim() || 'Partner' : null;
+
   const allRows = [...clientQuoteResults, ...partnerQuoteResults];
   const [items, setItems] = useState<ReviewItem[]>(() => [
     ...buildExistingItems(policies),
-    ...buildQuoteItems(allRows, quotes),
+    ...buildQuoteItems(allRows, quotes, clientName),
   ]);
 
   const [varyItem, setVaryItem] = useState<ReviewItem | null>(null);
   const [replaceItem, setReplaceItem] = useState<ReviewItem | null>(null);
   const [detailsItem, setDetailsItem] = useState<ReviewItem | null>(null);
-
-  const clientName = `${clientData.firstName} ${clientData.lastName}`.trim() || 'Client';
-  const partnerName = partnerData ? `${partnerData.firstName} ${partnerData.lastName}`.trim() || 'Partner' : null;
+  const [customOwners, setCustomOwners] = useState<string[]>([]);
+  const [addOwnerTarget, setAddOwnerTarget] = useState<{ itemId: string; coverIndex: number } | null>(null);
 
   function handleStatusChange(id: string, status: ReviewStatus) {
     const item = items.find((i) => i.id === id);
@@ -336,6 +486,22 @@ export function ScenarioReviewPage({
     }
 
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, status } : i));
+  }
+
+  function handleCoverUpdate(itemId: string, coverIndex: number, updates: Partial<ReviewCover>) {
+    setItems((prev) => prev.map((i) => {
+      if (i.id !== itemId) return i;
+      const newCovers = [...i.covers];
+      newCovers[coverIndex] = { ...newCovers[coverIndex], ...updates };
+      return { ...i, covers: newCovers };
+    }));
+  }
+
+  function handleAddOwnerSave(name: string) {
+    if (!addOwnerTarget) return;
+    setCustomOwners((prev) => prev.includes(name) ? prev : [...prev, name]);
+    handleCoverUpdate(addOwnerTarget.itemId, addOwnerTarget.coverIndex, { owner: name });
+    setAddOwnerTarget(null);
   }
 
   function handleVarySave(variedPolicy: ExistingPolicy) {
@@ -361,9 +527,10 @@ export function ScenarioReviewPage({
       existingPolicy: variedPolicy,
       covers: variedPolicy.covers.map((c) => ({
         type: coverToNeedCode(c, variedPolicy.covers),
-        definition: c.definition,
+        definition: coverLabel(c),
         sumInsured: c.sumInsured,
-        owner: c.ownership,
+        owner: c.ownership ?? clientName,
+        isSuper: false,
       })),
       supplierCode: variedPolicy.researchPortfolio?.supplierCode ?? '',
       revisionDate: variedPolicy.researchPortfolio?.revisionDate,
@@ -433,7 +600,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {existingItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Recommendations */}
@@ -445,7 +612,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {recItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Vary to Existing */}
@@ -457,7 +624,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {varyItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Alternatives */}
@@ -469,7 +636,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {altItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} clientName={clientName} partnerName={partnerName} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {items.length === 0 && (
@@ -520,6 +687,14 @@ export function ScenarioReviewPage({
             setDetailsItem(null);
           }}
           onClose={() => setDetailsItem(null)}
+        />
+      )}
+
+      {/* Add Custom Owner modal */}
+      {addOwnerTarget && (
+        <AddOwnerModal
+          onSave={handleAddOwnerSave}
+          onClose={() => setAddOwnerTarget(null)}
         />
       )}
     </div>

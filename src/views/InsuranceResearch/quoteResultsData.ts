@@ -559,11 +559,11 @@ export interface ProductOption {
 
 const NEED_LABELS: Record<string, string> = {
   TRM: 'Life',
-  TPE: 'TPD Extension to Life',
-  TRE: 'Trauma Extension to Life',
+  TPE: 'TPD',
+  TRE: 'Trauma',
   TPS: 'TPD Standalone',
   TRS: 'Trauma Standalone',
-  TPR: 'TPD Extension to Trauma',
+  TPR: 'TPD',
   INC: 'Income Protection',
   BUS: 'Business Expenses',
   NES: 'Needle Stick',
