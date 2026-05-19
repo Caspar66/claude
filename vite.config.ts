@@ -19,6 +19,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       host: true,
+      allowedHosts: true,
       proxy: {
         '/api/occupations': {
           target: target + '/occupations',
