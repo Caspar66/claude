@@ -213,7 +213,8 @@ function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
       <img
         src={logo}
         alt={name}
-        className="w-8 h-8 object-contain bg-white border border-gray-200 rounded"
+        className="object-contain"
+        style={{ width: 200, height: 114 }}
         onError={() => setLoadFailed(true)}
       />
     );
@@ -221,8 +222,8 @@ function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
 
   const initials = name.replace(/[^A-Z]/g, '').slice(0, 3) || name.slice(0, 3).toUpperCase();
   return (
-    <div className="w-8 h-8 flex items-center justify-center rounded border border-gray-200 bg-slate-100" aria-label={name}>
-      <span className="font-bold text-[10px] text-slate-600">{initials}</span>
+    <div className="flex items-center justify-center rounded border border-gray-200 bg-slate-100" style={{ width: 200, height: 114 }} aria-label={name}>
+      <span className="font-bold text-lg text-slate-600">{initials}</span>
     </div>
   );
 }
@@ -512,10 +513,8 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
                     <span className="absolute top-1 right-1 bg-amber-100 text-amber-800 text-[9px] font-bold px-1.5 py-0.5 rounded-full">EXISTING</span>
                   )}
                   <div className="flex flex-col items-center gap-1">
-                    <div className="flex items-center gap-1.5">
-                      <InsurerLogo name={col.row.supplierName} logo={col.row.supplierLogo} />
-                      <span className="text-sm font-bold text-slate-800">{col.row.supplierName}</span>
-                    </div>
+                    <InsurerLogo name={col.row.supplierName} logo={col.row.supplierLogo} />
+                    <span className="text-sm font-bold text-slate-800">{col.row.supplierName}</span>
                     <span className="text-[10px] text-slate-500 leading-tight line-clamp-2 max-w-[180px]">{col.row.products}</span>
                     <span className="text-xs font-semibold text-slate-800">{fmt(computePremiumTotal(col.row, premiumFreq, premiumFreq))} {freqSuffix}</span>
                     {filters.featureScore && (
