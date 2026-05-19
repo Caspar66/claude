@@ -601,10 +601,19 @@ export function FeaturesComparisonPage({ selectedRows, quoteRequestBody, activeQ
 
 // ── Need type group (top-level header) ─────────────────────────────────────
 
+function headingHasVisibleContent(heading: ParsedHeading, colCount: number, showDetails: boolean, showScore: boolean): boolean {
+  if (showDetails) return true;
+  if (!showScore) return false;
+  return !headingScores(heading, colCount).every((s) => s === undefined);
+}
+
 function NeedTypeGroup({ group, columns, collapsedNeedType, onToggleNeedType, colWidth, showDetails, showScore }: {
   group: ParsedNeedGroup; columns: ComparisonColumn[]; collapsedNeedType: boolean;
   onToggleNeedType: () => void; colWidth: number; showDetails: boolean; showScore: boolean;
 }) {
+  const visibleHeadings = group.headings.filter((h) => headingHasVisibleContent(h, columns.length, showDetails, showScore));
+  if (visibleHeadings.length === 0) return null;
+
   return (
     <>
       <tr className="bg-indigo-900 border-y border-indigo-800">
@@ -612,7 +621,7 @@ function NeedTypeGroup({ group, columns, collapsedNeedType, onToggleNeedType, co
           <div className="flex items-center gap-2">
             {collapsedNeedType ? <ChevronRight size={14} className="text-white/70" /> : <ChevronDown size={14} className="text-white/70" />}
             <span className="text-xs font-bold text-white uppercase tracking-wide">{group.label}</span>
-            <span className="text-[10px] text-white/60 ml-1">({group.headings.length} feature{group.headings.length === 1 ? '' : 's'})</span>
+            <span className="text-[10px] text-white/60 ml-1">({visibleHeadings.length} feature{visibleHeadings.length === 1 ? '' : 's'})</span>
           </div>
         </td>
       </tr>
@@ -650,7 +659,7 @@ function HeadingGroup({ heading, columns, colWidth, showDetails, showScore }: {
   const weightLabel = heading.ipsAdjustedWeighting > 0 ? WEIGHTING_LABELS[heading.ipsAdjustedWeighting] : null;
   const scores = headingScores(heading, columns.length);
 
-  if (!showDetails && scores.every((s) => s === undefined)) return null;
+  if (!showDetails && (!showScore || scores.every((s) => s === undefined))) return null;
 
   return (
     <>
