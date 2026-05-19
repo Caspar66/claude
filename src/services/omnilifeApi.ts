@@ -621,9 +621,9 @@ export async function fetchSupplierDocuments(
   return payload
     .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
     .map((item) => ({
-      supplier: String(item.supplierName ?? item.supplier ?? item.name ?? ''),
+      supplier: String(item.supplierName ?? item.supplier ?? ''),
       dateIssued: String(item.dateIssued ?? item.date ?? item.revisionDate ?? ''),
-      description: String(item.description ?? item.documentType ?? ''),
+      description: String(item.name ?? item.description ?? item.documentType ?? ''),
       url: String(item.url ?? item.link ?? item.pdsUrl ?? ''),
     }))
     .filter((d) => d.supplier || d.description);
