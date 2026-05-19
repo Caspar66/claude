@@ -89,19 +89,19 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
-        '/api/suppliers': {
-          target: target + '/suppliers',
+        '/api/supplier-documents': {
+          target,
           changeOrigin: true,
-          rewrite: () => '',
+          rewrite: (p: string) => p.replace('/api/supplier-documents', '/suppliers/documents'),
           secure: true,
           headers: {
             Authorization: authHeader,
           },
         },
-        '/api/supplier-documents': {
-          target,
+        '/api/suppliers': {
+          target: target + '/suppliers',
           changeOrigin: true,
-          rewrite: (p: string) => p.replace('/api/supplier-documents', '/suppliers/documents'),
+          rewrite: () => '',
           secure: true,
           headers: {
             Authorization: authHeader,
