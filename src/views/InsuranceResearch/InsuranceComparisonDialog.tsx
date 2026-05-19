@@ -18,6 +18,8 @@ import type { MappedPolicy } from './MapExistingPolicyModal';
 import { ProductComparisonPage } from './ProductComparisonPage';
 import { FeaturesComparisonPage } from './FeaturesComparisonPage';
 import { OptionsModalContent } from './OptionsPanel';
+import { SupplierDocumentsModal } from './SupplierDocumentsModal';
+import type { DocumentCategory } from './SupplierDocumentsModal';
 import type { OptionsTab } from './OptionsPanel';
 import {
   getDefaultClientData,
@@ -596,6 +598,7 @@ export function InsuranceComparisonDialog({
   const [preCompareScreen, setPreCompareScreen] = useState<Screen>(1);
   const [preOptionsScreen, setPreOptionsScreen] = useState<Screen>(1);
   const [optionsTab, setOptionsTab] = useState<OptionsTab>('defaults');
+  const [docsCategory, setDocsCategory] = useState<DocumentCategory | null>(null);
 
   function handleToggleQuoteSelect(id: string) {
     setQuoteResults((prev) => ({
@@ -657,10 +660,19 @@ export function InsuranceComparisonDialog({
           <div className="flex items-center justify-between px-4 py-2 bg-slate-800 text-white">
             <div className="flex items-center gap-4 text-xs">
               <span className="font-bold text-sm text-orange-400">OmniLife</span>
-              <button className="hover:underline">DOCUMENTS</button>
-              <button className="hover:underline">RESEARCH</button>
-              <button className="hover:underline">LIVE DATA</button>
-              <button className="hover:underline">HELP</button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="hover:underline flex items-center gap-1">
+                    DOCUMENTS <ChevronDown size={10} />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="w-52">
+                  <DropdownMenuItem onClick={() => setDocsCategory('documents')}>Documents</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setDocsCategory('archived')}>Archived Documents</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setDocsCategory('guides')}>Adviser Guides</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setDocsCategory('tmds')}>Target Market Determinations</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
             <div className="flex items-center gap-2">
               <span className="text-lg font-light tracking-wide">
@@ -907,6 +919,15 @@ export function InsuranceComparisonDialog({
             />
           )}
         </div>
+
+        {/* Supplier Documents modal */}
+        {docsCategory && (
+          <SupplierDocumentsModal
+            category={docsCategory}
+            onCategoryChange={setDocsCategory}
+            onClose={() => setDocsCategory(null)}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );

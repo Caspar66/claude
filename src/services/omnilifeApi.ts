@@ -590,3 +590,41 @@ export async function postGainedAndLost(body: GainedLostRequest): Promise<Gained
 
   return res.json();
 }
+
+// ── Supplier Documents ──────────────────────────────────────────────────────
+
+export interface SupplierDocument {
+  supplier: string;
+  dateIssued: string;
+  description: string;
+  url: string;
+}
+
+export async function fetchSupplierDocuments(
+  documentType: string,
+  date?: string,
+): Promise<SupplierDocument[]> {
+  const params = new URLSearchParams({ documentType });
+  if (date) params.set('date', date);
+
+  const res = await fetch(`/api/supplier-documents?${params.toString()}`, {
+    headers: { Accept: 'application/json' },
+  });
+
+  if (!res.ok) {
+    throw new Error(`OmniLife /suppliers/documents returned ${res.status} ${res.statusText}`);
+  }
+
+  const payload: unknown = await res.json();
+  if (!Array.isArray(payload)) return [];
+
+  return payload
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((item) => ({
+      supplier: String(item.supplierName ?? item.supplier ?? item.name ?? ''),
+      dateIssued: String(item.dateIssued ?? item.date ?? item.revisionDate ?? ''),
+      description: String(item.description ?? item.documentType ?? ''),
+      url: String(item.url ?? item.link ?? item.pdsUrl ?? ''),
+    }))
+    .filter((d) => d.supplier || d.description);
+}

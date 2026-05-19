@@ -98,6 +98,15 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/supplier-documents': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => p.replace('/api/supplier-documents', '/suppliers/documents'),
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         '/api/quote-portfolio-features': {
           target,
           changeOrigin: true,
