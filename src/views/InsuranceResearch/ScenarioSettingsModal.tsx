@@ -264,7 +264,9 @@ function CommissionsPanel({ draft, onChange }: { draft: ScenarioSettings; onChan
     if (changed) onChange({ ...draft, commissionBySupplier: updated });
   }, [isMinimum, suppliers]);
 
-  const rows: CommRow[] = suppliers.map((s) => {
+  const retailSuppliers = suppliers.filter((s) => s.fundType === 'Retail');
+
+  const rows: CommRow[] = retailSuppliers.map((s) => {
     const choices = s.commissionOptions && s.commissionOptions.length > 0
       ? s.commissionOptions
       : s.defaultCommissionCode
@@ -406,7 +408,9 @@ function CampaignsPanel({ draft, onChange }: { draft: ScenarioSettings; onChange
     setInitialised(true);
   }, [suppliers, initialised, draft, onChange]);
 
-  const rows: CampaignRow[] = suppliers.map((s) => {
+  const retailSuppliers = suppliers.filter((s) => s.fundType === 'Retail');
+
+  const rows: CampaignRow[] = retailSuppliers.map((s) => {
     const options = s.campaignOptions && s.campaignOptions.length > 0
       ? s.campaignOptions
       : [{ code: '', name: 'None' }];

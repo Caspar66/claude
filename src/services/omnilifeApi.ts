@@ -273,6 +273,12 @@ export interface Supplier {
   products: SupplierProduct[];
 }
 
+function ensureSupplierUrl(v: string): string {
+  if (!v) return '';
+  if (v.startsWith('http://') || v.startsWith('https://') || v.startsWith('//')) return v;
+  return `https://${v}`;
+}
+
 function normaliseSupplier(raw: Record<string, unknown>): Supplier | null {
   const code = typeof raw.code === 'string' ? raw.code : '';
   const name = typeof raw.name === 'string' ? raw.name : '';
@@ -306,7 +312,7 @@ function normaliseSupplier(raw: Record<string, unknown>): Supplier | null {
     name: name || code,
     type: typeof raw.type === 'string' ? raw.type : undefined,
     fundType,
-    logo: typeof raw.logo === 'string' ? raw.logo : undefined,
+    logo: typeof raw.logo === 'string' ? ensureSupplierUrl(raw.logo) : undefined,
     url: typeof raw.url === 'string' ? raw.url : undefined,
     cmapRating: typeof raw.cmapRating === 'string' ? raw.cmapRating : undefined,
     defaultCampaignCode: typeof raw.defaultCampaignCode === 'string' ? raw.defaultCampaignCode : undefined,
