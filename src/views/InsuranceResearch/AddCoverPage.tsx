@@ -210,9 +210,29 @@ export function AddCoverPage({ clientName, partnerName, onSave, onCancel }: Prop
         return;
       }
     }
-    const coversWithSumInsured = COVER_TYPE_ORDER
-      .map((t) => covers[t])
-      .filter((c) => parseMoney(c.sumInsured) > 0);
+    const coversWithSumInsured: ExistingCover[] = [];
+    for (const t of COVER_TYPE_ORDER) {
+      const c = covers[t];
+      if (parseMoney(c.sumInsured) <= 0) continue;
+      const isSuperLink = c.ownership === 'J' || c.ownership === 'K';
+      if ((t === 'TPD' || t === 'IP') && isSuperLink) {
+        const base = { ...c, superLinked: 'Yes' };
+        coversWithSumInsured.push({
+          ...base,
+          id: `${c.id}-super`,
+          super: 'Yes',
+          definition: t === 'TPD' ? 'Any' : c.definition,
+        });
+        coversWithSumInsured.push({
+          ...base,
+          id: `${c.id}-nonsuper`,
+          super: 'No',
+          definition: t === 'TPD' ? 'Own' : c.definition,
+        });
+      } else {
+        coversWithSumInsured.push(c);
+      }
+    }
 
     const policy: ExistingPolicy = {
       id: `pol-${Date.now()}`,
