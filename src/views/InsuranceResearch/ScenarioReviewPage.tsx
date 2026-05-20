@@ -144,7 +144,7 @@ function buildResolvedCovers(resolvedCovers: ResolvedCover[], defaultOwner: stri
       result.push({
         type: 'Income Protection',
         definition: 'Indemnity',
-        coverStructure: 'Standalone',
+        coverStructure: 'Super-linked',
         premiumStructure,
         sumInsured: si,
         owner: defaultOwner,
