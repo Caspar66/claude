@@ -191,11 +191,12 @@ function buildResolvedCovers(resolvedCovers: ResolvedCover[], defaultOwner: stri
   return result;
 }
 
-function buildExistingItems(policies: ExistingPolicy[]): ReviewItem[] {
+function buildExistingItems(policies: ExistingPolicy[], clientName: string, partnerName: string | null): ReviewItem[] {
   const styleMap: Record<string, string> = { S: 'Variable age-stepped', B: 'Blended', L: 'Variable to age 65', '70': 'Variable to age 70' };
   return policies
     .filter((p) => p.action === 'Review' || p.action === 'Replace')
     .map((p) => {
+      const lifeInsuredName = p.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
       const premSuper = p.premiumSuper + p.stampDutySuper;
       const premNonSuper = p.premiumNonSuper + p.stampDutyNonSuper;
       const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.superFrequency]
@@ -228,7 +229,7 @@ function buildExistingItems(policies: ExistingPolicy[]): ReviewItem[] {
             coverStructure: c.superLinked === 'Yes' ? 'Super-Linked' : c.standAlone === 'Yes' ? 'Standalone' : c.flexiLinked === 'Yes' ? 'Linked' : 'Standalone',
             premiumStructure: c.premiumStyle ? (styleMap[c.premiumStyle] ?? c.premiumStyle) : undefined,
             sumInsured: c.sumInsured,
-            owner: c.ownership ?? '',
+            owner: c.owner || lifeInsuredName,
             isSuper: c.super === 'Yes',
             waitingPeriod: c.waitingPeriod,
             benefitPeriod: c.benefitPeriod,
@@ -551,7 +552,7 @@ export function ScenarioReviewPage({
 
   const allRows = [...clientQuoteResults, ...partnerQuoteResults];
   const [items, setItems] = useState<ReviewItem[]>(() => [
-    ...buildExistingItems(policies),
+    ...buildExistingItems(policies, clientName, partnerName),
     ...buildQuoteItems(allRows, quotes, clientName),
   ]);
 
@@ -630,7 +631,7 @@ export function ScenarioReviewPage({
           coverStructure: c.superLinked === 'Yes' ? 'Super-Linked' : c.standAlone === 'Yes' ? 'Standalone' : c.flexiLinked === 'Yes' ? 'Linked' : 'Standalone',
           premiumStructure: c.premiumStyle ? (varyStyleMap[c.premiumStyle] ?? c.premiumStyle) : undefined,
           sumInsured: c.sumInsured,
-          owner: c.ownership ?? clientName,
+          owner: c.owner || c.ownership || clientName,
           isSuper: c.super === 'Yes',
           waitingPeriod: c.waitingPeriod,
           benefitPeriod: c.benefitPeriod,
