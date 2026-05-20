@@ -3,7 +3,7 @@ import { ArrowLeft, ChevronDown, ChevronRight, Eye, Plus, X } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import type { QuoteResultRow, ResolvedCover } from './quoteResultsData';
 import { getNeedLabel } from './quoteResultsData';
-import type { ExistingPolicy, PremiumFrequency, ClientFormData } from './insuranceData';
+import type { ExistingPolicy, ExistingCover, PremiumFrequency, ClientFormData } from './insuranceData';
 import { PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, coverToNeedCode } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import {
@@ -70,6 +70,30 @@ function getCoverType(needCode: string): string {
     case 'NES': case 'CHT': return 'Other';
     default: return getNeedLabel(needCode);
   }
+}
+
+function deriveCoverStructure(c: ExistingCover, coverType: string, allCovers: ExistingCover[]): string {
+  const isSuperLinked = c.superLinked === 'Yes';
+
+  if (coverType === 'TPD') {
+    if (isSuperLinked) return 'Super-Linked';
+    if (c.standAlone === 'Yes') return 'Standalone';
+    if (c.flexiLinked === 'Yes') return 'Flexi-linked';
+    return 'Linked';
+  }
+
+  if (coverType === 'Trauma') {
+    const hasLifeCover = allCovers.some(co => co.coverType === 'Life');
+    if (!hasLifeCover) return 'Standalone';
+    if (c.standAlone === 'Yes') return 'Standalone';
+    if (c.flexiLinked === 'Yes') return 'Flexi-linked';
+    return 'Linked';
+  }
+
+  if (isSuperLinked) return 'Super-Linked';
+  if (c.standAlone === 'Yes') return 'Standalone';
+  if (c.flexiLinked === 'Yes') return 'Linked';
+  return 'Standalone';
 }
 
 const FREQ_SHORT: Record<PremiumFrequency, string> = {
@@ -223,10 +247,11 @@ function buildExistingItems(policies: ExistingPolicy[], clientName: string, part
         existingPolicy: p,
         covers: p.covers.map((c) => {
           const needCode = coverToNeedCode(c, p.covers);
+          const coverType = getCoverType(needCode);
           return {
-            type: getCoverType(needCode),
+            type: coverType,
             definition: c.definition || undefined,
-            coverStructure: c.superLinked === 'Yes' ? 'Super-Linked' : c.standAlone === 'Yes' ? 'Standalone' : c.flexiLinked === 'Yes' ? 'Linked' : 'Standalone',
+            coverStructure: deriveCoverStructure(c, coverType, p.covers),
             premiumStructure: c.premiumStyle ? (styleMap[c.premiumStyle] ?? c.premiumStyle) : undefined,
             sumInsured: c.sumInsured,
             owner: c.owner || lifeInsuredName,
@@ -625,10 +650,11 @@ export function ScenarioReviewPage({
       existingPolicy: variedPolicy,
       covers: variedPolicy.covers.map((c) => {
         const needCode = coverToNeedCode(c, variedPolicy.covers);
+        const coverType = getCoverType(needCode);
         return {
-          type: getCoverType(needCode),
+          type: coverType,
           definition: c.definition || undefined,
-          coverStructure: c.superLinked === 'Yes' ? 'Super-Linked' : c.standAlone === 'Yes' ? 'Standalone' : c.flexiLinked === 'Yes' ? 'Linked' : 'Standalone',
+          coverStructure: deriveCoverStructure(c, coverType, variedPolicy.covers),
           premiumStructure: c.premiumStyle ? (varyStyleMap[c.premiumStyle] ?? c.premiumStyle) : undefined,
           sumInsured: c.sumInsured,
           owner: c.owner || c.ownership || clientName,
