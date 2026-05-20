@@ -46,6 +46,7 @@ interface Props {
   clientName: string;
   partnerName: string | null;
   onAddCover: () => void;
+  onEditPolicy: (policyId: string) => void;
   onChangePolicies: (policies: ExistingPolicy[]) => void;
 }
 
@@ -64,7 +65,7 @@ function formatSum(s: string): string {
   return `$${n.toLocaleString('en-AU')}`;
 }
 
-export function CurrentSituationSection({ policies, clientName, partnerName, onAddCover, onChangePolicies }: Props) {
+export function CurrentSituationSection({ policies, clientName, partnerName, onAddCover, onEditPolicy, onChangePolicies }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [reviewPolicyId, setReviewPolicyId] = useState<string | null>(null);
   const [customOwners, setCustomOwners] = useState<string[]>([]);
@@ -192,7 +193,7 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                           {/* Policy header row */}
                           <div className="grid grid-cols-[40px_2fr_1fr_1fr_1fr_130px] gap-2 px-3 py-2 border-b border-gray-100 items-start">
                             <div className="flex items-center gap-1 pt-0.5">
-                              <SquarePen size={12} className="text-blue-500 cursor-pointer" />
+                              <SquarePen size={12} className="text-blue-500 cursor-pointer" onClick={() => onEditPolicy(p.id)} />
                               <button className="text-slate-400 hover:text-red-500" onClick={() => removePolicy(p.id)}>×</button>
                               <button
                                 className={p.researchPortfolio ? 'text-emerald-600 hover:text-emerald-800' : 'text-blue-500 hover:text-blue-700'}

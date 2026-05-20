@@ -381,6 +381,7 @@ export function ClientDataCapture({
   const [ratingsModal, setRatingsModal] = useState<{ label: string; code: string } | null>(null);
   const [loadingsTarget, setLoadingsTarget] = useState<'client' | 'partner' | null>(null);
   const [addCoverOpen, setAddCoverOpen] = useState(false);
+  const [editingPolicyId, setEditingPolicyId] = useState<string | null>(null);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [workspacePrefs, setWorkspacePrefs] = useState<WorkspacePreferences>(() => loadPreferences());
 
@@ -390,6 +391,11 @@ export function ClientDataCapture({
   function handleSaveNewCover(policy: ExistingPolicy) {
     onChangePolicies([...policies, policy]);
     setAddCoverOpen(false);
+  }
+
+  function handleSaveEditedCover(policy: ExistingPolicy) {
+    onChangePolicies(policies.map((p) => p.id === policy.id ? policy : p));
+    setEditingPolicyId(null);
   }
 
   function handleAddQuote() {
@@ -454,6 +460,20 @@ export function ClientDataCapture({
         workspacePrefs={workspacePrefs}
         onSave={handleSaveQuote}
         onCancel={() => setEditingQuoteId(null)}
+      />
+    );
+  }
+
+  const editingPolicy = editingPolicyId ? policies.find((p) => p.id === editingPolicyId) ?? null : null;
+
+  if (editingPolicy) {
+    return (
+      <AddCoverPage
+        clientName={clientDisplayName}
+        partnerName={partnerDisplayName}
+        existingPolicy={editingPolicy}
+        onSave={handleSaveEditedCover}
+        onCancel={() => setEditingPolicyId(null)}
       />
     );
   }
@@ -530,6 +550,7 @@ export function ClientDataCapture({
         clientName={clientDisplayName}
         partnerName={partnerDisplayName}
         onAddCover={() => setAddCoverOpen(true)}
+        onEditPolicy={(id) => setEditingPolicyId(id)}
         onChangePolicies={onChangePolicies}
       />
 

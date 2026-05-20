@@ -77,9 +77,9 @@ const IP_DEFINITIONS = ['Indemnity', 'Agreed Value'];
 const TPD_DEFINITIONS = ['Any', 'Own', 'Super-linked', 'ADL'];
 
 interface Props {
-
   clientName: string;
   partnerName: string | null;
+  existingPolicy?: ExistingPolicy;
   onSave: (policy: ExistingPolicy) => void;
   onCancel: () => void;
 }
@@ -121,22 +121,39 @@ function sanitizeMoneyInput(s: string): string {
   return clean.slice(0, firstDot + 1) + clean.slice(firstDot + 1).replace(/\./g, '');
 }
 
-export function AddCoverPage({ clientName, partnerName, onSave, onCancel }: Props) {
+function coversFromPolicy(policy: ExistingPolicy): Record<ExistingCoverType, ExistingCover> {
+  const init = {} as Record<ExistingCoverType, ExistingCover>;
+  COVER_TYPE_ORDER.forEach((t) => { init[t] = emptyCover(t); });
+  for (const c of policy.covers) {
+    const t = c.coverType;
+    if (init[t].sumInsured !== '' && parseMoney(init[t].sumInsured) > 0) continue;
+    init[t] = { ...c, id: init[t].id };
+    if (c.superLinked === 'Yes' && (t === 'TPD' || t === 'IP')) {
+      const superCover = policy.covers.find((x) => x.coverType === t && x.super === 'Yes');
+      if (superCover?.ownership) init[t].ownership = superCover.ownership;
+      else init[t].ownership = 'J';
+    }
+  }
+  return init;
+}
+
+export function AddCoverPage({ clientName, partnerName, existingPolicy, onSave, onCancel }: Props) {
   const { suppliers: legacySuppliers, loading: suppliersLoading } = useLegacySuppliers();
 
-  const [provider, setProvider] = useState('');
+  const [provider, setProvider] = useState(existingPolicy?.provider ?? '');
   const [providerQuery, setProviderQuery] = useState('');
   const [providerOpen, setProviderOpen] = useState(false);
-  const [policyDescription, setPolicyDescription] = useState('');
-  const [lifeInsured, setLifeInsured] = useState<'client' | 'partner'>('client');
-  const [premiumSuper, setPremiumSuper] = useState('0');
-  const [stampDutySuper, setStampDutySuper] = useState('0');
-  const [superFreq, setSuperFreq] = useState<PremiumFrequency>('M');
-  const [premiumNonSuper, setPremiumNonSuper] = useState('0');
-  const [stampDutyNonSuper, setStampDutyNonSuper] = useState('0');
-  const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFrequency>('M');
+  const [policyDescription, setPolicyDescription] = useState(existingPolicy?.policyDescription ?? '');
+  const [lifeInsured, setLifeInsured] = useState<'client' | 'partner'>(existingPolicy?.lifeInsured ?? 'client');
+  const [premiumSuper, setPremiumSuper] = useState(existingPolicy ? String(existingPolicy.premiumSuper) : '0');
+  const [stampDutySuper, setStampDutySuper] = useState(existingPolicy ? String(existingPolicy.stampDutySuper) : '0');
+  const [superFreq, setSuperFreq] = useState<PremiumFrequency>(existingPolicy?.superFrequency ?? 'M');
+  const [premiumNonSuper, setPremiumNonSuper] = useState(existingPolicy ? String(existingPolicy.premiumNonSuper) : '0');
+  const [stampDutyNonSuper, setStampDutyNonSuper] = useState(existingPolicy ? String(existingPolicy.stampDutyNonSuper) : '0');
+  const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFrequency>(existingPolicy?.nonSuperFrequency ?? 'M');
 
   const [covers, setCovers] = useState<Record<ExistingCoverType, ExistingCover>>(() => {
+    if (existingPolicy) return coversFromPolicy(existingPolicy);
     const init = {} as Record<ExistingCoverType, ExistingCover>;
     COVER_TYPE_ORDER.forEach((t) => { init[t] = emptyCover(t); });
     return init;
@@ -235,7 +252,7 @@ export function AddCoverPage({ clientName, partnerName, onSave, onCancel }: Prop
     }
 
     const policy: ExistingPolicy = {
-      id: `pol-${Date.now()}`,
+      id: existingPolicy?.id ?? `pol-${Date.now()}`,
       provider: provider.trim() || 'Unknown',
       policyDescription: policyDescription.trim(),
       lifeInsured,
@@ -246,7 +263,8 @@ export function AddCoverPage({ clientName, partnerName, onSave, onCancel }: Prop
       stampDutyNonSuper: parseMoney(stampDutyNonSuper),
       nonSuperFrequency: nonSuperFreq,
       covers: coversWithSumInsured,
-      action: 'Not Considered',
+      action: existingPolicy?.action ?? 'Not Considered',
+      researchPortfolio: existingPolicy?.researchPortfolio,
     };
     onSave(policy);
   }
@@ -275,7 +293,7 @@ export function AddCoverPage({ clientName, partnerName, onSave, onCancel }: Prop
 
       {/* Section header */}
       <div className="mx-5 mt-4 px-4 py-2 bg-slate-400/70 text-white text-sm font-bold rounded-t">
-        Add Existing Cover
+        {existingPolicy ? 'Edit Existing Cover' : 'Add Existing Cover'}
       </div>
 
       {/* Form */}
