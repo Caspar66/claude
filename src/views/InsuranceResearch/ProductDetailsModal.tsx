@@ -26,7 +26,6 @@ interface Props {
   onClose: () => void;
 }
 
-const FREQ_OPTIONS = Object.entries(PREMIUM_FREQUENCY_LABELS).map(([k, v]) => ({ value: k, label: v }));
 
 function readOnlyField(label: string, value: string) {
   return (
@@ -52,20 +51,6 @@ function editableField(label: string, value: string, onChange: (v: string) => vo
   );
 }
 
-function freqSelect(label: string, value: string, onChange: (v: string) => void) {
-  return (
-    <div>
-      <div className="text-xs font-semibold text-slate-600 mb-1">{label}</div>
-      <select
-        className="w-full bg-white border border-slate-200 rounded px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {FREQ_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
-      </select>
-    </div>
-  );
-}
 
 function resolveStructureLabel(code: string | undefined): string {
   if (!code) return '';
@@ -183,7 +168,6 @@ function CoverDetailsModal({
 export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperFreq, quoteNonSuperFreq, onSave, onClose }: Props) {
   const [tab, setTab] = useState<DetailsTab>('details');
   const [policyName, setPolicyName] = useState(item.label);
-  const [underwriter, setUnderwriter] = useState(item.insurer);
   const [coverDetailIdx, setCoverDetailIdx] = useState<number | null>(null);
 
   const lifeInsuredName = item.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
@@ -191,12 +175,8 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
   const row = item.quoteRow;
   const existingPolicy = item.existingPolicy;
 
-  const [superFreq, setSuperFreq] = useState<PremiumFrequency>(
-    existingPolicy ? existingPolicy.superFrequency : (quoteSuperFreq ?? 'M')
-  );
-  const [nonSuperFreq, setNonSuperFreq] = useState<PremiumFrequency>(
-    existingPolicy ? existingPolicy.nonSuperFrequency : (quoteNonSuperFreq ?? 'M')
-  );
+  const superFreq: PremiumFrequency = existingPolicy ? existingPolicy.superFrequency : (quoteSuperFreq ?? 'M');
+  const nonSuperFreq: PremiumFrequency = existingPolicy ? existingPolicy.nonSuperFrequency : (quoteNonSuperFreq ?? 'M');
 
   const premSuper = row ? (row.premiumInsideSuper[superFreq] ?? 0) : (existingPolicy?.premiumSuper ?? 0);
   const premNonSuper = row ? (row.premiumOutsideSuper[nonSuperFreq] ?? 0) : (existingPolicy?.premiumNonSuper ?? 0);
@@ -204,6 +184,17 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
   const stampNonSuper = row ? (row.stampDutyOutsideSuper[nonSuperFreq] ?? 0) : (existingPolicy?.stampDutyNonSuper ?? 0);
   const totalPrem = premSuper + premNonSuper + stampSuper + stampNonSuper;
   const policyFee = row?.policyFee ?? 0;
+
+  const origPremSuper = premSuper + stampSuper;
+  const origPremNonSuper = premNonSuper + stampNonSuper;
+  const origTotal = origPremSuper + origPremNonSuper + policyFee;
+
+  const [premSuperEdit, setPremSuperEdit] = useState(origPremSuper.toFixed(2));
+  const [premNonSuperEdit, setPremNonSuperEdit] = useState(origPremNonSuper.toFixed(2));
+  const [policyFeeEdit, setPolicyFeeEdit] = useState(policyFee > 0 ? policyFee.toFixed(2) : '');
+
+  const editedTotal = (parseFloat(premSuperEdit) || 0) + (parseFloat(premNonSuperEdit) || 0) + (parseFloat(policyFeeEdit) || 0);
+  const totalChanged = Math.abs(editedTotal - origTotal) > 0.005;
 
   const commFreqInfo = (() => {
     if (!row) return { freq: superFreq, label: PREMIUM_FREQUENCY_LABELS[superFreq], isAnnualised: false };
@@ -240,11 +231,24 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
     { period: 'Premium Renewal', premium: commPremiumRenewal, freq: commFreqInfo.label, pct: commOngoingPct, amt: commOngoingAmt },
   ];
 
+  const [feeState, setFeeState] = useState(
+    feeRows.map((r) => ({
+      premium: r.premium.toFixed(2),
+      freq: r.freq,
+      pct: r.pct > 0 ? r.pct.toFixed(0) : '',
+      amt: r.amt > 0 ? r.amt.toFixed(2) : '',
+      include: true,
+    }))
+  );
+
+  const updateFee = (idx: number, field: string, value: string | boolean) => {
+    setFeeState((prev) => prev.map((r, i) => (i === idx ? { ...r, [field]: value } : r)));
+  };
+
   function handleSave() {
     const updated: ReviewItem = {
       ...item,
       label: policyName,
-      insurer: underwriter,
     };
     onSave(updated);
   }
@@ -272,7 +276,7 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
             {editableField('Policy Name', policyName, setPolicyName)}
             {readOnlyField('Policy Status', item.status)}
           </div>
-          {editableField('Underwriter', underwriter, setUnderwriter)}
+          {readOnlyField('Underwriter', item.insurer)}
         </div>
 
         {/* Tabs */}
@@ -297,18 +301,18 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
           {tab === 'details' && (
             <div className="space-y-4">
               <div className="grid grid-cols-3 gap-4">
-                {readOnlyField('Premium (Super)', premSuper.toFixed(2))}
-                {freqSelect('Super Frequency', superFreq, (v) => setSuperFreq(v as PremiumFrequency))}
+                {editableField('Premium (Super)', premSuperEdit, setPremSuperEdit)}
+                {readOnlyField('Super Frequency', PREMIUM_FREQUENCY_LABELS[superFreq])}
                 {readOnlyField('Date Generated', new Date().toLocaleDateString('en-AU'))}
               </div>
               <div className="grid grid-cols-3 gap-4">
-                {readOnlyField('Premium (Non - Super)', premNonSuper.toFixed(2))}
-                {freqSelect('Non - Super Frequency', nonSuperFreq, (v) => setNonSuperFreq(v as PremiumFrequency))}
-                {readOnlyField('Policy Fee', policyFee > 0 ? policyFee.toFixed(2) : '')}
+                {editableField('Premium (Non - Super)', premNonSuperEdit, setPremNonSuperEdit)}
+                {readOnlyField('Non - Super Frequency', PREMIUM_FREQUENCY_LABELS[nonSuperFreq])}
+                {editableField('Policy Fee', policyFeeEdit, setPolicyFeeEdit)}
               </div>
               <div className="grid grid-cols-2 gap-4">
-                {readOnlyField('Total Premium', totalPrem.toFixed(2))}
-                {freqSelect('Total Premium Frequency', superFreq, (v) => setSuperFreq(v as PremiumFrequency))}
+                {readOnlyField('Total Premium', editedTotal.toFixed(2))}
+                {readOnlyField('Total Premium Frequency', PREMIUM_FREQUENCY_LABELS[superFreq])}
               </div>
             </div>
           )}
@@ -374,29 +378,56 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
                   </tr>
                 </thead>
                 <tbody>
-                  {feeRows.map((r) => (
-                    <tr key={r.period} className="border-b border-gray-100">
+                  {feeState.map((r, idx) => (
+                    <tr key={idx} className="border-b border-gray-100">
                       <td className="py-2 px-2">
-                        <div className="bg-slate-100 rounded px-2 py-1.5 text-slate-700">{r.period}</div>
+                        <div className="bg-slate-100 rounded px-2 py-1.5 text-slate-700">
+                          {idx === 0 ? 'Premium Year 1' : 'Premium Renewal'}
+                        </div>
                       </td>
                       <td className="py-2 px-2">
-                        <div className="bg-slate-100 rounded px-2 py-1.5 text-slate-700">{r.premium.toFixed(2)}</div>
+                        <input
+                          className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          value={r.premium}
+                          onChange={(e) => updateFee(idx, 'premium', e.target.value)}
+                        />
                       </td>
                       <td className="py-2 px-2">
-                        <div className="bg-slate-100 rounded px-2 py-1.5 text-slate-700">{r.freq}</div>
+                        <select
+                          className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          value={r.freq}
+                          onChange={(e) => updateFee(idx, 'freq', e.target.value)}
+                        >
+                          {Object.values(PREMIUM_FREQUENCY_LABELS).map((l) => (
+                            <option key={l} value={l}>{l}</option>
+                          ))}
+                        </select>
                       </td>
                       <td className="py-2 px-2">
-                        <div className="bg-slate-100 rounded px-2 py-1.5 text-slate-700">{r.pct > 0 ? r.pct.toFixed(0) : ''}</div>
+                        <input
+                          className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          value={r.pct}
+                          onChange={(e) => updateFee(idx, 'pct', e.target.value)}
+                        />
                       </td>
                       <td className="py-2 px-2">
-                        <div className="bg-slate-100 rounded px-2 py-1.5 text-slate-700">{r.amt > 0 ? r.amt.toFixed(2) : ''}</div>
+                        <input
+                          className="w-full bg-white border border-slate-200 rounded px-2 py-1.5 text-sm text-slate-700 focus:outline-none focus:ring-1 focus:ring-teal-500"
+                          value={r.amt}
+                          onChange={(e) => updateFee(idx, 'amt', e.target.value)}
+                        />
                       </td>
                       <td className="py-2 px-2 text-center">
-                        <div className="inline-flex items-center justify-center w-6 h-6 rounded-full bg-teal-500 text-white">
+                        <button
+                          onClick={() => updateFee(idx, 'include', !r.include)}
+                          className={`inline-flex items-center justify-center w-6 h-6 rounded-full transition-colors ${
+                            r.include ? 'bg-teal-500 text-white' : 'bg-slate-200 text-slate-400'
+                          }`}
+                        >
                           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                             <polyline points="20 6 9 17 4 12" />
                           </svg>
-                        </div>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -407,13 +438,20 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-          <Button variant="outline" size="sm" className="text-xs" onClick={onClose}>
-            Close
-          </Button>
-          <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs" onClick={handleSave}>
-            Save
-          </Button>
+        <div className="px-6 py-3 border-t border-gray-200 bg-gray-50">
+          {totalChanged && (
+            <p className="text-xs text-amber-600 mb-2">
+              Fee details will need to be checked as the Total Premium amount has changed.
+            </p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" size="sm" className="text-xs" onClick={onClose}>
+              Close
+            </Button>
+            <Button size="sm" className="bg-teal-700 hover:bg-teal-800 text-white text-xs" onClick={handleSave}>
+              Save
+            </Button>
+          </div>
         </div>
       </div>
 
