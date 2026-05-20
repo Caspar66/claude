@@ -107,6 +107,7 @@ export interface ExistingCover {
   benefitPeriod?: string;
   addDeathCover?: string;
   ownership?: string;
+  owner?: string;
 }
 
 export type PremiumFrequency = 'Y' | 'H' | 'Q' | 'M' | 'F' | 'W';

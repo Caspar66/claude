@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronUp, ChevronDown, Settings, Move, SquarePen, Link2 } from 'lucide-react';
+import { ChevronUp, ChevronDown, Settings, Move, SquarePen, Link2, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ExistingPolicy, ExistingCoverType, ResearchPortfolio } from './insuranceData';
 import { COVER_TYPE_LABELS, OWNERSHIP_OPTIONS_BY_TYPE, PREMIUM_FREQUENCY_LABELS, totalPolicyPremiumPerAnnum } from './insuranceData';
@@ -7,6 +7,39 @@ import { MapProductModal } from './MapProductModal';
 
 type ActionStatus = 'Not Considered' | 'Review';
 const ACTIONS: ActionStatus[] = ['Not Considered', 'Review'];
+
+function AddOwnerModal({ onSave, onClose }: { onSave: (name: string) => void; onClose: () => void }) {
+  const [name, setName] = useState('');
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+      <div className="bg-white rounded-lg shadow-xl w-80 p-4">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-800">Add Custom Owner</h3>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={14} /></button>
+        </div>
+        <input
+          className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm mb-3 focus:outline-none focus:ring-1 focus:ring-teal-500 focus:border-teal-500"
+          placeholder="Owner name..."
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && name.trim()) onSave(name.trim()); }}
+          autoFocus
+        />
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onClose} className="text-xs">Cancel</Button>
+          <Button
+            size="sm"
+            className="bg-teal-700 hover:bg-teal-800 text-white text-xs"
+            onClick={() => { if (name.trim()) onSave(name.trim()); }}
+            disabled={!name.trim()}
+          >
+            Save
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   policies: ExistingPolicy[];
@@ -34,6 +67,8 @@ function formatSum(s: string): string {
 export function CurrentSituationSection({ policies, clientName, partnerName, onAddCover, onChangePolicies }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const [reviewPolicyId, setReviewPolicyId] = useState<string | null>(null);
+  const [customOwners, setCustomOwners] = useState<string[]>([]);
+  const [addOwnerTarget, setAddOwnerTarget] = useState<{ policyId: string; coverId: string } | null>(null);
 
   const groupedByInsured: Record<'client' | 'partner', ExistingPolicy[]> = { client: [], partner: [] };
   for (const p of policies) groupedByInsured[p.lifeInsured].push(p);
@@ -52,6 +87,40 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
     onChangePolicies(policies.map((p) => p.id === reviewPolicyId ? { ...p, researchPortfolio: portfolio } : p));
   }
 
+  function updateCoverOwner(policyId: string, coverId: string, owner: string) {
+    onChangePolicies(policies.map((p) => {
+      if (p.id !== policyId) return p;
+      return { ...p, covers: p.covers.map((c) => c.id === coverId ? { ...c, owner } : c) };
+    }));
+  }
+
+  function handleOwnerChange(policyId: string, coverId: string, value: string) {
+    if (value === '__add__') {
+      setAddOwnerTarget({ policyId, coverId });
+      return;
+    }
+    updateCoverOwner(policyId, coverId, value);
+  }
+
+  function handleAddOwnerSave(name: string) {
+    if (!addOwnerTarget) return;
+    setCustomOwners((prev) => prev.includes(name) ? prev : [...prev, name]);
+    updateCoverOwner(addOwnerTarget.policyId, addOwnerTarget.coverId, name);
+    setAddOwnerTarget(null);
+  }
+
+  function buildOwnerOptions(): string[] {
+    const opts: string[] = [clientName];
+    if (partnerName && !opts.includes(partnerName)) opts.push(partnerName);
+    if (!opts.includes('SMSF')) opts.push('SMSF');
+    if (!opts.includes('Super Fund')) opts.push('Super Fund');
+    for (const co of customOwners) {
+      if (!opts.includes(co)) opts.push(co);
+    }
+    return opts;
+  }
+
+  const ownerOptions = buildOwnerOptions();
   const reviewPolicy = reviewPolicyId ? policies.find((p) => p.id === reviewPolicyId) ?? null : null;
 
   return (
@@ -161,28 +230,43 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
                           {/* Covers sub-table */}
                           {p.covers.length > 0 && (
                             <div className="bg-gray-50/60 border-b border-gray-200 px-3 py-2">
-                              <div className="grid grid-cols-[100px_1fr_140px_100px_60px_1fr] gap-2 text-[11px] font-bold text-slate-600 pb-1 border-b border-gray-200">
+                              <div className="grid grid-cols-[100px_1fr_1fr_140px_60px_1fr] gap-2 text-[11px] font-bold text-slate-600 pb-1 border-b border-gray-200">
                                 <div>Cover</div>
+                                <div>Ownership</div>
                                 <div>Owner</div>
                                 <div className="text-right">Benefit Amount</div>
                                 <div className="text-center">Super</div>
-                                <div className="text-center">Super-Link</div>
                                 <div>Life Insured</div>
                               </div>
-                              {p.covers.map((cov) => (
-                                <div key={cov.id} className="grid grid-cols-[100px_1fr_140px_100px_60px_1fr] gap-2 py-1 text-[11px] text-slate-700">
-                                  <div className="font-medium">{COVER_TYPE_LABELS[cov.coverType]}</div>
-                                  <div>{ownershipLabel(cov.coverType, cov.ownership) || '—'}</div>
-                                  <div className="text-right">{formatSum(cov.sumInsured)}</div>
-                                  <div className="text-center">
-                                    <input type="checkbox" disabled checked={cov.super === 'Yes'} />
+                              {p.covers.map((cov) => {
+                                const currentOwner = cov.owner || name;
+                                return (
+                                  <div key={cov.id} className="grid grid-cols-[100px_1fr_1fr_140px_60px_1fr] gap-2 py-1 text-[11px] text-slate-700 items-center">
+                                    <div className="font-medium">{COVER_TYPE_LABELS[cov.coverType]}</div>
+                                    <div>{ownershipLabel(cov.coverType, cov.ownership) || '—'}</div>
+                                    <div>
+                                      <select
+                                        className="border border-gray-200 rounded px-1.5 py-0.5 text-[11px] text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer w-full"
+                                        value={currentOwner}
+                                        onChange={(e) => handleOwnerChange(p.id, cov.id, e.target.value)}
+                                      >
+                                        {ownerOptions.map((opt) => (
+                                          <option key={opt} value={opt}>{opt}</option>
+                                        ))}
+                                        {!ownerOptions.includes(currentOwner) && (
+                                          <option value={currentOwner}>{currentOwner}</option>
+                                        )}
+                                        <option value="__add__">+ Add...</option>
+                                      </select>
+                                    </div>
+                                    <div className="text-right">{formatSum(cov.sumInsured)}</div>
+                                    <div className="text-center">
+                                      <input type="checkbox" disabled checked={cov.super === 'Yes'} />
+                                    </div>
+                                    <div>{name}</div>
                                   </div>
-                                  <div className="text-center">
-                                    {cov.superLinked === 'Yes' ? <Link2 size={12} className="inline text-blue-500" /> : '—'}
-                                  </div>
-                                  <div>{name}</div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           )}
                         </div>
@@ -201,6 +285,13 @@ export function CurrentSituationSection({ policies, clientName, partnerName, onA
         policy={reviewPolicy}
         onSave={saveResearchPortfolio}
       />
+
+      {addOwnerTarget && (
+        <AddOwnerModal
+          onSave={handleAddOwnerSave}
+          onClose={() => setAddOwnerTarget(null)}
+        />
+      )}
     </div>
   );
 }
