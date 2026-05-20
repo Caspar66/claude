@@ -98,6 +98,7 @@ function FeatureGroup({
   subFeatureChecks,
   onToggle,
   onToggleSub,
+  onSetAllChecked,
   existingInsurer,
   recommendedInsurer,
 }: {
@@ -108,6 +109,7 @@ function FeatureGroup({
   subFeatureChecks: SubFeatureCheck[];
   onToggle: (code: string) => void;
   onToggleSub: (key: string) => void;
+  onSetAllChecked: (featureCodes: string[], subKeys: string[], checked: boolean) => void;
   existingInsurer: string;
   recommendedInsurer: string;
 }) {
@@ -115,15 +117,36 @@ function FeatureGroup({
   const dedupedFeatures = deduplicateFeatures(features);
   if (dedupedFeatures.length === 0) return null;
 
+  const groupFeatureCodes = dedupedFeatures.map((f) => f.code);
+  const groupSubKeys: string[] = [];
+  for (const f of dedupedFeatures) {
+    for (const sf of f.subFeatures) {
+      if (sf.comparedValue?.trim()) groupSubKeys.push(`${f.code}::${sf.code}::compared`);
+      if (sf.recommendedValue?.trim()) groupSubKeys.push(`${f.code}::${sf.code}::recommended`);
+    }
+  }
+
+  const allFeatureChecked = groupFeatureCodes.every((code) => featureChecks.find((c) => c.featureCode === code)?.checked);
+  const allSubChecked = groupSubKeys.every((key) => subFeatureChecks.find((sc) => sc.key === key)?.checked !== false);
+  const allChecked = allFeatureChecked && allSubChecked;
+
   return (
     <div className="mb-3">
-      <button
-        onClick={() => setExpanded(!expanded)}
-        className={`flex items-center gap-1.5 w-full text-left px-2 py-1.5 rounded text-xs font-semibold ${colorClass}`}
-      >
-        {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-        {title} ({dedupedFeatures.length})
-      </button>
+      <div className={`flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs font-semibold ${colorClass}`}>
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1.5 flex-1 text-left">
+          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {title} ({dedupedFeatures.length})
+        </button>
+        <button
+          onClick={(e) => { e.stopPropagation(); onSetAllChecked(groupFeatureCodes, groupSubKeys, !allChecked); }}
+          className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
+            allChecked ? 'bg-teal-600 border-teal-600 text-white' : 'border-current opacity-50 bg-white'
+          }`}
+          title={allChecked ? 'Unselect All' : 'Select All'}
+        >
+          {allChecked && <Check size={10} />}
+        </button>
+      </div>
       {expanded && (
         <div className="ml-1 mt-1 space-y-0.5">
           {dedupedFeatures.map((f) => {
@@ -294,6 +317,26 @@ export function ReplacementModal({
         ...existing,
         subFeatureChecks: existing.subFeatureChecks.map((sc) =>
           sc.key === subKey ? { ...sc, checked: !sc.checked } : sc
+        ),
+      });
+      return next;
+    });
+  }
+
+  function setAllChecked(candidateId: string, featureCodes: string[], subKeys: string[], checked: boolean) {
+    setComparisons((prev) => {
+      const next = new Map(prev);
+      const existing = next.get(candidateId);
+      if (!existing) return prev;
+      const featureSet = new Set(featureCodes);
+      const subSet = new Set(subKeys);
+      next.set(candidateId, {
+        ...existing,
+        featureChecks: existing.featureChecks.map((c) =>
+          featureSet.has(c.featureCode) ? { ...c, checked } : c
+        ),
+        subFeatureChecks: existing.subFeatureChecks.map((sc) =>
+          subSet.has(sc.key) ? { ...sc, checked } : sc
         ),
       });
       return next;
@@ -484,6 +527,7 @@ export function ReplacementModal({
                           subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
                           onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
+                          onSetAllChecked={(codes, keys, checked) => setAllChecked(candidateId, codes, keys, checked)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
@@ -495,6 +539,7 @@ export function ReplacementModal({
                           subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
                           onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
+                          onSetAllChecked={(codes, keys, checked) => setAllChecked(candidateId, codes, keys, checked)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
@@ -506,6 +551,7 @@ export function ReplacementModal({
                           subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
                           onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
+                          onSetAllChecked={(codes, keys, checked) => setAllChecked(candidateId, codes, keys, checked)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
@@ -517,6 +563,7 @@ export function ReplacementModal({
                           subFeatureChecks={comparison.subFeatureChecks}
                           onToggle={(code) => toggleFeatureCheck(candidateId, code)}
                           onToggleSub={(key) => toggleSubFeatureCheck(candidateId, key)}
+                          onSetAllChecked={(codes, keys, checked) => setAllChecked(candidateId, codes, keys, checked)}
                           existingInsurer={existingItem.insurer}
                           recommendedInsurer={candidate.insurer}
                         />
