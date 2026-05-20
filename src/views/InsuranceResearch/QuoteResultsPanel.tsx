@@ -801,7 +801,6 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
               )}
             </tbody>
           </table>
-        </div>
 
         {/* ── Excluded products section ────────────────────────────────────── */}
         {visibleExcluded.length > 0 && (
@@ -826,6 +825,7 @@ export function QuoteResultsPanel({ results, selectedQuoteIndices, activeClient,
             )}
           </div>
         )}
+        </div>
 
       </div>
 
