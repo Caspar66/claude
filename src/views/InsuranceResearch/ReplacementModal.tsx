@@ -51,12 +51,19 @@ function buildChecks(data: GainedLostResponse): { featureChecks: FeatureCheck[];
         featureChecks.push({ featureCode: f.code, checked: true });
       }
       for (const sf of f.subFeatures) {
-        const hasContent = (sf.comparedValue && sf.comparedValue.trim()) || (sf.recommendedValue && sf.recommendedValue.trim());
-        if (!hasContent) continue;
-        const key = `${f.code}::${sf.code}`;
-        if (!seenSubs.has(key)) {
-          seenSubs.add(key);
-          subFeatureChecks.push({ key, checked: true });
+        if (sf.comparedValue && sf.comparedValue.trim()) {
+          const key = `${f.code}::${sf.code}::compared`;
+          if (!seenSubs.has(key)) {
+            seenSubs.add(key);
+            subFeatureChecks.push({ key, checked: true });
+          }
+        }
+        if (sf.recommendedValue && sf.recommendedValue.trim()) {
+          const key = `${f.code}::${sf.code}::recommended`;
+          if (!seenSubs.has(key)) {
+            seenSubs.add(key);
+            subFeatureChecks.push({ key, checked: true });
+          }
         }
       }
     }
@@ -142,36 +149,52 @@ function FeatureGroup({
                   </div>
                 </div>
                 {visibleSubs.length > 0 && (
-                  <div className="ml-8 mt-0.5 mb-1 space-y-1">
+                  <div className="ml-8 mt-0.5 mb-1 space-y-0.5">
                     {visibleSubs.map((sf) => {
-                      const subKey = `${f.code}::${sf.code}`;
-                      const subCheck = subFeatureChecks.find((sc) => sc.key === subKey);
+                      const comparedKey = `${f.code}::${sf.code}::compared`;
+                      const recommendedKey = `${f.code}::${sf.code}::recommended`;
+                      const comparedCheck = subFeatureChecks.find((sc) => sc.key === comparedKey);
+                      const recommendedCheck = subFeatureChecks.find((sc) => sc.key === recommendedKey);
+                      const hasCompared = sf.comparedValue && sf.comparedValue.trim();
+                      const hasRecommended = sf.recommendedValue && sf.recommendedValue.trim();
                       return (
-                        <div key={sf.code} className="flex items-start gap-2 pl-1 py-0.5 rounded hover:bg-slate-50">
-                          <button
-                            onClick={() => onToggleSub(subKey)}
-                            className={`mt-0.5 w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
-                              subCheck?.checked
-                                ? 'bg-teal-600 border-teal-600 text-white'
-                                : 'border-slate-300 bg-white'
-                            }`}
-                          >
-                            {subCheck?.checked && <Check size={8} />}
-                          </button>
-                          <div className="flex-1 min-w-0">
-                            {sf.comparedValue && sf.comparedValue.trim() && (
+                        <div key={sf.code} className="space-y-0.5">
+                          {hasCompared && (
+                            <div className="flex items-center gap-2 pl-1 py-0.5 rounded hover:bg-slate-50">
+                              <button
+                                onClick={() => onToggleSub(comparedKey)}
+                                className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
+                                  comparedCheck?.checked
+                                    ? 'bg-teal-600 border-teal-600 text-white'
+                                    : 'border-slate-300 bg-white'
+                                }`}
+                              >
+                                {comparedCheck?.checked && <Check size={8} />}
+                              </button>
                               <div className="text-[10px] text-slate-600">
                                 <span className="text-slate-400">Existing:</span>{' '}
                                 <span className="font-medium">{existingInsurer}</span> — {sf.comparedValue}
                               </div>
-                            )}
-                            {sf.recommendedValue && sf.recommendedValue.trim() && (
+                            </div>
+                          )}
+                          {hasRecommended && (
+                            <div className="flex items-center gap-2 pl-1 py-0.5 rounded hover:bg-slate-50">
+                              <button
+                                onClick={() => onToggleSub(recommendedKey)}
+                                className={`w-3.5 h-3.5 rounded border flex items-center justify-center flex-shrink-0 ${
+                                  recommendedCheck?.checked
+                                    ? 'bg-teal-600 border-teal-600 text-white'
+                                    : 'border-slate-300 bg-white'
+                                }`}
+                              >
+                                {recommendedCheck?.checked && <Check size={8} />}
+                              </button>
                               <div className="text-[10px] text-slate-600">
                                 <span className="text-slate-400">New:</span>{' '}
                                 <span className="font-medium">{recommendedInsurer}</span> — {sf.recommendedValue}
                               </div>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       );
                     })}
