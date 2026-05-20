@@ -3,14 +3,12 @@ import { ArrowLeft, ChevronDown, ChevronRight, Eye, Plus, X } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import type { QuoteResultRow, ResolvedCover } from './quoteResultsData';
 import { getNeedLabel } from './quoteResultsData';
-import type { ExistingPolicy, ExistingCover, PremiumFrequency, ClientFormData } from './insuranceData';
-import { COVER_TYPE_LABELS, PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, coverToNeedCode } from './insuranceData';
+import type { ExistingPolicy, PremiumFrequency, ClientFormData } from './insuranceData';
+import { PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, coverToNeedCode } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import {
   STRUCTURE_4_LABELS, STRUCTURE_3_LABELS,
-  OCCUPATION_LABELS, AGREED_VALUE_LABELS,
-  WAITING_INC_LABELS, WAITING_BUS_LABELS,
-  BENEFIT_INC_LABELS,
+  OCCUPATION_LABELS,
 } from './needsTypes';
 import { VaryExistingCoverModal } from './VaryExistingCoverModal';
 import { ReplacementModal } from './ReplacementModal';
@@ -28,6 +26,10 @@ export interface ReviewItem {
   insurerLogo?: string;
   status: ReviewStatus;
   premiumPa: number;
+  premiumSuper: number;
+  premiumNonSuper: number;
+  superFrequencyCode: PremiumFrequency;
+  nonSuperFrequencyCode: PremiumFrequency;
   frequency: string;
   lifeInsured: 'client' | 'partner';
   existingPolicy?: ExistingPolicy;
@@ -41,9 +43,13 @@ export interface ReviewItem {
 export interface ReviewCover {
   type: string;
   definition?: string;
+  coverStructure?: string;
+  premiumStructure?: string;
   sumInsured: string;
   owner: string;
   isSuper: boolean;
+  waitingPeriod?: string;
+  benefitPeriod?: string;
   resolved?: ResolvedCover;
 }
 
@@ -53,31 +59,34 @@ function fmt(n: number) {
 
 const STRUCT_MAP: Record<string, string> = { ...STRUCTURE_4_LABELS, ...STRUCTURE_3_LABELS };
 const OCC_MAP: Record<string, string> = OCCUPATION_LABELS;
-const AGR_MAP: Record<string, string> = AGREED_VALUE_LABELS;
-const WP_MAP: Record<string, string> = { ...WAITING_INC_LABELS, ...WAITING_BUS_LABELS };
-const BP_MAP: Record<string, string> = BENEFIT_INC_LABELS;
 
-function resolvedDescription(rc: ResolvedCover): string {
-  const parts: string[] = [];
-  if (rc.structure) parts.push(STRUCT_MAP[rc.structure] ?? rc.structure);
-  if (rc.occupationType && rc.occupationType !== 'A') parts.push(OCC_MAP[rc.occupationType] ?? rc.occupationType);
-  if (rc.agreedValue) parts.push(AGR_MAP[rc.agreedValue] ?? rc.agreedValue);
-  if (rc.definition) parts.push(rc.definition);
-  if (rc.waitingPeriod) parts.push(`WP ${WP_MAP[rc.waitingPeriod] ?? rc.waitingPeriod}`);
-  if (rc.benefitPeriod) parts.push(`BP ${BP_MAP[rc.benefitPeriod] ?? rc.benefitPeriod}`);
-  return parts.join(' / ');
+function getCoverType(needCode: string): string {
+  switch (needCode) {
+    case 'TRM': return 'Life';
+    case 'TPE': case 'TPR': case 'TPS': return 'TPD';
+    case 'TRE': case 'TRS': return 'Trauma';
+    case 'INC': return 'Income Protection';
+    case 'BUS': return 'Business Expense';
+    case 'NES': case 'CHT': return 'Other';
+    default: return getNeedLabel(needCode);
+  }
 }
 
-function coverLabel(c: ExistingCover): string {
-  let label = COVER_TYPE_LABELS[c.coverType] || c.coverType;
-  if (c.premiumStyle) {
-    const styleMap: Record<string, string> = { S: 'Variable age-stepped', B: 'Blended', L: 'Variable to age 65', '70': 'Variable to age 70' };
-    label += ` / ${styleMap[c.premiumStyle] ?? c.premiumStyle}`;
-  }
-  if (c.definition) label += ` / ${c.definition}`;
-  if (c.waitingPeriod) label += ` / WP ${c.waitingPeriod} days`;
-  if (c.benefitPeriod) label += ` / BP to Age ${c.benefitPeriod}`;
-  return label;
+const FREQ_SHORT: Record<PremiumFrequency, string> = {
+  Y: '/year', H: '/half year', Q: '/quarter', M: '/month', F: '/fortnight', W: '/week',
+};
+
+function formatBenefitPeriod(bp: string): string {
+  if (!bp) return '';
+  const n = parseInt(bp, 10);
+  if (isNaN(n)) return bp;
+  if (n <= 5) return `${n} year${n === 1 ? '' : 's'}`;
+  return `Age ${n}`;
+}
+
+function formatWaitingPeriod(wp: string): string {
+  if (!wp) return '';
+  return `${wp} days`;
 }
 
 function isTPDCode(code: string): boolean {
@@ -95,53 +104,86 @@ function isSuperLinkOwner(owner?: string): boolean {
 function buildResolvedCovers(resolvedCovers: ResolvedCover[], defaultOwner: string): ReviewCover[] {
   const result: ReviewCover[] = [];
   for (const rc of resolvedCovers) {
-    const label = getNeedLabel(rc.needCode);
     const si = rc.sumInsured != null ? `${rc.sumInsured}` : rc.monthlyBenefit != null ? `${rc.monthlyBenefit}` : '';
+    const premiumStructure = rc.structure ? (STRUCT_MAP[rc.structure] ?? rc.structure) : undefined;
 
     if (isTPDCode(rc.needCode) && rc.owner === 'J') {
       result.push({
-        type: label,
-        definition: resolvedDescription({ ...rc, occupationType: 'O' }) + ' / Super-linked Own',
-        sumInsured: si,
-        owner: defaultOwner,
-        isSuper: false,
-        resolved: rc,
-      });
-      result.push({
-        type: label,
-        definition: resolvedDescription({ ...rc, occupationType: 'A' }) + ' / Super-linked Any',
+        type: 'TPD',
+        definition: 'Super-Linked Any',
+        coverStructure: 'Super-Linked',
+        premiumStructure,
         sumInsured: si,
         owner: defaultOwner,
         isSuper: true,
+        resolved: rc,
+      });
+      result.push({
+        type: 'TPD',
+        definition: 'Super-Linked Own',
+        coverStructure: 'Super-Linked',
+        premiumStructure,
+        sumInsured: si,
+        owner: defaultOwner,
+        isSuper: false,
         resolved: rc,
       });
     } else if (isIPCode(rc.needCode) && isSuperLinkOwner(rc.owner)) {
-      const desc = resolvedDescription(rc);
       result.push({
-        type: 'Super-linked IP',
-        definition: desc.replace(/Variable age-stepped|Blended|Variable/i, 'Super-linked'),
+        type: 'Income Protection',
+        definition: 'Indemnity',
+        coverStructure: 'Super-linked',
+        premiumStructure,
         sumInsured: si,
         owner: defaultOwner,
         isSuper: true,
+        waitingPeriod: rc.waitingPeriod,
+        benefitPeriod: rc.benefitPeriod,
         resolved: rc,
       });
       result.push({
-        type: getNeedLabel(rc.needCode),
-        definition: desc,
+        type: 'Income Protection',
+        definition: 'Indemnity',
+        coverStructure: 'Standalone',
+        premiumStructure,
         sumInsured: si,
         owner: defaultOwner,
         isSuper: false,
+        waitingPeriod: rc.waitingPeriod,
+        benefitPeriod: rc.benefitPeriod,
         resolved: rc,
       });
     } else {
+      const coverType = getCoverType(rc.needCode);
       const ownerCode = rc.owner ?? '';
-      const isSuper = ownerCode === 'S' || ownerCode === 'M' || ownerCode === 'J' || ownerCode === 'K';
+      const isSuperCover = ownerCode === 'S' || ownerCode === 'M' || ownerCode === 'J' || ownerCode === 'K';
+
+      let definition: string | undefined;
+      let coverStructure: string;
+
+      if (isTPDCode(rc.needCode)) {
+        definition = rc.occupationType === 'O' ? 'Own' : rc.occupationType === 'A' ? 'Any' : (rc.occupationType ? (OCC_MAP[rc.occupationType] ?? rc.occupationType) : undefined);
+        coverStructure = rc.isLinked ? 'Linked' : 'Standalone';
+      } else if (isIPCode(rc.needCode)) {
+        definition = 'Indemnity';
+        coverStructure = rc.isLinked ? 'Linked' : 'Standalone';
+      } else if (rc.needCode === 'NES' || rc.needCode === 'CHT') {
+        coverStructure = rc.needCode === 'NES' ? 'Needle Stick' : 'Child Trauma';
+      } else {
+        definition = rc.definition || undefined;
+        coverStructure = rc.isLinked ? 'Linked' : 'Standalone';
+      }
+
       result.push({
-        type: label,
-        definition: resolvedDescription(rc),
+        type: coverType,
+        definition,
+        coverStructure,
+        premiumStructure,
         sumInsured: si,
         owner: defaultOwner,
-        isSuper,
+        isSuper: isSuperCover,
+        waitingPeriod: rc.waitingPeriod,
+        benefitPeriod: rc.benefitPeriod,
         resolved: rc,
       });
     }
@@ -150,11 +192,14 @@ function buildResolvedCovers(resolvedCovers: ResolvedCover[], defaultOwner: stri
 }
 
 function buildExistingItems(policies: ExistingPolicy[]): ReviewItem[] {
+  const styleMap: Record<string, string> = { S: 'Variable age-stepped', B: 'Blended', L: 'Variable to age 65', '70': 'Variable to age 70' };
   return policies
     .filter((p) => p.action === 'Review' || p.action === 'Replace')
     .map((p) => {
-      const premiumPa = (p.premiumSuper + p.stampDutySuper) * PREMIUM_FREQUENCY_MULTIPLIER[p.superFrequency]
-                       + (p.premiumNonSuper + p.stampDutyNonSuper) * PREMIUM_FREQUENCY_MULTIPLIER[p.nonSuperFrequency];
+      const premSuper = p.premiumSuper + p.stampDutySuper;
+      const premNonSuper = p.premiumNonSuper + p.stampDutyNonSuper;
+      const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.superFrequency]
+                       + premNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[p.nonSuperFrequency];
       const productCodes: Record<string, string> = {};
       if (p.researchPortfolio) {
         for (const [code, val] of Object.entries(p.researchPortfolio.products)) {
@@ -168,16 +213,27 @@ function buildExistingItems(policies: ExistingPolicy[]): ReviewItem[] {
         insurer: p.provider,
         status: 'Hold' as ReviewStatus,
         premiumPa,
+        premiumSuper: premSuper,
+        premiumNonSuper: premNonSuper,
+        superFrequencyCode: p.superFrequency,
+        nonSuperFrequencyCode: p.nonSuperFrequency,
         frequency: PREMIUM_FREQUENCY_LABELS[p.superFrequency],
         lifeInsured: p.lifeInsured,
         existingPolicy: p,
-        covers: p.covers.map((c) => ({
-          type: coverToNeedCode(c, p.covers),
-          definition: coverLabel(c),
-          sumInsured: c.sumInsured,
-          owner: c.ownership ?? '',
-          isSuper: false,
-        })),
+        covers: p.covers.map((c) => {
+          const needCode = coverToNeedCode(c, p.covers);
+          return {
+            type: getCoverType(needCode),
+            definition: c.definition || undefined,
+            coverStructure: c.superLinked === 'Yes' ? 'Super-Linked' : c.standAlone === 'Yes' ? 'Standalone' : c.flexiLinked === 'Yes' ? 'Linked' : 'Standalone',
+            premiumStructure: c.premiumStyle ? (styleMap[c.premiumStyle] ?? c.premiumStyle) : undefined,
+            sumInsured: c.sumInsured,
+            owner: c.ownership ?? '',
+            isSuper: c.super === 'Yes',
+            waitingPeriod: c.waitingPeriod,
+            benefitPeriod: c.benefitPeriod,
+          };
+        }),
         supplierCode: p.researchPortfolio?.supplierCode ?? '',
         revisionDate: p.researchPortfolio?.revisionDate,
         productCodes,
@@ -192,10 +248,10 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[], clientNam
       const q = quotes[r.quoteIndex];
       const superFreq = (q?.superFrequency ?? 'M') as PremiumFrequency;
       const nonSuperFreq = (q?.nonSuperFrequency ?? 'M') as PremiumFrequency;
-      const superPrem = Object.values(r.premiumInsideSuper)[0] ?? 0;
-      const nonSuperPrem = Object.values(r.premiumOutsideSuper)[0] ?? 0;
-      const premiumPa = superPrem * PREMIUM_FREQUENCY_MULTIPLIER[superFreq]
-                       + nonSuperPrem * PREMIUM_FREQUENCY_MULTIPLIER[nonSuperFreq];
+      const premSuper = (r.premiumInsideSuper[superFreq] ?? 0) + (r.stampDutyInsideSuper[superFreq] ?? 0);
+      const premNonSuper = (r.premiumOutsideSuper[nonSuperFreq] ?? 0) + (r.stampDutyOutsideSuper[nonSuperFreq] ?? 0);
+      const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[superFreq]
+                       + premNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[nonSuperFreq];
       const defaultOwner = clientName;
       return {
         id: r.id,
@@ -205,6 +261,10 @@ function buildQuoteItems(rows: QuoteResultRow[], quotes: NeedsQuote[], clientNam
         insurerLogo: r.supplierLogo,
         status: (r.recommendation === 'rec' ? 'Recommend' : 'Alternative') as ReviewStatus,
         premiumPa,
+        premiumSuper: premSuper,
+        premiumNonSuper: premNonSuper,
+        superFrequencyCode: superFreq,
+        nonSuperFrequencyCode: nonSuperFreq,
         frequency: PREMIUM_FREQUENCY_LABELS[nonSuperFreq],
         lifeInsured: q?.lifeInsured ?? 'client',
         quoteRow: r,
@@ -330,6 +390,8 @@ function ReviewRow({
     return num > 0 ? `$${num.toLocaleString('en-AU')}` : '';
   }
 
+  const totalPrem = item.premiumSuper + item.premiumNonSuper;
+
   return (
     <>
       <tr className="border-b border-gray-100 hover:bg-slate-50/50 transition-colors">
@@ -349,10 +411,25 @@ function ReviewRow({
             </div>
           </div>
         </td>
-        <td className="px-3 py-3 text-xs text-slate-600">{lifeInsuredName}</td>
         <td className="px-3 py-3 text-right">
-          <span className="text-sm font-medium text-slate-800">{fmt(item.premiumPa)}</span>
-          <span className="text-xs text-slate-400 ml-1">pa</span>
+          {item.premiumSuper > 0
+            ? <><span className="text-sm font-medium text-slate-800">{fmt(item.premiumSuper)}</span><span className="text-xs text-slate-400 ml-0.5">{FREQ_SHORT[item.superFrequencyCode]}</span></>
+            : <span className="text-xs text-slate-400">N/A</span>}
+        </td>
+        <td className="px-3 py-3 text-right">
+          {item.premiumNonSuper > 0
+            ? <><span className="text-sm font-medium text-slate-800">{fmt(item.premiumNonSuper)}</span><span className="text-xs text-slate-400 ml-0.5">{FREQ_SHORT[item.nonSuperFrequencyCode]}</span></>
+            : <span className="text-xs text-slate-400">N/A</span>}
+        </td>
+        <td className="px-3 py-3 text-right">
+          <span className="text-sm font-semibold text-slate-800">{fmt(totalPrem)}</span>
+          <span className="text-xs text-slate-400 ml-0.5">
+            {item.superFrequencyCode === item.nonSuperFrequencyCode
+              ? FREQ_SHORT[item.superFrequencyCode]
+              : item.premiumSuper > 0 && item.premiumNonSuper > 0
+                ? FREQ_SHORT[item.nonSuperFrequencyCode]
+                : item.premiumSuper > 0 ? FREQ_SHORT[item.superFrequencyCode] : FREQ_SHORT[item.nonSuperFrequencyCode]}
+          </span>
         </td>
         <td className="px-3 py-3 text-center">
           <select
@@ -378,50 +455,63 @@ function ReviewRow({
       {expanded && item.covers.length > 0 && (
         <tr className="bg-slate-50/50">
           <td />
-          <td colSpan={5} className="px-6 py-3">
+          <td colSpan={6} className="px-6 py-3">
             <table className="w-full text-xs">
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className="py-1 text-left text-slate-600 font-semibold">Type</th>
                   <th className="py-1 text-left text-slate-600 font-semibold">Description</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Premium Structure</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Cover Structure</th>
                   <th className="py-1 text-center text-slate-600 font-semibold w-14">Super</th>
                   <th className="py-1 text-left text-slate-600 font-semibold">Owner</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Life Insured</th>
                   <th className="py-1 text-right text-slate-600 font-semibold">Benefit Amount</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Benefit Period</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Waiting Period</th>
                 </tr>
               </thead>
               <tbody>
-                {item.covers.map((c, idx) => (
-                  <tr key={idx} className="border-b border-gray-100">
-                    <td className="py-1.5 text-slate-700 font-medium">{c.type}</td>
-                    <td className="py-1.5 text-slate-600">{c.definition || ''}</td>
-                    <td className="py-1.5 text-center">
-                      <input
-                        type="checkbox"
-                        checked={c.isSuper}
-                        onChange={(e) => onCoverUpdate(item.id, idx, { isSuper: e.target.checked })}
-                        className="rounded border-gray-300 text-teal-600 focus:ring-teal-500 h-3.5 w-3.5"
-                      />
-                    </td>
-                    <td className="py-1.5">
-                      <select
-                        className="border border-gray-200 rounded px-1.5 py-0.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
-                        value={ownerOptions.includes(c.owner) ? c.owner : c.owner}
-                        onChange={(e) => handleOwnerChange(idx, e.target.value)}
-                      >
-                        {ownerOptions.map((opt) => (
-                          <option key={opt} value={opt}>{opt}</option>
-                        ))}
-                        {!ownerOptions.includes(c.owner) && (
-                          <option value={c.owner}>{c.owner}</option>
-                        )}
-                        <option value="__add__">+ Add...</option>
-                      </select>
-                    </td>
-                    <td className="py-1.5 text-right text-slate-800 font-medium">
-                      {formatBenefitAmount(c.sumInsured)}
-                    </td>
-                  </tr>
-                ))}
+                {item.covers.map((c, idx) => {
+                  const rc = c.resolved;
+                  return (
+                    <tr key={idx} className="border-b border-gray-100">
+                      <td className="py-1.5 text-slate-700 font-medium">{c.type}</td>
+                      <td className="py-1.5 text-slate-600">{c.definition || ''}</td>
+                      <td className="py-1.5 text-slate-600">{c.premiumStructure || (rc?.structure ? (STRUCT_MAP[rc.structure] ?? rc.structure) : '')}</td>
+                      <td className="py-1.5 text-slate-600">{c.coverStructure || ''}</td>
+                      <td className="py-1.5 text-center">
+                        <input
+                          type="checkbox"
+                          checked={c.isSuper}
+                          disabled
+                          className="rounded border-gray-300 text-teal-600 h-3.5 w-3.5 cursor-default"
+                        />
+                      </td>
+                      <td className="py-1.5">
+                        <select
+                          className="border border-gray-200 rounded px-1.5 py-0.5 text-xs text-slate-700 bg-white focus:outline-none focus:ring-1 focus:ring-teal-500 cursor-pointer"
+                          value={ownerOptions.includes(c.owner) ? c.owner : c.owner}
+                          onChange={(e) => handleOwnerChange(idx, e.target.value)}
+                        >
+                          {ownerOptions.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                          {!ownerOptions.includes(c.owner) && (
+                            <option value={c.owner}>{c.owner}</option>
+                          )}
+                          <option value="__add__">+ Add...</option>
+                        </select>
+                      </td>
+                      <td className="py-1.5 text-slate-600">{lifeInsuredName}</td>
+                      <td className="py-1.5 text-right text-slate-800 font-medium">
+                        {formatBenefitAmount(c.sumInsured)}
+                      </td>
+                      <td className="py-1.5 text-slate-600">{c.benefitPeriod ? formatBenefitPeriod(c.benefitPeriod) : (rc?.benefitPeriod ? formatBenefitPeriod(rc.benefitPeriod) : '')}</td>
+                      <td className="py-1.5 text-slate-600">{c.waitingPeriod ? formatWaitingPeriod(c.waitingPeriod) : (rc?.waitingPeriod ? formatWaitingPeriod(rc.waitingPeriod) : '')}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </td>
@@ -507,8 +597,11 @@ export function ScenarioReviewPage({
   function handleVarySave(variedPolicy: ExistingPolicy) {
     if (!varyItem) return;
     setItems((prev) => prev.map((i) => i.id === varyItem.id ? { ...i, status: 'Vary' as ReviewStatus } : i));
-    const premiumPa = (variedPolicy.premiumSuper + variedPolicy.stampDutySuper) * PREMIUM_FREQUENCY_MULTIPLIER[variedPolicy.superFrequency]
-                     + (variedPolicy.premiumNonSuper + variedPolicy.stampDutyNonSuper) * PREMIUM_FREQUENCY_MULTIPLIER[variedPolicy.nonSuperFrequency];
+    const varyStyleMap: Record<string, string> = { S: 'Variable age-stepped', B: 'Blended', L: 'Variable to age 65', '70': 'Variable to age 70' };
+    const premSuper = variedPolicy.premiumSuper + variedPolicy.stampDutySuper;
+    const premNonSuper = variedPolicy.premiumNonSuper + variedPolicy.stampDutyNonSuper;
+    const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[variedPolicy.superFrequency]
+                     + premNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[variedPolicy.nonSuperFrequency];
     const productCodes: Record<string, string> = {};
     if (variedPolicy.researchPortfolio) {
       for (const [code, val] of Object.entries(variedPolicy.researchPortfolio.products)) {
@@ -522,16 +615,27 @@ export function ScenarioReviewPage({
       insurer: variedPolicy.provider,
       status: 'Vary to Existing',
       premiumPa,
+      premiumSuper: premSuper,
+      premiumNonSuper: premNonSuper,
+      superFrequencyCode: variedPolicy.superFrequency,
+      nonSuperFrequencyCode: variedPolicy.nonSuperFrequency,
       frequency: PREMIUM_FREQUENCY_LABELS[variedPolicy.superFrequency],
       lifeInsured: variedPolicy.lifeInsured,
       existingPolicy: variedPolicy,
-      covers: variedPolicy.covers.map((c) => ({
-        type: coverToNeedCode(c, variedPolicy.covers),
-        definition: coverLabel(c),
-        sumInsured: c.sumInsured,
-        owner: c.ownership ?? clientName,
-        isSuper: false,
-      })),
+      covers: variedPolicy.covers.map((c) => {
+        const needCode = coverToNeedCode(c, variedPolicy.covers);
+        return {
+          type: getCoverType(needCode),
+          definition: c.definition || undefined,
+          coverStructure: c.superLinked === 'Yes' ? 'Super-Linked' : c.standAlone === 'Yes' ? 'Standalone' : c.flexiLinked === 'Yes' ? 'Linked' : 'Standalone',
+          premiumStructure: c.premiumStyle ? (varyStyleMap[c.premiumStyle] ?? c.premiumStyle) : undefined,
+          sumInsured: c.sumInsured,
+          owner: c.ownership ?? clientName,
+          isSuper: c.super === 'Yes',
+          waitingPeriod: c.waitingPeriod,
+          benefitPeriod: c.benefitPeriod,
+        };
+      }),
       supplierCode: variedPolicy.researchPortfolio?.supplierCode ?? '',
       revisionDate: variedPolicy.researchPortfolio?.revisionDate,
       productCodes,
@@ -584,8 +688,9 @@ export function ScenarioReviewPage({
             <tr className="border-b border-gray-200">
               <th className="w-10 px-3 py-2.5" />
               <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600">Policy Details</th>
-              <th className="px-3 py-2.5 text-left text-xs font-semibold text-slate-600">Life Insured</th>
-              <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600">Premium p.a.</th>
+              <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600">Super</th>
+              <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600">Non-Super</th>
+              <th className="px-3 py-2.5 text-right text-xs font-semibold text-slate-600">Premium</th>
               <th className="px-3 py-2.5 text-center text-xs font-semibold text-slate-600">Status</th>
               <th className="w-12 px-3 py-2.5" />
             </tr>
@@ -594,7 +699,7 @@ export function ScenarioReviewPage({
             {/* Existing Covers */}
             {existingItems.length > 0 && (
               <tr className="bg-amber-50">
-                <td colSpan={6} className="px-4 py-2 text-xs font-bold text-amber-800">
+                <td colSpan={7} className="px-4 py-2 text-xs font-bold text-amber-800">
                   Existing Covers ({existingItems.length})
                 </td>
               </tr>
@@ -606,7 +711,7 @@ export function ScenarioReviewPage({
             {/* Recommendations */}
             {recItems.length > 0 && (
               <tr className="bg-emerald-50">
-                <td colSpan={6} className="px-4 py-2 text-xs font-bold text-emerald-800">
+                <td colSpan={7} className="px-4 py-2 text-xs font-bold text-emerald-800">
                   Recommendations ({recItems.length})
                 </td>
               </tr>
@@ -618,7 +723,7 @@ export function ScenarioReviewPage({
             {/* Vary to Existing */}
             {varyItems.length > 0 && (
               <tr className="bg-purple-50">
-                <td colSpan={6} className="px-4 py-2 text-xs font-bold text-purple-800">
+                <td colSpan={7} className="px-4 py-2 text-xs font-bold text-purple-800">
                   Vary to Existing ({varyItems.length})
                 </td>
               </tr>
@@ -630,7 +735,7 @@ export function ScenarioReviewPage({
             {/* Alternatives */}
             {altItems.length > 0 && (
               <tr className="bg-blue-50">
-                <td colSpan={6} className="px-4 py-2 text-xs font-bold text-blue-800">
+                <td colSpan={7} className="px-4 py-2 text-xs font-bold text-blue-800">
                   Alternatives ({altItems.length})
                 </td>
               </tr>
@@ -641,7 +746,7 @@ export function ScenarioReviewPage({
 
             {items.length === 0 && (
               <tr>
-                <td colSpan={6} className="px-6 py-12 text-center text-slate-400">
+                <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
                   No products to review. Go back and tag products as Rec or Alt.
                 </td>
               </tr>

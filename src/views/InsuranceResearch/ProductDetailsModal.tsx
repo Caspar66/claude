@@ -1,18 +1,15 @@
 import { useState } from 'react';
 import { X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { ReviewItem } from './ScenarioReviewPage';
+import type { ReviewItem, ReviewCover } from './ScenarioReviewPage';
 import type { PremiumFrequency } from './insuranceData';
 import { PREMIUM_FREQUENCY_LABELS } from './insuranceData';
 import type { ResolvedCover } from './quoteResultsData';
-import { getNeedLabel } from './quoteResultsData';
 import {
   STRUCTURE_4_LABELS,
   STRUCTURE_3_LABELS,
-  OWNER_INC_LABELS,
   OCCUPATION_LABELS,
 } from './needsTypes';
-import type { Structure4, Structure3, OwnerINC, OccupationType } from './needsTypes';
 
 type DetailsTab = 'details' | 'cover' | 'fees';
 
@@ -59,19 +56,9 @@ function resolveStructureLabel(code: string | undefined): string {
     ?? code;
 }
 
-function resolveOwnerLabel(code: string | undefined): string {
-  if (!code) return '';
-  return (OWNER_INC_LABELS as Record<string, string>)[code] ?? code;
-}
-
 function resolveOccupationLabel(code: string | undefined): string {
   if (!code) return '';
   return (OCCUPATION_LABELS as Record<string, string>)[code] ?? code;
-}
-
-function isSuper(ownerCode: string | undefined): string {
-  if (!ownerCode) return '';
-  return ownerCode === 'S' || ownerCode === 'J' || ownerCode === 'K' || ownerCode === 'M' ? 'True' : 'False';
 }
 
 function benefitFrequency(rc: ResolvedCover): string {
@@ -92,11 +79,6 @@ function formatWaitingPeriod(wp: string | undefined): string {
   return `${wp} days`;
 }
 
-function coverStructure(rc: ResolvedCover): string {
-  if (rc.isLinked) return 'Linked';
-  return 'Standalone';
-}
-
 // ── Cover Details Sub-Modal ────────────────────────────────────────────────
 
 function CoverDetailsModal({
@@ -105,14 +87,18 @@ function CoverDetailsModal({
   lifeInsuredName,
   onClose,
 }: {
-  cover: { type: string; definition?: string; sumInsured: string; owner?: string; resolved?: ResolvedCover };
+  cover: ReviewCover;
   itemStatus: string;
   lifeInsuredName: string;
   onClose: () => void;
 }) {
   const rc = cover.resolved;
-
-  const ownerDisplay = rc?.owner ? resolveOwnerLabel(rc.owner) : (cover.owner || lifeInsuredName);
+  const ownerDisplay = cover.owner || lifeInsuredName;
+  const coverStructureDisplay = cover.coverStructure || (rc ? (rc.isLinked ? 'Linked' : 'Standalone') : '');
+  const premStructureDisplay = cover.premiumStructure || (rc?.structure ? resolveStructureLabel(rc.structure) : '');
+  const isSuperDisplay = cover.isSuper ? 'True' : 'False';
+  const isTPD = cover.type === 'TPD';
+  const isIP = cover.type === 'Income Protection';
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50">
@@ -127,25 +113,25 @@ function CoverDetailsModal({
         <div className="flex-1 overflow-auto px-6 py-5 space-y-4">
           <div className="grid grid-cols-3 gap-4">
             {readOnlyField('Cover Type', cover.type)}
-            {readOnlyField('Cover Structure', rc ? coverStructure(rc) : '')}
+            {readOnlyField('Cover Structure', coverStructureDisplay)}
             {readOnlyField('Owner', ownerDisplay)}
           </div>
           <div className="grid grid-cols-3 gap-4">
             {readOnlyField('Life Insured', lifeInsuredName)}
-            {readOnlyField('Premium Structure', rc ? resolveStructureLabel(rc.structure) : '')}
-            {readOnlyField('Is Super', rc ? isSuper(rc.owner) : '')}
+            {readOnlyField('Premium Structure', premStructureDisplay)}
+            {readOnlyField('Is Super', isSuperDisplay)}
           </div>
           <div className="grid grid-cols-3 gap-4">
             {readOnlyField('Benefit Amount', cover.sumInsured ? parseFloat(cover.sumInsured).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '')}
-            {readOnlyField('Definition', rc?.definition || cover.definition || '')}
+            {readOnlyField('Definition', cover.definition || '')}
             {readOnlyField('Benefit Status', itemStatus)}
           </div>
           <div className="grid grid-cols-3 gap-4">
             {readOnlyField('Benefit Frequency', rc ? benefitFrequency(rc) : '')}
-            {readOnlyField('Benefit Period', formatBenefitPeriod(rc?.benefitPeriod))}
-            {readOnlyField('Waiting Period', formatWaitingPeriod(rc?.waitingPeriod))}
+            {readOnlyField('Benefit Period', formatBenefitPeriod(cover.benefitPeriod || rc?.benefitPeriod))}
+            {readOnlyField('Waiting Period', formatWaitingPeriod(cover.waitingPeriod || rc?.waitingPeriod))}
           </div>
-          {rc?.occupationType && (
+          {!isTPD && !isIP && rc?.occupationType && (
             <div className="grid grid-cols-3 gap-4">
               {readOnlyField('Occupation Type', resolveOccupationLabel(rc.occupationType))}
               <div /><div />
@@ -323,30 +309,37 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
                 <thead>
                   <tr className="border-b border-gray-200 bg-slate-50">
                     <th className="py-2 px-2 text-left font-semibold text-slate-600">Type</th>
-                    <th className="py-2 px-2 text-left font-semibold text-slate-600">Definition</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-600">Description</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-600">Premium Structure</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-600">Cover Structure</th>
+                    <th className="py-2 px-2 text-center font-semibold text-slate-600">Super</th>
                     <th className="py-2 px-2 text-left font-semibold text-slate-600">Owner</th>
                     <th className="py-2 px-2 text-left font-semibold text-slate-600">Life Insured</th>
-                    <th className="py-2 px-2 text-left font-semibold text-slate-600">Benefit Amount</th>
-                    <th className="py-2 px-2 text-left font-semibold text-slate-600">Waiting Period</th>
+                    <th className="py-2 px-2 text-right font-semibold text-slate-600">Benefit Amount</th>
                     <th className="py-2 px-2 text-left font-semibold text-slate-600">Benefit Period</th>
+                    <th className="py-2 px-2 text-left font-semibold text-slate-600">Waiting Period</th>
                     <th className="w-8" />
                   </tr>
                 </thead>
                 <tbody>
                   {item.covers.map((c, idx) => {
                     const rc = c.resolved;
-                    const ownerDisplay = rc?.owner ? resolveOwnerLabel(rc.owner) : (c.owner || lifeInsuredName);
                     return (
                       <tr key={idx} className="border-b border-gray-100">
                         <td className="py-2 px-2 text-slate-700">{c.type}</td>
-                        <td className="py-2 px-2 text-slate-600">{c.definition || c.type}</td>
-                        <td className="py-2 px-2 text-slate-600">{ownerDisplay}</td>
+                        <td className="py-2 px-2 text-slate-600">{c.definition || ''}</td>
+                        <td className="py-2 px-2 text-slate-600">{c.premiumStructure || (rc?.structure ? resolveStructureLabel(rc.structure) : '')}</td>
+                        <td className="py-2 px-2 text-slate-600">{c.coverStructure || ''}</td>
+                        <td className="py-2 px-2 text-center">
+                          <input type="checkbox" checked={c.isSuper} disabled className="rounded border-gray-300 text-teal-600 h-3.5 w-3.5 cursor-default" />
+                        </td>
+                        <td className="py-2 px-2 text-slate-600">{c.owner || lifeInsuredName}</td>
                         <td className="py-2 px-2 text-slate-600">{lifeInsuredName}</td>
                         <td className="py-2 px-2 text-right text-slate-800 font-medium">
                           {c.sumInsured ? `$${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
                         </td>
-                        <td className="py-2 px-2 text-slate-600">{formatWaitingPeriod(rc?.waitingPeriod)}</td>
-                        <td className="py-2 px-2 text-slate-600">{formatBenefitPeriod(rc?.benefitPeriod)}</td>
+                        <td className="py-2 px-2 text-slate-600">{c.benefitPeriod ? formatBenefitPeriod(c.benefitPeriod) : (rc?.benefitPeriod ? formatBenefitPeriod(rc.benefitPeriod) : '')}</td>
+                        <td className="py-2 px-2 text-slate-600">{c.waitingPeriod ? formatWaitingPeriod(c.waitingPeriod) : (rc?.waitingPeriod ? formatWaitingPeriod(rc.waitingPeriod) : '')}</td>
                         <td className="py-2 px-2 text-center">
                           <button
                             onClick={() => setCoverDetailIdx(idx)}
