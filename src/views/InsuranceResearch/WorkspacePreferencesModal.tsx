@@ -325,7 +325,7 @@ function CommissionsTab({ draft, onChange }: { draft: WorkspacePreferences; onCh
         <div className="text-center">Initial</div>
         <div className="text-center">Renewal</div>
       </div>
-      {suppliers.map((s) => {
+      {suppliers.filter((s) => s.fundType === 'Retail').map((s) => {
         const choices = s.commissionOptions?.length ? s.commissionOptions : s.defaultCommissionCode ? [{ code: s.defaultCommissionCode, name: s.defaultCommissionCode }] : [];
         const selectedCode = draft.scenario.commissionBySupplier[s.code] ?? s.defaultCommissionCode ?? '';
         const selected = choices.find((c) => c.code === selectedCode);
