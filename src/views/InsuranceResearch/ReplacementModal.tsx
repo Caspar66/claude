@@ -141,10 +141,6 @@ function FeatureGroup({
   return (
     <div className="mb-3">
       <div className={`flex items-center gap-1.5 w-full px-2 py-1.5 rounded text-xs font-semibold ${colorClass}`}>
-        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1.5 flex-1 text-left">
-          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-          {title} ({dedupedFeatures.length})
-        </button>
         <button
           onClick={(e) => { e.stopPropagation(); onSetAllChecked(groupFeatureCodes, groupSubKeys, !allChecked); }}
           className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${
@@ -153,6 +149,10 @@ function FeatureGroup({
           title={allChecked ? 'Unselect All' : 'Select All'}
         >
           {allChecked && <Check size={10} />}
+        </button>
+        <button onClick={() => setExpanded(!expanded)} className="flex items-center gap-1.5 flex-1 text-left">
+          {expanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+          {title} ({dedupedFeatures.length})
         </button>
       </div>
       {expanded && (
