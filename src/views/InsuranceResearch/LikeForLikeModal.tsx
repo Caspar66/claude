@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { X, Loader2, Check, ChevronDown, ChevronRight, Link2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import type { ReviewItem, ReviewCover } from './ScenarioReviewPage';
+import type { ReviewItem } from './ScenarioReviewPage';
 import type { ResearchPortfolio, ExistingPolicy, ExistingCoverType } from './insuranceData';
-import { PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, COVER_TYPE_LABELS, coverToNeedCode } from './insuranceData';
+import { PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, COVER_TYPE_LABELS } from './insuranceData';
 import type { PremiumFrequency } from './insuranceData';
 import { MapProductModal } from './MapProductModal';
 import { postSimilaritiesAndDifferences } from '@/services/omnilifeApi';
@@ -11,7 +11,7 @@ import type { DifferenceFeature, SimilaritiesAndDifferencesEntry } from '@/servi
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-type L4LTab = 'details' | 'compare';
+type ModalTab = 'details' | 'compare';
 
 interface ExistingProductState {
   existingItemId: string;
@@ -20,14 +20,12 @@ interface ExistingProductState {
   superFreq: PremiumFrequency;
   nonSuperFreq: PremiumFrequency;
   linkedPortfolio?: ResearchPortfolio;
-  differences?: DifferenceFeature[];
-  compareLoading?: boolean;
-  compareError?: string;
 }
 
 export interface LikeForLikeState {
   selectedExistingIds: string[];
   existingStates: Record<string, ExistingProductState>;
+  checkedDifferences?: string[];
 }
 
 // ── Props ───────────────────────────────────────────────────────────────────
@@ -52,6 +50,10 @@ const FREQ_SHORT: Record<PremiumFrequency, string> = {
 };
 
 function buildPolicyFromRecommended(rec: ReviewItem, state: ExistingProductState): ExistingPolicy {
+  const labelToType: Record<string, ExistingCoverType> = {
+    'Life': 'Life', 'TPD': 'TPD', 'Trauma': 'Trauma',
+    'Income Protection': 'IP', 'Business Expense': 'BE', 'Child Cover': 'ChildCover',
+  };
   return {
     id: `l4l-${state.existingItemId}`,
     provider: rec.insurer,
@@ -63,12 +65,7 @@ function buildPolicyFromRecommended(rec: ReviewItem, state: ExistingProductState
     premiumNonSuper: parseFloat(state.premNonSuperEdit) || 0,
     stampDutyNonSuper: 0,
     nonSuperFrequency: state.nonSuperFreq,
-    covers: rec.covers.map((c) => {
-      const labelToType: Record<string, ExistingCoverType> = {
-        'Life': 'Life', 'TPD': 'TPD', 'Trauma': 'Trauma',
-        'Income Protection': 'IP', 'Business Expense': 'BE', 'Child Cover': 'ChildCover',
-      };
-      return {
+    covers: rec.covers.map((c) => ({
       id: crypto.randomUUID(),
       coverType: labelToType[c.type] ?? (c.type as ExistingCoverType),
       sumInsured: c.sumInsured,
@@ -77,15 +74,15 @@ function buildPolicyFromRecommended(rec: ReviewItem, state: ExistingProductState
       super: c.isSuper ? 'Yes' : 'No',
       waitingPeriod: c.waitingPeriod,
       benefitPeriod: c.benefitPeriod,
-    };}),
+    })),
     action: 'Review',
     researchPortfolio: state.linkedPortfolio,
   };
 }
 
-// ── Existing Product Panel ──────────────────────────────────────────────────
+// ── Existing Product Details Panel ──────────────────────────────────────────
 
-function ExistingProductPanel({
+function ExistingProductDetailsPanel({
   existingItem,
   recItem,
   state,
@@ -102,38 +99,8 @@ function ExistingProductPanel({
   clientName: string;
   partnerName: string | null;
 }) {
-  const [activeTab, setActiveTab] = useState<L4LTab>('details');
   const [expanded, setExpanded] = useState(true);
   const lifeInsuredName = recItem.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
-
-  const handleCompare = useCallback(async () => {
-    if (!recItem.supplierCode || !state.linkedPortfolio) return;
-
-    const recEntry: SimilaritiesAndDifferencesEntry = {
-      supplierCode: recItem.supplierCode,
-      revisionDate: recItem.revisionDate,
-      products: recItem.productCodes,
-    };
-
-    const l4lEntry: SimilaritiesAndDifferencesEntry = {
-      supplierCode: state.linkedPortfolio.supplierCode,
-      revisionDate: state.linkedPortfolio.revisionDate,
-      products: {},
-    };
-    for (const [code, val] of Object.entries(state.linkedPortfolio.products)) {
-      if (val?.productCode) l4lEntry.products[code] = val.productCode;
-    }
-
-    onStateChange({ ...state, compareLoading: true, compareError: undefined });
-
-    try {
-      const result = await postSimilaritiesAndDifferences([recEntry, l4lEntry]);
-      onStateChange({ ...state, differences: result.differences, compareLoading: false, compareError: undefined });
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Failed to load comparison';
-      onStateChange({ ...state, compareLoading: false, compareError: msg });
-    }
-  }, [recItem, state, onStateChange]);
 
   return (
     <div className="border border-teal-300 rounded-lg bg-teal-50/30 mb-3 overflow-hidden">
@@ -153,204 +120,401 @@ function ExistingProductPanel({
       </button>
 
       {expanded && (
-        <div className="border-t border-teal-200">
-          {/* Tabs */}
-          <div className="flex border-b border-gray-200">
-            <button
-              onClick={() => setActiveTab('details')}
-              className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
-                activeTab === 'details'
-                  ? 'text-teal-700 border-b-2 border-teal-700 bg-teal-50/30'
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              Details
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab('compare');
-                if (state.linkedPortfolio && !state.differences && !state.compareLoading) {
-                  handleCompare();
-                }
-              }}
-              className={`flex-1 px-4 py-2 text-xs font-medium transition-colors ${
-                activeTab === 'compare'
-                  ? 'text-teal-700 border-b-2 border-teal-700 bg-teal-50/30'
-                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
-              } ${!state.linkedPortfolio ? 'opacity-40 cursor-not-allowed' : ''}`}
-              disabled={!state.linkedPortfolio}
-            >
-              Compare
-            </button>
+        <div className="border-t border-teal-200 px-4 py-3 space-y-3">
+          {/* Premium editing */}
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-slate-500 italic w-[130px]">Premium (Super):</label>
+              <input
+                type="number"
+                step="0.01"
+                className="w-24 border border-gray-200 rounded px-2 py-1 text-xs text-right"
+                value={state.premSuperEdit}
+                onChange={(e) => onStateChange({ ...state, premSuperEdit: e.target.value })}
+              />
+              <select
+                className="border border-gray-200 rounded px-1.5 py-1 text-xs"
+                value={state.superFreq}
+                onChange={(e) => onStateChange({ ...state, superFreq: e.target.value as PremiumFrequency })}
+              >
+                {Object.entries(PREMIUM_FREQUENCY_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-slate-500 italic w-[130px]">Premium (Non-super):</label>
+              <input
+                type="number"
+                step="0.01"
+                className="w-24 border border-gray-200 rounded px-2 py-1 text-xs text-right"
+                value={state.premNonSuperEdit}
+                onChange={(e) => onStateChange({ ...state, premNonSuperEdit: e.target.value })}
+              />
+              <select
+                className="border border-gray-200 rounded px-1.5 py-1 text-xs"
+                value={state.nonSuperFreq}
+                onChange={(e) => onStateChange({ ...state, nonSuperFreq: e.target.value as PremiumFrequency })}
+              >
+                {Object.entries(PREMIUM_FREQUENCY_LABELS).map(([k, v]) => (
+                  <option key={k} value={k}>{v}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-slate-600 font-semibold w-[130px]">Total Premium:</label>
+            <span className="text-xs font-semibold text-slate-800">
+              {fmt(
+                (parseFloat(state.premSuperEdit) || 0) * PREMIUM_FREQUENCY_MULTIPLIER[state.superFreq] +
+                (parseFloat(state.premNonSuperEdit) || 0) * PREMIUM_FREQUENCY_MULTIPLIER[state.nonSuperFreq]
+              )} /year
+            </span>
           </div>
 
-          {activeTab === 'details' && (
-            <div className="px-4 py-3 space-y-3">
-              {/* Premium editing */}
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 italic w-[130px]">Premium (Super):</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-24 border border-gray-200 rounded px-2 py-1 text-xs text-right"
-                    value={state.premSuperEdit}
-                    onChange={(e) => onStateChange({ ...state, premSuperEdit: e.target.value })}
-                  />
-                  <select
-                    className="border border-gray-200 rounded px-1.5 py-1 text-xs"
-                    value={state.superFreq}
-                    onChange={(e) => onStateChange({ ...state, superFreq: e.target.value as PremiumFrequency })}
-                  >
-                    {Object.entries(PREMIUM_FREQUENCY_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs text-slate-500 italic w-[130px]">Premium (Non-super):</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    className="w-24 border border-gray-200 rounded px-2 py-1 text-xs text-right"
-                    value={state.premNonSuperEdit}
-                    onChange={(e) => onStateChange({ ...state, premNonSuperEdit: e.target.value })}
-                  />
-                  <select
-                    className="border border-gray-200 rounded px-1.5 py-1 text-xs"
-                    value={state.nonSuperFreq}
-                    onChange={(e) => onStateChange({ ...state, nonSuperFreq: e.target.value as PremiumFrequency })}
-                  >
-                    {Object.entries(PREMIUM_FREQUENCY_LABELS).map(([k, v]) => (
-                      <option key={k} value={k}>{v}</option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <label className="text-xs text-slate-600 font-semibold w-[130px]">Total Premium:</label>
-                <span className="text-xs font-semibold text-slate-800">
-                  {fmt(
-                    (parseFloat(state.premSuperEdit) || 0) * PREMIUM_FREQUENCY_MULTIPLIER[state.superFreq] +
-                    (parseFloat(state.premNonSuperEdit) || 0) * PREMIUM_FREQUENCY_MULTIPLIER[state.nonSuperFreq]
-                  )} /year
-                </span>
-              </div>
+          {/* Cover Details (view-only, from recommended) */}
+          <div className="border-t border-gray-200 pt-3">
+            <div className="text-xs font-semibold text-slate-600 mb-2 underline">Cover Details</div>
+            <table className="w-full text-[10px]">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="py-1 text-left text-slate-600 font-semibold">Type</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Details</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Owner</th>
+                  <th className="py-1 text-right text-slate-600 font-semibold">Benefit Amount</th>
+                  <th className="py-1 text-center text-slate-600 font-semibold w-12">Super</th>
+                  <th className="py-1 text-left text-slate-600 font-semibold">Life Insured</th>
+                </tr>
+              </thead>
+              <tbody>
+                {recItem.covers.map((c, idx) => (
+                  <tr key={idx} className="border-b border-gray-100">
+                    <td className="py-1 text-slate-700">{c.type}</td>
+                    <td className="py-1 text-slate-600">
+                      {[c.premiumStructure, c.coverStructure, c.definition].filter(Boolean).join(' / ') || c.type}
+                    </td>
+                    <td className="py-1 text-slate-600">{c.owner || lifeInsuredName}</td>
+                    <td className="py-1 text-right text-slate-800 font-medium">
+                      {c.sumInsured ? `$${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
+                    </td>
+                    <td className="py-1 text-center">
+                      <input type="checkbox" checked={c.isSuper} disabled className="rounded border-gray-300 text-teal-600 h-3 w-3 cursor-default" />
+                    </td>
+                    <td className="py-1 text-slate-600">{lifeInsuredName}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-              {/* Cover Details (view-only, from recommended) */}
-              <div className="border-t border-gray-200 pt-3">
-                <div className="text-xs font-semibold text-slate-600 mb-2 underline">Cover Details</div>
-                <table className="w-full text-[10px]">
-                  <thead>
-                    <tr className="border-b border-gray-200">
-                      <th className="py-1 text-left text-slate-600 font-semibold">Type</th>
-                      <th className="py-1 text-left text-slate-600 font-semibold">Details</th>
-                      <th className="py-1 text-left text-slate-600 font-semibold">Owner</th>
-                      <th className="py-1 text-right text-slate-600 font-semibold">Benefit Amount</th>
-                      <th className="py-1 text-center text-slate-600 font-semibold w-12">Super</th>
-                      <th className="py-1 text-left text-slate-600 font-semibold">Life Insured</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {recItem.covers.map((c, idx) => (
-                      <tr key={idx} className="border-b border-gray-100">
-                        <td className="py-1 text-slate-700">{c.type}</td>
-                        <td className="py-1 text-slate-600">
-                          {[c.premiumStructure, c.coverStructure, c.definition].filter(Boolean).join(' / ') || c.type}
-                        </td>
-                        <td className="py-1 text-slate-600">{c.owner || lifeInsuredName}</td>
-                        <td className="py-1 text-right text-slate-800 font-medium">
-                          {c.sumInsured ? `$${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
-                        </td>
-                        <td className="py-1 text-center">
-                          <input type="checkbox" checked={c.isSuper} disabled className="rounded border-gray-300 text-teal-600 h-3 w-3 cursor-default" />
-                        </td>
-                        <td className="py-1 text-slate-600">{lifeInsuredName}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Link button */}
-              <div className="flex items-center gap-2 pt-1">
-                <button
-                  onClick={onOpenLink}
-                  className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
-                >
-                  <Link2 size={12} />
-                  {state.linkedPortfolio ? 'Change Linked Products' : 'Link Products'}
-                </button>
-                {state.linkedPortfolio && (
-                  <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
-                    <CheckCircle2 size={10} /> Linked
-                  </span>
-                )}
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'compare' && (
-            <div className="px-4 py-3">
-              {!state.linkedPortfolio && (
-                <p className="text-xs text-slate-400 text-center py-6">
-                  Link products first to compare differences.
-                </p>
-              )}
-              {state.compareLoading && (
-                <div className="flex items-center gap-2 py-6 justify-center text-xs text-slate-400">
-                  <Loader2 size={14} className="animate-spin" />
-                  Loading comparison…
-                </div>
-              )}
-              {state.compareError && (
-                <p className="text-xs text-red-500 text-center py-4">{state.compareError}</p>
-              )}
-              {state.differences && state.differences.length > 0 && (
-                <div className="overflow-auto max-h-[300px]">
-                  <table className="w-full text-xs border-collapse">
-                    <thead className="sticky top-0 bg-white">
-                      <tr className="border-b border-gray-200">
-                        <th className="py-1.5 text-left text-slate-600 font-semibold px-2">Difference</th>
-                        <th className="py-1.5 text-center text-slate-600 font-semibold px-2 uppercase text-[10px]">Recommended</th>
-                        <th className="py-1.5 text-center text-slate-600 font-semibold px-2 uppercase text-[10px]">Like for Like</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {state.differences.map((d) => {
-                        const recIncluded = d.featureIncluded.some((p) => p.endsWith('P0'));
-                        const l4lIncluded = d.featureIncluded.some((p) => p.endsWith('P1'));
-
-                        return (
-                          <tr key={d.code} className={`border-b border-gray-100 ${l4lIncluded ? 'bg-emerald-50/30' : 'bg-red-50/30'}`}>
-                            <td className="py-1.5 px-2 text-slate-700">{d.name}</td>
-                            <td className="py-1.5 px-2 text-center">
-                              {recIncluded
-                                ? <CheckCircle2 size={14} className="inline text-emerald-500" />
-                                : <XCircle size={14} className="inline text-red-400" />}
-                            </td>
-                            <td className="py-1.5 px-2 text-center">
-                              {l4lIncluded
-                                ? <CheckCircle2 size={14} className="inline text-emerald-500" />
-                                : <XCircle size={14} className="inline text-red-400" />}
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-              {state.differences && state.differences.length === 0 && (
-                <p className="text-xs text-slate-400 text-center py-6">No differences found between these products.</p>
-              )}
-            </div>
-          )}
+          {/* Link button */}
+          <div className="flex items-center gap-2 pt-1">
+            <button
+              onClick={onOpenLink}
+              className="text-xs text-blue-600 hover:text-blue-800 underline flex items-center gap-1"
+            >
+              <Link2 size={12} />
+              {state.linkedPortfolio ? 'Change Linked Products' : 'Link Products'}
+            </button>
+            {state.linkedPortfolio && (
+              <span className="text-[10px] text-emerald-600 flex items-center gap-0.5">
+                <CheckCircle2 size={10} /> Linked
+              </span>
+            )}
+          </div>
         </div>
       )}
     </div>
+  );
+}
+
+// ── Compare Tab Content ─────────────────────────────────────────────────────
+
+function CompareTabContent({
+  recommendedItem,
+  linkedEntries,
+  existingItems,
+  checkedDiffs,
+  onToggleDiff,
+  onToggleAllDiffs,
+}: {
+  recommendedItem: ReviewItem;
+  linkedEntries: { existingItem: ReviewItem; portfolio: ResearchPortfolio }[];
+  existingItems: ReviewItem[];
+  checkedDiffs: Set<string>;
+  onToggleDiff: (code: string) => void;
+  onToggleAllDiffs: (checked: boolean) => void;
+}) {
+  const [differences, setDifferences] = useState<DifferenceFeature[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [hasFetched, setHasFetched] = useState(false);
+
+  const handleCompare = useCallback(async () => {
+    if (linkedEntries.length === 0) return;
+
+    const entries: SimilaritiesAndDifferencesEntry[] = [
+      {
+        supplierCode: recommendedItem.supplierCode,
+        revisionDate: recommendedItem.revisionDate,
+        products: recommendedItem.productCodes,
+      },
+      ...linkedEntries.map((le) => {
+        const products: Record<string, string> = {};
+        for (const [code, val] of Object.entries(le.portfolio.products)) {
+          if (val?.productCode) products[code] = val.productCode;
+        }
+        return {
+          supplierCode: le.portfolio.supplierCode,
+          revisionDate: le.portfolio.revisionDate,
+          products,
+        };
+      }),
+    ];
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const result = await postSimilaritiesAndDifferences(entries);
+      setDifferences(result.differences);
+      setHasFetched(true);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load comparison';
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [recommendedItem, linkedEntries]);
+
+  if (linkedEntries.length === 0) {
+    return (
+      <div className="px-5 py-12 text-center text-xs text-slate-400">
+        No linked products to compare. Go to the Details tab and link at least one existing product.
+      </div>
+    );
+  }
+
+  const allChecked = differences ? differences.every((d) => checkedDiffs.has(d.code)) : false;
+
+  // Group differences by coverType
+  const groupedDiffs: { coverType: string; features: DifferenceFeature[] }[] = [];
+  if (differences) {
+    const groupMap = new Map<string, DifferenceFeature[]>();
+    for (const d of differences) {
+      const key = d.coverType || 'General';
+      if (!groupMap.has(key)) groupMap.set(key, []);
+      groupMap.get(key)!.push(d);
+    }
+    for (const [coverType, features] of groupMap) {
+      groupedDiffs.push({ coverType, features });
+    }
+  }
+
+  return (
+    <div className="flex-1 overflow-auto">
+      {/* Compare button */}
+      {!hasFetched && !loading && (
+        <div className="px-5 py-6 text-center">
+          <p className="text-xs text-slate-500 mb-3">
+            {linkedEntries.length} product{linkedEntries.length > 1 ? 's' : ''} linked and ready to compare.
+          </p>
+          <Button
+            size="sm"
+            className="bg-teal-700 hover:bg-teal-800 text-white text-xs"
+            onClick={handleCompare}
+          >
+            Load Comparison
+          </Button>
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center gap-2 py-12 justify-center text-xs text-slate-400">
+          <Loader2 size={14} className="animate-spin" />
+          Loading comparison…
+        </div>
+      )}
+      {error && <p className="text-xs text-red-500 text-center py-6">{error}</p>}
+
+      {differences && (
+        <table className="w-full text-xs border-collapse">
+          <thead className="sticky top-0 bg-white z-10">
+            {/* Column headers: logos */}
+            <tr className="border-b border-gray-100">
+              <th className="px-3 py-2 text-left" />
+              <th className="px-3 py-2 text-center text-[10px] text-slate-500 uppercase tracking-wide font-semibold">
+                Recommended
+              </th>
+              {linkedEntries.map((le, i) => (
+                <th key={i} className="px-3 py-2 text-center text-[10px] text-slate-500 uppercase tracking-wide font-semibold">
+                  Like for Like
+                </th>
+              ))}
+            </tr>
+            <tr className="border-b border-gray-100">
+              <th className="px-3 py-2 text-left" />
+              <th className="px-3 py-3 text-center">
+                {recommendedItem.insurerLogo && (
+                  <img src={recommendedItem.insurerLogo} alt="" className="w-12 h-12 object-contain mx-auto mb-1" />
+                )}
+                <div className="text-xs font-semibold text-slate-800">{recommendedItem.insurer}</div>
+              </th>
+              {linkedEntries.map((le, i) => (
+                <th key={i} className="px-3 py-3 text-center">
+                  {le.existingItem.insurerLogo && (
+                    <img src={le.existingItem.insurerLogo} alt="" className="w-12 h-12 object-contain mx-auto mb-1" />
+                  )}
+                  <div className="text-xs font-semibold text-slate-800">{le.existingItem.insurer}</div>
+                </th>
+              ))}
+            </tr>
+            {/* Include in report row */}
+            <tr className="border-b border-gray-200 bg-slate-50">
+              <th className="px-3 py-2 text-left">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={allChecked}
+                    onChange={() => onToggleAllDiffs(!allChecked)}
+                    className="rounded border-gray-300 text-teal-600 h-3.5 w-3.5"
+                  />
+                  <span className="text-[10px] text-slate-600 font-medium">Differences to be included in Report</span>
+                </label>
+              </th>
+              <th className="px-3 py-2 text-center text-[10px] text-slate-500 font-medium">{recommendedItem.label}</th>
+              {linkedEntries.map((le, i) => (
+                <th key={i} className="px-3 py-2 text-center text-[10px] text-slate-500 font-medium">
+                  {le.existingItem.label}
+                </th>
+              ))}
+            </tr>
+            {/* Cover details row */}
+            <tr className="border-b border-gray-200 bg-gray-50">
+              <td className="px-3 py-2 text-[10px] text-slate-700 font-medium">
+                {recommendedItem.covers.map((c) => {
+                  const amt = c.sumInsured ? parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0') : 0;
+                  return `${c.type} ${amt > 0 ? `$${amt.toLocaleString('en-AU')}` : ''} ${c.premiumStructure || ''}`.trim();
+                }).join('\n').split('\n').map((line, i) => <div key={i}>{line}</div>)}
+              </td>
+              <td className="px-3 py-2 text-center text-[10px] text-slate-600 font-medium">
+                {recommendedItem.label}
+              </td>
+              {linkedEntries.map((le, i) => (
+                <td key={i} className="px-3 py-2 text-center text-[10px] text-slate-600 font-medium">
+                  {le.existingItem.label}
+                </td>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {groupedDiffs.map((group) => (
+              <GroupSection
+                key={group.coverType}
+                coverType={group.coverType}
+                features={group.features}
+                linkedCount={linkedEntries.length}
+                checkedDiffs={checkedDiffs}
+                onToggleDiff={onToggleDiff}
+              />
+            ))}
+            {differences.length === 0 && (
+              <tr>
+                <td colSpan={2 + linkedEntries.length} className="px-3 py-8 text-center text-slate-400">
+                  No differences found between these products.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+// ── Feature Group Section ───────────────────────────────────────────────────
+
+const COVER_TYPE_DISPLAY: Record<string, string> = {
+  TRM: 'Life', TPD: 'TPD', TPE: 'TPD', TPS: 'TPD', TPR: 'TPD',
+  TRE: 'Trauma', TRS: 'Trauma', TRA: 'Trauma',
+  INC: 'Income Protection', BUS: 'Business Expense',
+  ALL: 'All Cover Types', General: 'General',
+};
+
+function GroupSection({
+  coverType,
+  features,
+  linkedCount,
+  checkedDiffs,
+  onToggleDiff,
+}: {
+  coverType: string;
+  features: DifferenceFeature[];
+  linkedCount: number;
+  checkedDiffs: Set<string>;
+  onToggleDiff: (code: string) => void;
+}) {
+  // Group features by their name prefix (e.g. "Exclusions for Life Cover", "Indexation Benefit")
+  const featureGroups: { groupName: string; items: DifferenceFeature[] }[] = [];
+  const groupMap = new Map<string, DifferenceFeature[]>();
+
+  for (const f of features) {
+    const parts = f.name.split(' - ');
+    const groupName = parts.length > 1 ? parts[0].trim() : (COVER_TYPE_DISPLAY[coverType] ?? coverType);
+    if (!groupMap.has(groupName)) groupMap.set(groupName, []);
+    groupMap.get(groupName)!.push(f);
+  }
+  for (const [groupName, items] of groupMap) {
+    featureGroups.push({ groupName, items });
+  }
+
+  const label = COVER_TYPE_DISPLAY[coverType] ?? coverType;
+
+  return (
+    <>
+      {/* Cover type header */}
+      <tr className="bg-[#2c3e6b]">
+        <td colSpan={2 + linkedCount} className="px-3 py-1.5 text-xs font-semibold text-white">
+          {label} ({features.length} features)
+        </td>
+      </tr>
+      {features.map((d) => {
+        const isChecked = checkedDiffs.has(d.code);
+        return (
+          <tr key={d.code} className="border-b border-gray-100 hover:bg-slate-50/50">
+            <td className="px-3 py-1.5">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={isChecked}
+                  onChange={() => onToggleDiff(d.code)}
+                  className="rounded border-gray-300 text-teal-600 h-3.5 w-3.5"
+                />
+                <span className="text-slate-700">{d.name}</span>
+              </label>
+            </td>
+            <td className="px-3 py-1.5 text-center">
+              {d.featureIncluded.some((p) => p.endsWith('P0'))
+                ? <CheckCircle2 size={14} className="inline text-emerald-500" />
+                : <XCircle size={14} className="inline text-red-400" />}
+            </td>
+            {Array.from({ length: linkedCount }, (_, i) => {
+              const suffix = `P${i + 1}`;
+              const included = d.featureIncluded.some((p) => p.endsWith(suffix));
+              return (
+                <td key={i} className={`px-3 py-1.5 text-center ${included ? 'bg-emerald-50/40' : 'bg-red-50/40'}`}>
+                  {included
+                    ? <CheckCircle2 size={14} className="inline text-emerald-500" />
+                    : <XCircle size={14} className="inline text-red-400" />}
+                </td>
+              );
+            })}
+          </tr>
+        );
+      })}
+    </>
   );
 }
 
@@ -364,7 +528,7 @@ export function LikeForLikeModal({
   initialState,
   onClose,
 }: Props) {
-  const lifeInsuredName = recommendedItem.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
+  const [activeTab, setActiveTab] = useState<ModalTab>('details');
 
   const [selectedIds, setSelectedIds] = useState<Set<string>>(() =>
     initialState ? new Set(initialState.selectedExistingIds) : new Set()
@@ -372,12 +536,16 @@ export function LikeForLikeModal({
   const [existingStates, setExistingStates] = useState<Record<string, ExistingProductState>>(() =>
     initialState?.existingStates ?? {}
   );
+  const [checkedDiffs, setCheckedDiffs] = useState<Set<string>>(() =>
+    initialState?.checkedDifferences ? new Set(initialState.checkedDifferences) : new Set()
+  );
   const [linkTarget, setLinkTarget] = useState<{ existingItemId: string } | null>(null);
 
   function buildState(): LikeForLikeState {
     return {
       selectedExistingIds: Array.from(selectedIds),
       existingStates,
+      checkedDifferences: Array.from(checkedDiffs),
     };
   }
 
@@ -416,11 +584,35 @@ export function LikeForLikeModal({
       [linkTarget.existingItemId]: {
         ...prev[linkTarget.existingItemId],
         linkedPortfolio: portfolio,
-        differences: undefined,
-        compareError: undefined,
       },
     }));
     setLinkTarget(null);
+  }
+
+  function handleToggleDiff(code: string) {
+    setCheckedDiffs((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      return next;
+    });
+  }
+
+  function handleToggleAllDiffs(checked: boolean) {
+    if (checked) {
+      setCheckedDiffs(new Set());
+    } else {
+      setCheckedDiffs(new Set());
+    }
+  }
+
+  const linkedEntries: { existingItem: ReviewItem; portfolio: ResearchPortfolio }[] = [];
+  for (const id of selectedIds) {
+    const item = existingItems.find((i) => i.id === id);
+    const state = existingStates[id];
+    if (item && state?.linkedPortfolio) {
+      linkedEntries.push({ existingItem: item, portfolio: state.linkedPortfolio });
+    }
   }
 
   const linkPolicy = linkTarget
@@ -430,133 +622,144 @@ export function LikeForLikeModal({
   return (
     <>
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white rounded-lg shadow-xl w-[1050px] max-h-[92vh] flex flex-col">
+        <div className="bg-white rounded-lg shadow-xl w-[1100px] max-h-[92vh] flex flex-col">
           {/* Header */}
           <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200 bg-[#3b5998]">
-            <div>
-              <h2 className="text-sm font-bold text-white">
-                Like for Like: {recommendedItem.insurer} — {recommendedItem.label}
-              </h2>
-            </div>
+            <h2 className="text-sm font-bold text-white">
+              Like for Like: {recommendedItem.insurer} — {recommendedItem.label}
+            </h2>
             <button onClick={() => onClose(buildState())} className="text-white/70 hover:text-white">
               <X size={16} />
             </button>
           </div>
 
-          {/* Recommended product summary */}
-          <div className="px-5 py-3 border-b border-gray-200 bg-slate-50">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="flex items-center gap-1">
-                <input type="checkbox" checked disabled className="rounded border-gray-300 text-teal-600 h-3.5 w-3.5" />
-              </div>
-              {recommendedItem.insurerLogo && (
-                <img src={recommendedItem.insurerLogo} alt="" className="w-10 h-10 object-contain" />
-              )}
-              <div className="flex-1">
-                <div className="text-xs text-slate-400 uppercase tracking-wide">Recommended Product</div>
-                <div className="text-sm font-semibold text-slate-800">{recommendedItem.label}</div>
-                <div className="text-xs text-slate-500">{recommendedItem.insurer}</div>
-              </div>
-              <Link2 size={14} className="text-slate-400" />
-            </div>
-
-            {/* Premium details */}
-            <div className="grid grid-cols-3 gap-3 text-xs mb-2">
-              <div>
-                <span className="text-slate-500 italic">Premium (Super):</span>{' '}
-                <span className="font-medium text-slate-800">
-                  {recommendedItem.premiumSuper > 0
-                    ? `${fmt(recommendedItem.premiumSuper)} ${FREQ_SHORT[recommendedItem.superFrequencyCode]}`
-                    : 'N/A'}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-500 italic">Premium (Non-super):</span>{' '}
-                <span className="font-medium text-slate-800">
-                  {recommendedItem.premiumNonSuper > 0
-                    ? `${fmt(recommendedItem.premiumNonSuper)} ${FREQ_SHORT[recommendedItem.nonSuperFrequencyCode]}`
-                    : 'N/A'}
-                </span>
-              </div>
-              <div>
-                <span className="text-slate-600 font-semibold">Total Premium:</span>{' '}
-                <span className="font-semibold text-slate-800">{fmt(recommendedItem.premiumPa)} /year</span>
-              </div>
-            </div>
-
-            {/* Cover pills */}
-            {recommendedItem.covers.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {recommendedItem.covers.map((c, i) => (
-                  <span key={i} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-medium">
-                    {(COVER_TYPE_LABELS as Record<string, string>)[c.type] ?? c.type}
-                    {c.sumInsured ? ` $${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
-                  </span>
-                ))}
-              </div>
-            )}
+          {/* Top-level tabs */}
+          <div className="flex border-b border-gray-200">
+            <button
+              onClick={() => setActiveTab('details')}
+              className={`px-6 py-2.5 text-xs font-semibold transition-colors ${
+                activeTab === 'details'
+                  ? 'text-teal-700 border-b-2 border-teal-700 bg-teal-50/30'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Details
+            </button>
+            <button
+              onClick={() => setActiveTab('compare')}
+              className={`px-6 py-2.5 text-xs font-semibold transition-colors ${
+                activeTab === 'compare'
+                  ? 'text-teal-700 border-b-2 border-teal-700 bg-teal-50/30'
+                  : 'text-slate-500 hover:text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              Compare
+            </button>
           </div>
 
-          {/* Existing products selection */}
-          <div className="px-5 py-3 border-b border-gray-200">
-            <div className="text-xs font-semibold text-slate-600 mb-2">
-              Select Existing Products for Like for Like Comparison ({existingItems.length} available)
-            </div>
-            {existingItems.length === 0 ? (
-              <p className="text-xs text-slate-400">No existing products available for this life insured.</p>
-            ) : (
-              <div className="space-y-1">
-                {existingItems.map((item) => {
-                  const isSelected = selectedIds.has(item.id);
+          {/* Tab content */}
+          {activeTab === 'details' && (
+            <div className="flex-1 overflow-auto">
+              {/* Recommended product summary */}
+              <div className="px-5 py-3 border-b border-gray-200 bg-slate-50">
+                <div className="flex items-center gap-3 mb-2">
+                  <input type="checkbox" checked disabled className="rounded border-gray-300 text-teal-600 h-3.5 w-3.5" />
+                  {recommendedItem.insurerLogo && (
+                    <img src={recommendedItem.insurerLogo} alt="" className="w-10 h-10 object-contain" />
+                  )}
+                  <div className="flex-1">
+                    <div className="text-xs text-slate-400 uppercase tracking-wide">Recommended Product</div>
+                    <div className="text-sm font-semibold text-slate-800">{recommendedItem.label}</div>
+                    <div className="text-xs text-slate-500">{recommendedItem.insurer}</div>
+                  </div>
+                  <span className="text-xs font-semibold text-slate-700">{fmt(recommendedItem.premiumPa)} p.a.</span>
+                </div>
+
+                {recommendedItem.covers.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 ml-9">
+                    {recommendedItem.covers.map((c, i) => (
+                      <span key={i} className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded text-[10px] font-medium">
+                        {(COVER_TYPE_LABELS as Record<string, string>)[c.type] ?? c.type}
+                        {c.sumInsured ? ` $${parseFloat(c.sumInsured.replace(/[^0-9.]/g, '') || '0').toLocaleString('en-AU')}` : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Existing products selection */}
+              <div className="px-5 py-3 border-b border-gray-200">
+                <div className="text-xs font-semibold text-slate-600 mb-2">
+                  Select Existing Products for Like for Like Comparison ({existingItems.length} available)
+                </div>
+                {existingItems.length === 0 ? (
+                  <p className="text-xs text-slate-400">No existing products available for this life insured.</p>
+                ) : (
+                  <div className="space-y-1">
+                    {existingItems.map((item) => {
+                      const isSelected = selectedIds.has(item.id);
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => toggleExisting(item)}
+                          className={`w-full flex items-center gap-2 px-3 py-2 rounded border text-left text-xs transition-colors ${
+                            isSelected ? 'border-teal-300 bg-teal-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-teal-600 border-teal-600 text-white' : 'border-slate-300'}`}>
+                            {isSelected && <Check size={10} />}
+                          </div>
+                          {item.insurerLogo && <img src={item.insurerLogo} alt="" className="w-6 h-6 object-contain" />}
+                          <div className="flex-1 min-w-0">
+                            <span className="font-medium text-slate-800">{item.label}</span>
+                            <span className="text-slate-500 ml-2">{item.insurer}</span>
+                          </div>
+                          <span className="text-[10px] text-slate-500">{fmt(item.premiumPa)} p.a.</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* Selected existing products details */}
+              <div className="px-5 py-3">
+                {Array.from(selectedIds).length === 0 && (
+                  <p className="text-xs text-slate-400 text-center py-6">
+                    Select an existing product above to configure details.
+                  </p>
+                )}
+                {Array.from(selectedIds).map((id) => {
+                  const item = existingItems.find((i) => i.id === id);
+                  const state = existingStates[id];
+                  if (!item || !state) return null;
                   return (
-                    <button
-                      key={item.id}
-                      onClick={() => toggleExisting(item)}
-                      className={`w-full flex items-center gap-2 px-3 py-2 rounded border text-left text-xs transition-colors ${
-                        isSelected ? 'border-teal-300 bg-teal-50' : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                      }`}
-                    >
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center flex-shrink-0 ${isSelected ? 'bg-teal-600 border-teal-600 text-white' : 'border-slate-300'}`}>
-                        {isSelected && <Check size={10} />}
-                      </div>
-                      {item.insurerLogo && <img src={item.insurerLogo} alt="" className="w-6 h-6 object-contain" />}
-                      <div className="flex-1 min-w-0">
-                        <span className="font-medium text-slate-800">{item.label}</span>
-                        <span className="text-slate-500 ml-2">{item.insurer}</span>
-                      </div>
-                      <span className="text-[10px] text-slate-500">{fmt(item.premiumPa)} p.a.</span>
-                    </button>
+                    <ExistingProductDetailsPanel
+                      key={id}
+                      existingItem={item}
+                      recItem={recommendedItem}
+                      state={state}
+                      onStateChange={(s) => handleExistingStateChange(id, s)}
+                      onOpenLink={() => setLinkTarget({ existingItemId: id })}
+                      clientName={clientName}
+                      partnerName={partnerName}
+                    />
                   );
                 })}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Selected existing products details */}
-          <div className="flex-1 overflow-auto px-5 py-3 min-h-[150px]">
-            {Array.from(selectedIds).length === 0 && (
-              <p className="text-xs text-slate-400 text-center py-8">
-                Select an existing product above to begin the Like for Like comparison.
-              </p>
-            )}
-            {Array.from(selectedIds).map((id) => {
-              const item = existingItems.find((i) => i.id === id);
-              const state = existingStates[id];
-              if (!item || !state) return null;
-              return (
-                <ExistingProductPanel
-                  key={id}
-                  existingItem={item}
-                  recItem={recommendedItem}
-                  state={state}
-                  onStateChange={(s) => handleExistingStateChange(id, s)}
-                  onOpenLink={() => setLinkTarget({ existingItemId: id })}
-                  clientName={clientName}
-                  partnerName={partnerName}
-                />
-              );
-            })}
-          </div>
+          {activeTab === 'compare' && (
+            <CompareTabContent
+              recommendedItem={recommendedItem}
+              linkedEntries={linkedEntries}
+              existingItems={existingItems}
+              checkedDiffs={checkedDiffs}
+              onToggleDiff={handleToggleDiff}
+              onToggleAllDiffs={handleToggleAllDiffs}
+            />
+          )}
 
           {/* Footer */}
           <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
