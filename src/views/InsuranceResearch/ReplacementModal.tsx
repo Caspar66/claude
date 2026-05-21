@@ -379,7 +379,7 @@ export function ReplacementModal({
               {existingItem.insurer} — {existingItem.label} • {lifeInsuredName}
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+          <button onClick={() => onClose(buildState())} className="text-slate-400 hover:text-slate-600">
             <X size={16} />
           </button>
         </div>
