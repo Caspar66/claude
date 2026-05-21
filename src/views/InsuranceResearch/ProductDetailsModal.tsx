@@ -3,7 +3,7 @@ import { X, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ReviewItem, ReviewCover } from './ScenarioReviewPage';
 import type { PremiumFrequency } from './insuranceData';
-import { PREMIUM_FREQUENCY_LABELS } from './insuranceData';
+import { PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER } from './insuranceData';
 import type { ResolvedCover } from './quoteResultsData';
 import {
   STRUCTURE_4_LABELS,
@@ -232,9 +232,16 @@ export function ProductDetailsModal({ item, clientName, partnerName, quoteSuperF
   };
 
   function handleSave() {
+    const newPremSuper = parseFloat(premSuperEdit) || 0;
+    const newPremNonSuper = parseFloat(premNonSuperEdit) || 0;
+    const newPremPa = newPremSuper * PREMIUM_FREQUENCY_MULTIPLIER[superFreq]
+                    + newPremNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[nonSuperFreq];
     const updated: ReviewItem = {
       ...item,
       label: policyName,
+      premiumSuper: newPremSuper,
+      premiumNonSuper: newPremNonSuper,
+      premiumPa: newPremPa,
     };
     onSave(updated);
   }

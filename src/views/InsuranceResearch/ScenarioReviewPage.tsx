@@ -1,9 +1,9 @@
-import { useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronRight, Eye, Plus, X } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { ArrowLeft, ChevronDown, ChevronRight, Eye, Plus, X, Link2, MoreHorizontal } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { QuoteResultRow, ResolvedCover } from './quoteResultsData';
 import { getNeedLabel } from './quoteResultsData';
-import type { ExistingPolicy, ExistingCover, PremiumFrequency, ClientFormData } from './insuranceData';
+import type { ExistingPolicy, ExistingCover, PremiumFrequency, ClientFormData, ResearchPortfolio } from './insuranceData';
 import { PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, coverToNeedCode } from './insuranceData';
 import type { NeedsQuote } from './needsTypes';
 import {
@@ -12,7 +12,10 @@ import {
 } from './needsTypes';
 import { VaryExistingCoverModal } from './VaryExistingCoverModal';
 import { ReplacementModal } from './ReplacementModal';
+import type { ReplacementState } from './ReplacementModal';
 import { ProductDetailsModal } from './ProductDetailsModal';
+import { AddCoverPage } from './AddCoverPage';
+import { MapProductModal } from './MapProductModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -366,10 +369,102 @@ function AddOwnerModal({ onSave, onClose }: { onSave: (name: string) => void; on
 
 // ── Expandable row ──────────────────────────────────────────────────────────
 
+function ActionMenu({
+  item,
+  onViewDetails,
+  onEditReplacement,
+  onDeleteRecommendation,
+  onLinkProduct,
+}: {
+  item: ReviewItem;
+  onViewDetails: () => void;
+  onEditReplacement?: () => void;
+  onDeleteRecommendation?: () => void;
+  onLinkProduct?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [open]);
+
+  const showEditReplacement = item.type === 'existing' && item.status === 'Replace' && onEditReplacement;
+  const showDelete = (item.type === 'rec' || item.type === 'alt') && onDeleteRecommendation;
+  const showLink = item.type === 'rec' && item.existingPolicy && !item.quoteRow && onLinkProduct;
+  const hasMultiple = !!(showEditReplacement || showDelete || showLink);
+
+  if (!hasMultiple) {
+    return (
+      <button
+        onClick={onViewDetails}
+        className="text-teal-600 hover:text-teal-800 p-1 rounded hover:bg-teal-50 inline-flex items-center gap-1 text-xs font-medium"
+        title="View Details"
+      >
+        <Eye size={14} />
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="text-teal-600 hover:text-teal-800 p-1 rounded hover:bg-teal-50 inline-flex items-center gap-1 text-xs font-medium"
+        title="Actions"
+      >
+        <MoreHorizontal size={14} />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full mt-1 z-30 bg-white border border-gray-200 rounded-lg shadow-lg py-1 w-48">
+          <button
+            onClick={() => { setOpen(false); onViewDetails(); }}
+            className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+          >
+            <Eye size={12} /> View Details
+          </button>
+          {showLink && (
+            <button
+              onClick={() => { setOpen(false); onLinkProduct!(); }}
+              className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Link2 size={12} /> Link Products
+            </button>
+          )}
+          {showEditReplacement && (
+            <button
+              onClick={() => { setOpen(false); onEditReplacement!(); }}
+              className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Eye size={12} /> Edit Replacement
+            </button>
+          )}
+          {showDelete && (
+            <button
+              onClick={() => { setOpen(false); onDeleteRecommendation!(); }}
+              className="w-full text-left px-3 py-1.5 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2"
+            >
+              <X size={12} /> Delete Recommendation
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ReviewRow({
   item,
   onStatusChange,
   onViewDetails,
+  onEditReplacement,
+  onDeleteRecommendation,
+  onLinkProduct,
   onCoverUpdate,
   onRequestAddOwner,
   clientName,
@@ -379,6 +474,9 @@ function ReviewRow({
   item: ReviewItem;
   onStatusChange: (id: string, status: ReviewStatus) => void;
   onViewDetails: (item: ReviewItem) => void;
+  onEditReplacement: (item: ReviewItem) => void;
+  onDeleteRecommendation: (id: string) => void;
+  onLinkProduct: (item: ReviewItem) => void;
   onCoverUpdate: (itemId: string, coverIndex: number, updates: Partial<ReviewCover>) => void;
   onRequestAddOwner: (itemId: string, coverIndex: number) => void;
   clientName: string;
@@ -469,13 +567,13 @@ function ReviewRow({
           </select>
         </td>
         <td className="px-3 py-3 text-center">
-          <button
-            onClick={() => onViewDetails(item)}
-            className="text-teal-600 hover:text-teal-800 p-1 rounded hover:bg-teal-50 inline-flex items-center gap-1 text-xs font-medium"
-            title="View Details"
-          >
-            <Eye size={14} />
-          </button>
+          <ActionMenu
+            item={item}
+            onViewDetails={() => onViewDetails(item)}
+            onEditReplacement={() => onEditReplacement(item)}
+            onDeleteRecommendation={() => onDeleteRecommendation(item.id)}
+            onLinkProduct={() => onLinkProduct(item)}
+          />
         </td>
       </tr>
       {expanded && item.covers.length > 0 && (
@@ -586,6 +684,9 @@ export function ScenarioReviewPage({
   const [detailsItem, setDetailsItem] = useState<ReviewItem | null>(null);
   const [customOwners, setCustomOwners] = useState<string[]>([]);
   const [addOwnerTarget, setAddOwnerTarget] = useState<{ itemId: string; coverIndex: number } | null>(null);
+  const [replacementStates, setReplacementStates] = useState<Record<string, ReplacementState>>({});
+  const [addManualRecOpen, setAddManualRecOpen] = useState(false);
+  const [linkItem, setLinkItem] = useState<ReviewItem | null>(null);
 
   function handleStatusChange(id: string, status: ReviewStatus) {
     const item = items.find((i) => i.id === id);
@@ -602,6 +703,83 @@ export function ScenarioReviewPage({
     }
 
     setItems((prev) => prev.map((i) => i.id === id ? { ...i, status } : i));
+  }
+
+  function handleEditReplacement(item: ReviewItem) {
+    setReplaceItem(item);
+  }
+
+  function handleDeleteRecommendation(id: string) {
+    setItems((prev) => prev.filter((i) => i.id !== id));
+  }
+
+  function handleReplacementClose(state: ReplacementState) {
+    if (replaceItem) {
+      setReplacementStates((prev) => ({ ...prev, [replaceItem.id]: state }));
+    }
+    setReplaceItem(null);
+  }
+
+  function handleSaveManualRec(policy: ExistingPolicy) {
+    const lifeInsuredName = policy.lifeInsured === 'client' ? clientName : (partnerName ?? 'Partner');
+    const styleMap: Record<string, string> = { S: 'Variable age-stepped', B: 'Blended', L: 'Variable to age 65', '70': 'Variable to age 70' };
+    const premSuper = policy.premiumSuper + policy.stampDutySuper;
+    const premNonSuper = policy.premiumNonSuper + policy.stampDutyNonSuper;
+    const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[policy.superFrequency]
+                     + premNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[policy.nonSuperFrequency];
+    const newItem: ReviewItem = {
+      id: `manual-rec-${Date.now()}`,
+      type: 'rec',
+      label: policy.policyDescription || 'Manual Recommendation',
+      insurer: policy.provider,
+      status: 'Recommend',
+      premiumPa,
+      premiumSuper: premSuper,
+      premiumNonSuper: premNonSuper,
+      superFrequencyCode: policy.superFrequency,
+      nonSuperFrequencyCode: policy.nonSuperFrequency,
+      frequency: PREMIUM_FREQUENCY_LABELS[policy.superFrequency],
+      lifeInsured: policy.lifeInsured,
+      existingPolicy: policy,
+      covers: policy.covers.map((c) => {
+        const needCode = coverToNeedCode(c, policy.covers);
+        const coverType = getCoverType(needCode);
+        return {
+          type: coverType,
+          definition: c.definition || undefined,
+          coverStructure: deriveCoverStructure(c, coverType, policy.covers),
+          premiumStructure: c.premiumStyle ? (styleMap[c.premiumStyle] ?? c.premiumStyle) : undefined,
+          sumInsured: c.sumInsured,
+          owner: c.owner || lifeInsuredName,
+          isSuper: c.super === 'Yes',
+          waitingPeriod: c.waitingPeriod,
+          benefitPeriod: c.benefitPeriod,
+        };
+      }),
+      supplierCode: '',
+      productCodes: {},
+    };
+    setItems((prev) => [...prev, newItem]);
+    setAddManualRecOpen(false);
+  }
+
+  function handleLinkSave(portfolio: ResearchPortfolio) {
+    if (!linkItem) return;
+    const productCodes: Record<string, string> = {};
+    for (const [code, val] of Object.entries(portfolio.products)) {
+      if (val?.productCode) productCodes[code] = val.productCode;
+    }
+    setItems((prev) => prev.map((i) => {
+      if (i.id !== linkItem.id) return i;
+      return {
+        ...i,
+        supplierCode: portfolio.supplierCode,
+        revisionDate: portfolio.revisionDate,
+        productCodes,
+        existingPolicy: i.existingPolicy ? { ...i.existingPolicy, researchPortfolio: portfolio } : i.existingPolicy,
+      };
+    }));
+    setLinkItem(null);
   }
 
   function handleCoverUpdate(itemId: string, coverIndex: number, updates: Partial<ReviewCover>) {
@@ -694,6 +872,20 @@ export function ScenarioReviewPage({
     );
   }
 
+  if (addManualRecOpen) {
+    return (
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <AddCoverPage
+          clientName={clientName}
+          partnerName={partnerName}
+          title="Add Recommended Cover"
+          onSave={handleSaveManualRec}
+          onCancel={() => setAddManualRecOpen(false)}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Header */}
@@ -732,19 +924,27 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {existingItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Recommendations */}
-            {recItems.length > 0 && (
-              <tr className="bg-emerald-50">
-                <td colSpan={7} className="px-4 py-2 text-xs font-bold text-emerald-800">
-                  Recommendations ({recItems.length})
-                </td>
-              </tr>
-            )}
+            <tr className="bg-emerald-50">
+              <td colSpan={7} className="px-4 py-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-emerald-800">Recommendations ({recItems.length})</span>
+                  <Button
+                    size="sm"
+                    className="bg-indigo-900 hover:bg-indigo-950 text-white text-xs h-7 px-3"
+                    onClick={() => setAddManualRecOpen(true)}
+                  >
+                    <Plus size={12} className="mr-1" />
+                    Add Manual Recommendation
+                  </Button>
+                </div>
+              </td>
+            </tr>
             {recItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Vary to Existing */}
@@ -756,7 +956,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {varyItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Alternatives */}
@@ -768,7 +968,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {altItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {items.length === 0 && (
@@ -804,7 +1004,8 @@ export function ScenarioReviewPage({
           replacementCandidates={recommendAndVaryItems.filter((i) => i.lifeInsured === replaceItem.lifeInsured)}
           clientName={clientName}
           partnerName={partnerName}
-          onClose={() => setReplaceItem(null)}
+          initialState={replacementStates[replaceItem.id]}
+          onClose={handleReplacementClose}
         />
       )}
 
@@ -829,6 +1030,16 @@ export function ScenarioReviewPage({
         <AddOwnerModal
           onSave={handleAddOwnerSave}
           onClose={() => setAddOwnerTarget(null)}
+        />
+      )}
+
+      {/* Map Product modal for manual recommendations */}
+      {linkItem && (
+        <MapProductModal
+          open={true}
+          onClose={() => setLinkItem(null)}
+          policy={linkItem.existingPolicy ?? null}
+          onSave={handleLinkSave}
         />
       )}
     </div>

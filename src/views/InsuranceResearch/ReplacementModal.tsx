@@ -27,6 +27,13 @@ interface ComparisonResult {
   subFeatureChecks: SubFeatureCheck[];
 }
 
+export interface ReplacementState {
+  selectedCandidates: string[];
+  comparisons: Record<string, ComparisonResult>;
+  costsText: string;
+  reasonsText: string;
+}
+
 // ── Props ───────────────────────────────────────────────────────────────────
 
 interface Props {
@@ -34,7 +41,8 @@ interface Props {
   replacementCandidates: ReviewItem[];
   clientName: string;
   partnerName: string | null;
-  onClose: () => void;
+  initialState?: ReplacementState;
+  onClose: (state: ReplacementState) => void;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -239,19 +247,30 @@ export function ReplacementModal({
   replacementCandidates,
   clientName,
   partnerName,
+  initialState,
   onClose,
 }: Props) {
   const [activeTab, setActiveTab] = useState<ReplacementTab>('differences');
-  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(new Set());
-  const [comparisons, setComparisons] = useState<Map<string, ComparisonResult>>(new Map());
+  const [selectedCandidates, setSelectedCandidates] = useState<Set<string>>(() =>
+    initialState ? new Set(initialState.selectedCandidates) : new Set()
+  );
+  const [comparisons, setComparisons] = useState<Map<string, ComparisonResult>>(() =>
+    initialState ? new Map(Object.entries(initialState.comparisons)) : new Map()
+  );
   const [loading, setLoading] = useState<Set<string>>(new Set());
   const [errors, setErrors] = useState<Map<string, string>>(new Map());
-  const [costsText, setCostsText] = useState('');
-  const [reasonsText, setReasonsText] = useState('');
+  const [costsText, setCostsText] = useState(initialState?.costsText ?? '');
+  const [reasonsText, setReasonsText] = useState(initialState?.reasonsText ?? '');
 
   const lifeInsuredName = existingItem.lifeInsured === 'client'
     ? clientName
     : (partnerName ?? 'Partner');
+
+  function buildState(): ReplacementState {
+    const comps: Record<string, ComparisonResult> = {};
+    comparisons.forEach((v, k) => { comps[k] = v; });
+    return { selectedCandidates: Array.from(selectedCandidates), comparisons: comps, costsText, reasonsText };
+  }
 
   const toggleCandidate = useCallback(async (candidate: ReviewItem) => {
     const id = candidate.id;
@@ -608,13 +627,13 @@ export function ReplacementModal({
 
         {/* Footer */}
         <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-          <Button variant="outline" size="sm" className="text-xs" onClick={onClose}>
+          <Button variant="outline" size="sm" className="text-xs" onClick={() => onClose(buildState())}>
             Close
           </Button>
           <Button
             size="sm"
             className="bg-teal-700 hover:bg-teal-800 text-white text-xs"
-            onClick={onClose}
+            onClick={() => onClose(buildState())}
           >
             Save
           </Button>

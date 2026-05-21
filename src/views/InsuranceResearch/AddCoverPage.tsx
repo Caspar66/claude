@@ -80,6 +80,7 @@ interface Props {
   clientName: string;
   partnerName: string | null;
   existingPolicy?: ExistingPolicy;
+  title?: string;
   onSave: (policy: ExistingPolicy) => void;
   onCancel: () => void;
 }
@@ -137,7 +138,7 @@ function coversFromPolicy(policy: ExistingPolicy): Record<ExistingCoverType, Exi
   return init;
 }
 
-export function AddCoverPage({ clientName, partnerName, existingPolicy, onSave, onCancel }: Props) {
+export function AddCoverPage({ clientName, partnerName, existingPolicy, title, onSave, onCancel }: Props) {
   const { suppliers: legacySuppliers, loading: suppliersLoading } = useLegacySuppliers();
 
   const [provider, setProvider] = useState(existingPolicy?.provider ?? '');
@@ -293,7 +294,7 @@ export function AddCoverPage({ clientName, partnerName, existingPolicy, onSave, 
 
       {/* Section header */}
       <div className="mx-5 mt-4 px-4 py-2 bg-slate-400/70 text-white text-sm font-bold rounded-t">
-        {existingPolicy ? 'Edit Existing Cover' : 'Add Existing Cover'}
+        {title ?? (existingPolicy ? 'Edit Existing Cover' : 'Add Existing Cover')}
       </div>
 
       {/* Form */}
