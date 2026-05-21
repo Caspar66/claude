@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import { X, Loader2, Check, ChevronDown, ChevronRight, Link2, CheckCircle2, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { ReviewItem, ReviewCover } from './ScenarioReviewPage';
-import type { ResearchPortfolio, ExistingPolicy } from './insuranceData';
+import type { ResearchPortfolio, ExistingPolicy, ExistingCoverType } from './insuranceData';
 import { PREMIUM_FREQUENCY_LABELS, PREMIUM_FREQUENCY_MULTIPLIER, COVER_TYPE_LABELS, coverToNeedCode } from './insuranceData';
 import type { PremiumFrequency } from './insuranceData';
 import { MapProductModal } from './MapProductModal';
@@ -63,16 +63,21 @@ function buildPolicyFromRecommended(rec: ReviewItem, state: ExistingProductState
     premiumNonSuper: parseFloat(state.premNonSuperEdit) || 0,
     stampDutyNonSuper: 0,
     nonSuperFrequency: state.nonSuperFreq,
-    covers: rec.covers.map((c) => ({
+    covers: rec.covers.map((c) => {
+      const labelToType: Record<string, ExistingCoverType> = {
+        'Life': 'Life', 'TPD': 'TPD', 'Trauma': 'Trauma',
+        'Income Protection': 'IP', 'Business Expense': 'BE', 'Child Cover': 'ChildCover',
+      };
+      return {
       id: crypto.randomUUID(),
-      coverType: c.type as 'Life' | 'TPD' | 'Trauma' | 'Income Protection' | 'Business Expense' | 'Child Cover',
+      coverType: labelToType[c.type] ?? (c.type as ExistingCoverType),
       sumInsured: c.sumInsured,
       premiumStyle: '',
       definition: c.definition,
       super: c.isSuper ? 'Yes' : 'No',
       waitingPeriod: c.waitingPeriod,
       benefitPeriod: c.benefitPeriod,
-    })),
+    };}),
     action: 'Review',
     researchPortfolio: state.linkedPortfolio,
   };
