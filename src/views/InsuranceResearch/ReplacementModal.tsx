@@ -370,7 +370,7 @@ export function ReplacementModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-      <div className="bg-white rounded-lg shadow-xl w-[900px] max-h-[85vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-[1050px] max-h-[92vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-200">
           <div>
@@ -428,7 +428,7 @@ export function ReplacementModal({
           {replacementCandidates.length === 0 ? (
             <p className="text-xs text-slate-400">No recommended or varied products for this life insured.</p>
           ) : (
-            <div className="space-y-1 max-h-[120px] overflow-auto">
+            <div className="space-y-1">
               {replacementCandidates.map((c) => {
                 const isSelected = selectedCandidates.has(c.id);
                 const isLoading = loading.has(c.id);
@@ -450,6 +450,9 @@ export function ReplacementModal({
                         <div className="font-medium text-slate-800 truncate">{c.label}</div>
                         <div className="text-slate-500">{c.insurer}</div>
                       </div>
+                      <span className="text-[10px] text-slate-500 font-medium">
+                        {c.premiumPa.toLocaleString('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 2 })} p.a.
+                      </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${c.type === 'rec' ? 'bg-emerald-100 text-emerald-800' : 'bg-purple-100 text-purple-800'}`}>
                         {c.type === 'rec' ? 'Recommend' : 'Vary to Existing'}
                       </span>
