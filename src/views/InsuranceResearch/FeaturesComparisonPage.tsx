@@ -214,7 +214,7 @@ function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
         src={logo}
         alt={name}
         className="object-contain"
-        style={{ width: 200, height: 114 }}
+        style={{ width: 100, height: 57 }}
         onError={() => setLoadFailed(true)}
       />
     );
@@ -222,7 +222,7 @@ function InsurerLogo({ name, logo }: { name: string; logo?: string }) {
 
   const initials = name.replace(/[^A-Z]/g, '').slice(0, 3) || name.slice(0, 3).toUpperCase();
   return (
-    <div className="flex items-center justify-center rounded border border-gray-200 bg-slate-100" style={{ width: 200, height: 114 }} aria-label={name}>
+    <div className="flex items-center justify-center rounded border border-gray-200 bg-slate-100" style={{ width: 100, height: 57 }} aria-label={name}>
       <span className="font-bold text-lg text-slate-600">{initials}</span>
     </div>
   );
