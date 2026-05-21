@@ -145,6 +145,15 @@ export default defineConfig(({ mode }) => {
             Authorization: authHeader,
           },
         },
+        '/api/similarities-and-differences': {
+          target,
+          changeOrigin: true,
+          rewrite: (p: string) => p.replace('/api/similarities-and-differences', '/research/portfolio/similaritiesAndDifferences'),
+          secure: true,
+          headers: {
+            Authorization: authHeader,
+          },
+        },
         '/api/gained-and-lost': {
           target,
           changeOrigin: true,

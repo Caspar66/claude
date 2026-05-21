@@ -597,6 +597,48 @@ export async function postGainedAndLost(body: GainedLostRequest): Promise<Gained
   return res.json();
 }
 
+// ── Similarities & Differences ──────────────────────────────────────────────
+
+export interface SimilaritiesAndDifferencesEntry {
+  supplierCode: string;
+  revisionDate?: string;
+  products: Record<string, string>;
+}
+
+export interface DifferenceFeature {
+  code: string;
+  name: string;
+  coverType: string;
+  featureIncluded: string[];
+  featureExcluded: string[];
+  subFeatures: unknown[];
+}
+
+export interface SimilaritiesAndDifferencesResponse {
+  similarities: unknown[];
+  differences: DifferenceFeature[];
+}
+
+export async function postSimilaritiesAndDifferences(
+  body: SimilaritiesAndDifferencesEntry[],
+): Promise<SimilaritiesAndDifferencesResponse> {
+  const res = await fetch('/api/similarities-and-differences', {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => '');
+    throw new Error(`OmniLife similaritiesAndDifferences returned ${res.status}${text ? ': ' + text : ''}`);
+  }
+
+  return res.json();
+}
+
 // ── Supplier Documents ──────────────────────────────────────────────────────
 
 export interface SupplierDocument {

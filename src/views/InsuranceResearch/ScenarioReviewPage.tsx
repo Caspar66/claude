@@ -16,6 +16,8 @@ import type { ReplacementState } from './ReplacementModal';
 import { ProductDetailsModal } from './ProductDetailsModal';
 import { AddCoverPage } from './AddCoverPage';
 import { MapProductModal } from './MapProductModal';
+import { LikeForLikeModal } from './LikeForLikeModal';
+import type { LikeForLikeState } from './LikeForLikeModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -375,12 +377,14 @@ function ActionMenu({
   onEditReplacement,
   onDeleteRecommendation,
   onLinkProduct,
+  onLikeForLike,
 }: {
   item: ReviewItem;
   onViewDetails: () => void;
   onEditReplacement?: () => void;
   onDeleteRecommendation?: () => void;
   onLinkProduct?: () => void;
+  onLikeForLike?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -397,7 +401,8 @@ function ActionMenu({
   const showEditReplacement = item.type === 'existing' && item.status === 'Replace' && onEditReplacement;
   const showDelete = (item.type === 'rec' || item.type === 'alt') && onDeleteRecommendation;
   const showLink = item.type === 'rec' && item.existingPolicy && !item.quoteRow && onLinkProduct;
-  const hasMultiple = !!(showEditReplacement || showDelete || showLink);
+  const showLikeForLike = (item.type === 'rec' || item.type === 'alt') && onLikeForLike;
+  const hasMultiple = !!(showEditReplacement || showDelete || showLink || showLikeForLike);
 
   if (!hasMultiple) {
     return (
@@ -444,6 +449,14 @@ function ActionMenu({
               <Eye size={12} /> Edit Replacement
             </button>
           )}
+          {showLikeForLike && (
+            <button
+              onClick={() => { setOpen(false); onLikeForLike!(); }}
+              className="w-full text-left px-3 py-1.5 text-xs text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+            >
+              <Eye size={12} /> Like for Like
+            </button>
+          )}
           {showDelete && (
             <button
               onClick={() => { setOpen(false); onDeleteRecommendation!(); }}
@@ -465,6 +478,7 @@ function ReviewRow({
   onEditReplacement,
   onDeleteRecommendation,
   onLinkProduct,
+  onLikeForLike,
   onCoverUpdate,
   onRequestAddOwner,
   clientName,
@@ -477,6 +491,7 @@ function ReviewRow({
   onEditReplacement: (item: ReviewItem) => void;
   onDeleteRecommendation: (id: string) => void;
   onLinkProduct: (item: ReviewItem) => void;
+  onLikeForLike: (item: ReviewItem) => void;
   onCoverUpdate: (itemId: string, coverIndex: number, updates: Partial<ReviewCover>) => void;
   onRequestAddOwner: (itemId: string, coverIndex: number) => void;
   clientName: string;
@@ -573,6 +588,7 @@ function ReviewRow({
             onEditReplacement={() => onEditReplacement(item)}
             onDeleteRecommendation={() => onDeleteRecommendation(item.id)}
             onLinkProduct={() => onLinkProduct(item)}
+            onLikeForLike={() => onLikeForLike(item)}
           />
         </td>
       </tr>
@@ -687,6 +703,8 @@ export function ScenarioReviewPage({
   const [replacementStates, setReplacementStates] = useState<Record<string, ReplacementState>>({});
   const [addManualRecOpen, setAddManualRecOpen] = useState(false);
   const [linkItem, setLinkItem] = useState<ReviewItem | null>(null);
+  const [likeForLikeItem, setLikeForLikeItem] = useState<ReviewItem | null>(null);
+  const [likeForLikeStates, setLikeForLikeStates] = useState<Record<string, LikeForLikeState>>({});
 
   function handleStatusChange(id: string, status: ReviewStatus) {
     const item = items.find((i) => i.id === id);
@@ -780,6 +798,13 @@ export function ScenarioReviewPage({
       };
     }));
     setLinkItem(null);
+  }
+
+  function handleLikeForLikeClose(state: LikeForLikeState) {
+    if (likeForLikeItem) {
+      setLikeForLikeStates((prev) => ({ ...prev, [likeForLikeItem.id]: state }));
+    }
+    setLikeForLikeItem(null);
   }
 
   function handleCoverUpdate(itemId: string, coverIndex: number, updates: Partial<ReviewCover>) {
@@ -924,7 +949,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {existingItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onLikeForLike={setLikeForLikeItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Recommendations */}
@@ -944,7 +969,7 @@ export function ScenarioReviewPage({
               </td>
             </tr>
             {recItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onLikeForLike={setLikeForLikeItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Vary to Existing */}
@@ -956,7 +981,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {varyItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onLikeForLike={setLikeForLikeItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {/* Alternatives */}
@@ -968,7 +993,7 @@ export function ScenarioReviewPage({
               </tr>
             )}
             {altItems.map((item) => (
-              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
+              <ReviewRow key={item.id} item={item} onStatusChange={handleStatusChange} onViewDetails={setDetailsItem} onEditReplacement={handleEditReplacement} onDeleteRecommendation={handleDeleteRecommendation} onLinkProduct={setLinkItem} onLikeForLike={setLikeForLikeItem} onCoverUpdate={handleCoverUpdate} onRequestAddOwner={(itemId, coverIndex) => setAddOwnerTarget({ itemId, coverIndex })} clientName={clientName} partnerName={partnerName} customOwners={customOwners} />
             ))}
 
             {items.length === 0 && (
@@ -1040,6 +1065,18 @@ export function ScenarioReviewPage({
           onClose={() => setLinkItem(null)}
           policy={linkItem.existingPolicy ?? null}
           onSave={handleLinkSave}
+        />
+      )}
+
+      {/* Like for Like modal */}
+      {likeForLikeItem && (
+        <LikeForLikeModal
+          recommendedItem={likeForLikeItem}
+          existingItems={existingItems.filter((i) => i.lifeInsured === likeForLikeItem.lifeInsured)}
+          clientName={clientName}
+          partnerName={partnerName}
+          initialState={likeForLikeStates[likeForLikeItem.id]}
+          onClose={handleLikeForLikeClose}
         />
       )}
     </div>

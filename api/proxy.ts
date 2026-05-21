@@ -96,6 +96,10 @@ function resolve(segments: string[], query: VercelRequest['query']): Route | nul
     return { upstream: `/quote/portfolio/${encodeURIComponent(portfolioCode)}/productOptions`, method: 'POST', hasBody: true };
   }
 
+  if (s0 === 'similarities-and-differences' && segments.length === 1) {
+    return { upstream: `/research/portfolio/similaritiesAndDifferences${forwardQs(query)}`, method: 'POST', hasBody: true };
+  }
+
   if (s0 === 'gained-and-lost' && segments.length === 1) {
     return { upstream: `/research/portfolio/gainedAndLost${forwardQs(query)}`, method: 'POST', hasBody: true };
   }
