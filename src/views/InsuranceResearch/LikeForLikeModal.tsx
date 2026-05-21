@@ -36,7 +36,8 @@ interface Props {
   clientName: string;
   partnerName: string | null;
   initialState?: LikeForLikeState;
-  onClose: (state: LikeForLikeState) => void;
+  onClose: () => void;
+  onSave: (state: LikeForLikeState) => void;
 }
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
@@ -527,6 +528,7 @@ export function LikeForLikeModal({
   partnerName,
   initialState,
   onClose,
+  onSave,
 }: Props) {
   const [activeTab, setActiveTab] = useState<ModalTab>('details');
 
@@ -628,7 +630,7 @@ export function LikeForLikeModal({
             <h2 className="text-sm font-bold text-white">
               Like for Like: {recommendedItem.insurer} — {recommendedItem.label}
             </h2>
-            <button onClick={() => onClose(buildState())} className="text-white/70 hover:text-white">
+            <button onClick={onClose} className="text-white/70 hover:text-white">
               <X size={16} />
             </button>
           </div>
@@ -763,13 +765,13 @@ export function LikeForLikeModal({
 
           {/* Footer */}
           <div className="px-5 py-3 border-t border-gray-200 bg-gray-50 flex justify-end gap-2">
-            <Button variant="outline" size="sm" className="text-xs" onClick={() => onClose(buildState())}>
+            <Button variant="outline" size="sm" className="text-xs" onClick={onClose}>
               Close
             </Button>
             <Button
               size="sm"
               className="bg-teal-700 hover:bg-teal-800 text-white text-xs"
-              onClick={() => onClose(buildState())}
+              onClick={() => onSave(buildState())}
             >
               Save
             </Button>

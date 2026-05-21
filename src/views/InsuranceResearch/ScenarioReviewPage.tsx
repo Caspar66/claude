@@ -17,7 +17,7 @@ import { ProductDetailsModal } from './ProductDetailsModal';
 import { AddCoverPage } from './AddCoverPage';
 import { MapProductModal } from './MapProductModal';
 import { LikeForLikeModal } from './LikeForLikeModal';
-import type { LikeForLikeState, ExistingProductState } from './LikeForLikeModal';
+import type { LikeForLikeState } from './LikeForLikeModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
@@ -801,67 +801,58 @@ export function ScenarioReviewPage({
     setLinkItem(null);
   }
 
-  function handleLikeForLikeClose(state: LikeForLikeState) {
-    if (likeForLikeItem) {
-      setLikeForLikeStates((prev) => ({ ...prev, [likeForLikeItem.id]: state }));
+  function handleLikeForLikeSave(state: LikeForLikeState) {
+    if (!likeForLikeItem) return;
 
-      const existingL4lIds = new Set(
-        items.filter((i) => i.type === 'alt' && i.status === 'Like for Like' && i.id.startsWith(`l4l-${likeForLikeItem.id}-`)).map((i) => i.id)
-      );
+    setLikeForLikeStates((prev) => ({ ...prev, [likeForLikeItem.id]: state }));
 
-      const newL4lItems: ReviewItem[] = [];
-      for (const existingId of state.selectedExistingIds) {
-        const es = state.existingStates[existingId];
-        if (!es) continue;
-        const existingItem = items.find((i) => i.id === existingId);
-        if (!existingItem) continue;
+    const l4lPrefix = `l4l-${likeForLikeItem.id}-`;
 
-        const itemId = `l4l-${likeForLikeItem.id}-${existingId}`;
-        existingL4lIds.delete(itemId);
+    const newL4lItems: ReviewItem[] = [];
+    for (const existingId of state.selectedExistingIds) {
+      const es = state.existingStates[existingId];
+      if (!es) continue;
+      const existingItem = items.find((i) => i.id === existingId);
+      if (!existingItem) continue;
 
-        const premSuper = parseFloat(es.premSuperEdit) || 0;
-        const premNonSuper = parseFloat(es.premNonSuperEdit) || 0;
-        const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[es.superFreq]
-                         + premNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[es.nonSuperFreq];
+      const premSuper = parseFloat(es.premSuperEdit) || 0;
+      const premNonSuper = parseFloat(es.premNonSuperEdit) || 0;
+      const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[es.superFreq]
+                       + premNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[es.nonSuperFreq];
 
-        const productCodes: Record<string, string> = {};
-        if (es.linkedPortfolio) {
-          for (const [code, val] of Object.entries(es.linkedPortfolio.products)) {
-            if (val?.productCode) productCodes[code] = val.productCode;
-          }
+      const productCodes: Record<string, string> = {};
+      if (es.linkedPortfolio) {
+        for (const [code, val] of Object.entries(es.linkedPortfolio.products)) {
+          if (val?.productCode) productCodes[code] = val.productCode;
         }
-
-        newL4lItems.push({
-          id: itemId,
-          type: 'alt',
-          label: `${existingItem.label} (Like for Like)`,
-          insurer: existingItem.insurer,
-          insurerLogo: existingItem.insurerLogo,
-          status: 'Like for Like',
-          premiumPa,
-          premiumSuper: premSuper,
-          premiumNonSuper: premNonSuper,
-          superFrequencyCode: es.superFreq,
-          nonSuperFrequencyCode: es.nonSuperFreq,
-          frequency: PREMIUM_FREQUENCY_LABELS[es.superFreq],
-          lifeInsured: likeForLikeItem.lifeInsured,
-          covers: likeForLikeItem.covers.map((c) => ({ ...c })),
-          supplierCode: es.linkedPortfolio?.supplierCode ?? '',
-          revisionDate: es.linkedPortfolio?.revisionDate,
-          productCodes,
-        });
       }
 
-      setItems((prev) => {
-        const filtered = prev.filter((i) => !existingL4lIds.has(i.id));
-        const withUpdated = filtered.map((i) => {
-          const updated = newL4lItems.find((n) => n.id === i.id);
-          return updated ?? i;
-        });
-        const brandNew = newL4lItems.filter((n) => !filtered.some((i) => i.id === n.id));
-        return [...withUpdated, ...brandNew];
+      newL4lItems.push({
+        id: `${l4lPrefix}${existingId}`,
+        type: 'alt',
+        label: `${existingItem.label} (Like for Like)`,
+        insurer: existingItem.insurer,
+        insurerLogo: existingItem.insurerLogo,
+        status: 'Like for Like',
+        premiumPa,
+        premiumSuper: premSuper,
+        premiumNonSuper: premNonSuper,
+        superFrequencyCode: es.superFreq,
+        nonSuperFrequencyCode: es.nonSuperFreq,
+        frequency: PREMIUM_FREQUENCY_LABELS[es.superFreq],
+        lifeInsured: likeForLikeItem.lifeInsured,
+        covers: likeForLikeItem.covers.map((c) => ({ ...c })),
+        supplierCode: es.linkedPortfolio?.supplierCode ?? '',
+        revisionDate: es.linkedPortfolio?.revisionDate,
+        productCodes,
       });
     }
+
+    setItems((prev) => {
+      const withoutOldL4l = prev.filter((i) => !i.id.startsWith(l4lPrefix));
+      return [...withoutOldL4l, ...newL4lItems];
+    });
+
     setLikeForLikeItem(null);
   }
 
@@ -1134,7 +1125,8 @@ export function ScenarioReviewPage({
           clientName={clientName}
           partnerName={partnerName}
           initialState={likeForLikeStates[likeForLikeItem.id]}
-          onClose={handleLikeForLikeClose}
+          onClose={() => setLikeForLikeItem(null)}
+          onSave={handleLikeForLikeSave}
         />
       )}
     </div>
