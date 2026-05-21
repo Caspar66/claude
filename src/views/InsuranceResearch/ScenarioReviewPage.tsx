@@ -17,11 +17,11 @@ import { ProductDetailsModal } from './ProductDetailsModal';
 import { AddCoverPage } from './AddCoverPage';
 import { MapProductModal } from './MapProductModal';
 import { LikeForLikeModal } from './LikeForLikeModal';
-import type { LikeForLikeState } from './LikeForLikeModal';
+import type { LikeForLikeState, ExistingProductState } from './LikeForLikeModal';
 
 // ── Types ───────────────────────────────────────────────────────────────────
 
-export type ReviewStatus = 'Recommend' | 'Not Accepted' | 'Alternative' | 'Hold' | 'Replace' | 'Cancel' | 'Vary' | 'Exclude' | 'Vary to Existing';
+export type ReviewStatus = 'Recommend' | 'Not Accepted' | 'Alternative' | 'Hold' | 'Replace' | 'Cancel' | 'Vary' | 'Exclude' | 'Vary to Existing' | 'Like for Like';
 
 export interface ReviewItem {
   id: string;
@@ -332,6 +332,7 @@ const STATUS_COLORS: Record<ReviewStatus, string> = {
   Vary: 'bg-purple-100 text-purple-800',
   Exclude: 'bg-slate-200 text-slate-500',
   'Vary to Existing': 'bg-purple-100 text-purple-800',
+  'Like for Like': 'bg-indigo-100 text-indigo-800',
 };
 
 // ── Add Custom Owner Modal ─────────────────────────────────────────────────
@@ -504,7 +505,7 @@ function ReviewRow({
   const statusOptions: ReviewStatus[] =
     item.type === 'existing' ? ['Hold', 'Replace', 'Cancel', 'Vary', 'Exclude'] :
     item.type === 'rec' ? ['Recommend', 'Not Accepted'] :
-    item.type === 'alt' ? ['Alternative', 'Not Accepted'] :
+    item.type === 'alt' ? ['Alternative', 'Not Accepted', 'Like for Like'] :
     ['Recommend', 'Not Accepted', 'Alternative', 'Hold', 'Replace', 'Cancel', 'Vary', 'Exclude', 'Vary to Existing'];
 
   const ownerOptions: string[] = [clientName];
@@ -803,6 +804,63 @@ export function ScenarioReviewPage({
   function handleLikeForLikeClose(state: LikeForLikeState) {
     if (likeForLikeItem) {
       setLikeForLikeStates((prev) => ({ ...prev, [likeForLikeItem.id]: state }));
+
+      const existingL4lIds = new Set(
+        items.filter((i) => i.type === 'alt' && i.status === 'Like for Like' && i.id.startsWith(`l4l-${likeForLikeItem.id}-`)).map((i) => i.id)
+      );
+
+      const newL4lItems: ReviewItem[] = [];
+      for (const existingId of state.selectedExistingIds) {
+        const es = state.existingStates[existingId];
+        if (!es) continue;
+        const existingItem = items.find((i) => i.id === existingId);
+        if (!existingItem) continue;
+
+        const itemId = `l4l-${likeForLikeItem.id}-${existingId}`;
+        existingL4lIds.delete(itemId);
+
+        const premSuper = parseFloat(es.premSuperEdit) || 0;
+        const premNonSuper = parseFloat(es.premNonSuperEdit) || 0;
+        const premiumPa = premSuper * PREMIUM_FREQUENCY_MULTIPLIER[es.superFreq]
+                         + premNonSuper * PREMIUM_FREQUENCY_MULTIPLIER[es.nonSuperFreq];
+
+        const productCodes: Record<string, string> = {};
+        if (es.linkedPortfolio) {
+          for (const [code, val] of Object.entries(es.linkedPortfolio.products)) {
+            if (val?.productCode) productCodes[code] = val.productCode;
+          }
+        }
+
+        newL4lItems.push({
+          id: itemId,
+          type: 'alt',
+          label: `${existingItem.label} (Like for Like)`,
+          insurer: existingItem.insurer,
+          insurerLogo: existingItem.insurerLogo,
+          status: 'Like for Like',
+          premiumPa,
+          premiumSuper: premSuper,
+          premiumNonSuper: premNonSuper,
+          superFrequencyCode: es.superFreq,
+          nonSuperFrequencyCode: es.nonSuperFreq,
+          frequency: PREMIUM_FREQUENCY_LABELS[es.superFreq],
+          lifeInsured: likeForLikeItem.lifeInsured,
+          covers: likeForLikeItem.covers.map((c) => ({ ...c })),
+          supplierCode: es.linkedPortfolio?.supplierCode ?? '',
+          revisionDate: es.linkedPortfolio?.revisionDate,
+          productCodes,
+        });
+      }
+
+      setItems((prev) => {
+        const filtered = prev.filter((i) => !existingL4lIds.has(i.id));
+        const withUpdated = filtered.map((i) => {
+          const updated = newL4lItems.find((n) => n.id === i.id);
+          return updated ?? i;
+        });
+        const brandNew = newL4lItems.filter((n) => !filtered.some((i) => i.id === n.id));
+        return [...withUpdated, ...brandNew];
+      });
     }
     setLikeForLikeItem(null);
   }

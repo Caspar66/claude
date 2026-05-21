@@ -13,7 +13,7 @@ import type { DifferenceFeature, SimilaritiesAndDifferencesEntry } from '@/servi
 
 type ModalTab = 'details' | 'compare';
 
-interface ExistingProductState {
+export interface ExistingProductState {
   existingItemId: string;
   premSuperEdit: string;
   premNonSuperEdit: string;
