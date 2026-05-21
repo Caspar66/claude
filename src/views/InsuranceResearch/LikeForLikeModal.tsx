@@ -135,13 +135,6 @@ function ExistingProductPanel({
     }
   }, [recItem, state, onStateChange]);
 
-  const productCodeForEntry = (code: string, entry: SimilaritiesAndDifferencesEntry): string => {
-    return entry.products[code.replace('NeedType_', '')] ?? '';
-  };
-
-  const recProductCode = recItem.supplierCode;
-  const l4lProductCode = state.linkedPortfolio?.supplierCode ?? '';
-
   return (
     <div className="border border-teal-300 rounded-lg bg-teal-50/30 mb-3 overflow-hidden">
       <button
@@ -327,25 +320,8 @@ function ExistingProductPanel({
                     </thead>
                     <tbody>
                       {state.differences.map((d) => {
-                        const recEntry: SimilaritiesAndDifferencesEntry = {
-                          supplierCode: recItem.supplierCode,
-                          revisionDate: recItem.revisionDate,
-                          products: recItem.productCodes,
-                        };
-                        const l4lEntry: SimilaritiesAndDifferencesEntry = {
-                          supplierCode: state.linkedPortfolio!.supplierCode,
-                          revisionDate: state.linkedPortfolio!.revisionDate,
-                          products: {},
-                        };
-                        for (const [code, val] of Object.entries(state.linkedPortfolio!.products)) {
-                          if (val?.productCode) l4lEntry.products[code] = val.productCode;
-                        }
-
-                        const recProducts = Object.values(recEntry.products);
-                        const l4lProducts = Object.values(l4lEntry.products);
-
-                        const recIncluded = d.featureIncluded.some((p) => recProducts.includes(p));
-                        const l4lIncluded = d.featureIncluded.some((p) => l4lProducts.includes(p));
+                        const recIncluded = d.featureIncluded.some((p) => p.endsWith('P0'));
+                        const l4lIncluded = d.featureIncluded.some((p) => p.endsWith('P1'));
 
                         return (
                           <tr key={d.code} className={`border-b border-gray-100 ${l4lIncluded ? 'bg-emerald-50/30' : 'bg-red-50/30'}`}>
