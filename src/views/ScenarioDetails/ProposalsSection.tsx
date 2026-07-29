@@ -453,7 +453,7 @@ function RenameModal({ open, currentLabel, onConfirm, onClose }: RenameModalProp
   return (
     <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent className="max-w-sm p-0 overflow-hidden">
-        <div className="flex items-center justify-between px-4 py-3 bg-teal-700 text-white">
+        <div className="flex items-center justify-between px-4 py-3 bg-navy text-white">
           <span className="text-sm font-semibold">Rename Proposal</span>
           <DialogClose asChild>
             <button className="text-white/80 hover:text-white text-lg leading-none" onClick={onClose}>
@@ -469,7 +469,7 @@ function RenameModal({ open, currentLabel, onConfirm, onClose }: RenameModalProp
             ref={inputRef}
             id="proposal-name"
             type="text"
-            className="w-full border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-600"
+            className="w-full border border-border rounded px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-teal-400"
             value={value}
             onChange={(e) => setValue(e.target.value)}
           />
@@ -567,7 +567,7 @@ export function ProposalsSection({ proposals, scenarioId }: Props) {
   return (
     <>
       <section className="mb-4">
-        <div className="flex items-center justify-between px-4 py-2 bg-teal-700 text-white rounded-t">
+        <div className="flex items-center justify-between px-4 py-2 bg-navy text-white rounded-t">
           <span className="text-sm font-semibold flex items-center gap-2">
             <Settings size={14} />
             Proposals
@@ -611,7 +611,7 @@ export function ProposalsSection({ proposals, scenarioId }: Props) {
                     <TabsTrigger
                       key={p.id}
                       value={p.id}
-                      className="max-w-[200px] truncate text-xs data-[state=active]:bg-teal-700 data-[state=active]:text-white"
+                      className="max-w-[200px] truncate text-xs data-[state=active]:bg-navy data-[state=active]:text-white"
                       title={p.label}
                     >
                       {isPlanReviewProposal(p) && (

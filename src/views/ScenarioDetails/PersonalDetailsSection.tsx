@@ -35,7 +35,7 @@ function PersonColumn({ label, person }: { label: string; person: PersonDetails 
 export function PersonalDetailsSection({ client, partner }: Props) {
   return (
     <section className="mb-4">
-      <div className="flex items-center justify-between px-4 py-2 bg-teal-700 text-white text-sm font-semibold rounded-t">
+      <div className="flex items-center justify-between px-4 py-2 bg-navy text-white text-sm font-semibold rounded-t">
         Personal Details
       </div>
       <div className="border border-border border-t-0 rounded-b p-4 flex gap-8">

@@ -1,0 +1,713 @@
+// ── Shared types ──────────────────────────────────────────────────────────────
+
+export type EmploymentStatus = 'E' | 'T' | 'Q' | 'O' | 'H' | 'R' | 'P' | 'U' | 'S';
+
+export const EMPLOYMENT_STATUS_LABELS: Record<EmploymentStatus, string> = {
+  E: 'Employee',
+  T: 'Self Employed - Sole Trader',
+  Q: 'Self Employed - Partnership',
+  O: 'Self Employed - Business Owner',
+  H: 'Home Duties',
+  R: 'Retired',
+  P: 'Pensioner',
+  U: 'Unemployed',
+  S: 'Student',
+};
+
+export type HealthDiscount = 'I' | 'E';
+
+export const HEALTH_DISCOUNT_LABELS: Record<HealthDiscount, string> = {
+  I: 'Include',
+  E: 'Exclude',
+};
+
+export interface LoadingEntry {
+  percentage: number;
+  dollarPer1000: number;
+}
+
+export interface Loadings {
+  life: LoadingEntry;
+  tpd: LoadingEntry;
+  trauma: LoadingEntry;
+  incomeProtection: LoadingEntry;
+  businessExpenses: LoadingEntry;
+}
+
+export const EMPTY_LOADINGS: Loadings = {
+  life: { percentage: 0, dollarPer1000: 0 },
+  tpd: { percentage: 0, dollarPer1000: 0 },
+  trauma: { percentage: 0, dollarPer1000: 0 },
+  incomeProtection: { percentage: 0, dollarPer1000: 0 },
+  businessExpenses: { percentage: 0, dollarPer1000: 0 },
+};
+
+export function hasLoadings(l: Loadings): boolean {
+  return Object.values(l).some((e) => e.percentage !== 0 || e.dollarPer1000 !== 0);
+}
+
+export interface ClientFormData {
+  firstName: string;
+  lastName: string;
+  gender: 'Male' | 'Female';
+  smoker: 'Yes' | 'No';
+  dateOfBirth: string;
+  age: number;
+  occupation: string;
+  occupationCode: string;
+  employmentStatus: EmploymentStatus;
+  healthDiscount: HealthDiscount;
+  annualIncome: string;
+  state: string;
+  loadings: Loadings;
+}
+
+// ── Existing Covers ──────────────────────────────────────────────────────────
+
+export type ExistingCoverType = 'Life' | 'TPD' | 'Trauma' | 'IP' | 'BE' | 'SBI' | 'ChildCover' | 'Needlestick';
+
+export interface OwnershipOption {
+  code: string;
+  label: string;
+}
+
+export const OWNERSHIP_OPTIONS_BY_TYPE: Record<ExistingCoverType, OwnershipOption[]> = {
+  Life:         [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }],
+  TPD:          [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }, { code: 'J', label: 'SuperLink' }, { code: 'K', label: 'SMSF SuperLink' }],
+  Trauma:       [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }, { code: 'J', label: 'SuperLink' }, { code: 'K', label: 'SMSF SuperLink' }],
+  IP:           [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }, { code: 'J', label: 'SuperLink' }, { code: 'K', label: 'SMSF SuperLink' }],
+  BE:           [{ code: 'O', label: 'Non-Super' }, { code: 'M', label: 'SMSF' }, { code: 'S', label: 'Super' }],
+  SBI:          [{ code: 'O', label: 'Non-Super' }, { code: 'S', label: 'Super' }],
+  ChildCover:   [{ code: 'O', label: 'Non-Super' }, { code: 'S', label: 'Super' }],
+  Needlestick:  [{ code: 'O', label: 'Non-Super' }, { code: 'S', label: 'Super' }],
+};
+
+export const COVER_TYPE_LABELS: Record<ExistingCoverType, string> = {
+  Life: 'Life',
+  TPD: 'TPD',
+  Trauma: 'Trauma',
+  IP: 'Income Protection /month',
+  BE: 'Business Expenses /month',
+  SBI: 'Severity Based Insurance',
+  ChildCover: 'Child Cover',
+  Needlestick: 'Needlestick',
+};
+
+export interface ExistingCover {
+  id: string;
+  coverType: ExistingCoverType;
+  sumInsured: string;
+  premiumStyle: string;
+  super?: string;
+  definition?: string;
+  standAlone?: string;
+  flexiLinked?: string;
+  superLinked?: string;
+  waitingPeriod?: string;
+  benefitPeriod?: string;
+  addDeathCover?: string;
+  ownership?: string;
+  owner?: string;
+}
+
+export type PremiumFrequency = 'Y' | 'H' | 'Q' | 'M' | 'F' | 'W';
+
+export const PREMIUM_FREQUENCY_LABELS: Record<PremiumFrequency, string> = {
+  Y: 'Yearly',
+  H: 'Half Yearly',
+  Q: 'Quarterly',
+  M: 'Monthly',
+  F: 'Fortnightly',
+  W: 'Weekly',
+};
+
+export const PREMIUM_FREQUENCY_MULTIPLIER: Record<PremiumFrequency, number> = {
+  Y: 1,
+  H: 2,
+  Q: 4,
+  M: 12,
+  F: 26,
+  W: 52,
+};
+
+export type CoverNeedCode = 'TRM' | 'TPE' | 'TRE' | 'TPS' | 'TRS' | 'TPR' | 'INC' | 'BUS' | 'NES' | 'CHT';
+
+export const COVER_NEED_CODE_LABELS: Record<CoverNeedCode, string> = {
+  TRM: 'Life',
+  TPE: 'TPD extension/linked cover on Life',
+  TRE: 'Trauma extension/linked cover on Life',
+  TPS: 'TPD Standalone',
+  TRS: 'Trauma Standalone',
+  TPR: 'TPD extension/linked cover on Trauma',
+  INC: 'Income Protection',
+  BUS: 'Business Expenses',
+  NES: 'Needle Stick',
+  CHT: 'Child Trauma',
+};
+
+export function coverToNeedCode(cover: ExistingCover, allCovers?: ExistingCover[]): CoverNeedCode {
+  switch (cover.coverType) {
+    case 'Life': return 'TRM';
+    case 'TPD': {
+      if (cover.standAlone === 'Yes') return 'TPS';
+      if (allCovers) {
+        const hasLife = allCovers.some((c) => c.coverType === 'Life' && parseFloat(c.sumInsured.replace(/[^0-9.]/g, '')) > 0);
+        const hasStandaloneTrauma = allCovers.some((c) => c.coverType === 'Trauma' && c.standAlone === 'Yes' && parseFloat(c.sumInsured.replace(/[^0-9.]/g, '')) > 0);
+        if (!hasLife && hasStandaloneTrauma) return 'TPR';
+      }
+      return 'TPE';
+    }
+    case 'Trauma': return cover.standAlone === 'Yes' ? 'TRS' : 'TRE';
+    case 'SBI': return 'TRS';
+    case 'IP': return 'INC';
+    case 'BE': return 'BUS';
+    case 'Needlestick': return 'NES';
+    case 'ChildCover': return 'CHT';
+  }
+}
+
+export interface ResearchPortfolio {
+  supplierCode: string;
+  revisionDate: string;
+  existingCover: boolean;
+  premiumInsideSuperAnnualised: number;
+  premiumOutsideSuperAnnualised: number;
+  stampDutyInsideSuperAnnualised: number;
+  stampDutyOutsideSuperAnnualised: number;
+  products: Partial<Record<CoverNeedCode, { productCode: string }>>;
+}
+
+export interface ExistingPolicy {
+  id: string;
+  provider: string;
+  policyDescription: string;
+  lifeInsured: 'client' | 'partner';
+  premiumSuper: number;
+  stampDutySuper: number;
+  superFrequency: PremiumFrequency;
+  premiumNonSuper: number;
+  stampDutyNonSuper: number;
+  nonSuperFrequency: PremiumFrequency;
+  covers: ExistingCover[];
+  action: 'Not Considered' | 'Review' | 'Replace' | 'Retain';
+  researchPortfolio?: ResearchPortfolio;
+}
+
+export function totalPolicyPremiumPerAnnum(p: ExistingPolicy): number {
+  return (p.premiumSuper + p.stampDutySuper) * PREMIUM_FREQUENCY_MULTIPLIER[p.superFrequency]
+       + (p.premiumNonSuper + p.stampDutyNonSuper) * PREMIUM_FREQUENCY_MULTIPLIER[p.nonSuperFrequency];
+}
+
+export interface QuoteOptions {
+  state: string;
+  optionsMode: 'Flexible' | 'Fixed';
+  multiSelect: 'No' | 'Yes';
+  autoRefreshQuote: 'Yes' | 'No';
+}
+
+export interface LifeCoverOptions {
+  enabled: boolean;
+  sumInsured: string;
+  structure: 'Stepped' | 'Level';
+  premiumWaiver: 'Exclude' | 'Include if possible';
+  ownership: 'Non-Super' | 'Super Fund';
+  payByRollover: 'Exclude' | 'Include';
+}
+
+export interface TpdOptions {
+  enabled: boolean;
+  sumInsured: string;
+  structure: 'Stepped' | 'Level';
+  premiumWaiver: 'Exclude' | 'Include if possible';
+  ownership: 'Non-Super' | 'Super Fund';
+  lifeBuyBack: 'Exclude if possible' | 'Include if possible';
+  doubleTpd: 'Exclude if possible' | 'Include if possible';
+  occupationType: 'Best Available' | 'Own Occupation' | 'Any Occupation';
+  payByRollover: 'Exclude' | 'Include';
+}
+
+export type ExtendedPremiumStructure = 'Stepped' | 'Blended' | 'Level to Age 65' | 'Level to Age 70';
+export type ThreeWayOption = 'Exclude if possible' | 'Include' | 'Exclude';
+export type PremiumWaiverOption = 'Include if possible' | 'Include' | 'Exclude';
+export type BabyCareOption = 'Exclude if possible' | 'Include if possible' | 'Include' | 'Exclude';
+export type TraumaPriority = 'Cheapest' | 'Best' | 'Intermediate';
+export type OwnerOption = 'Non-Super' | 'SMSF' | 'Super' | 'SuperLink' | 'SMSF SuperLink';
+export type RolloverOption = 'Include if possible' | 'Exclude';
+export type TpdOccupationType = 'Any' | 'Own' | 'Homemaker' | 'ADL' | 'Best available';
+export type LifeBuyBackOption = 'Exclude if possible' | 'Best available' | 'Exclude' | '1 year' | '3 years';
+
+export interface TraumaOptions {
+  enabled: boolean;
+  sumInsured: string;
+  structure: ExtendedPremiumStructure;
+  lifeBuyBack: LifeBuyBackOption;
+  doubleTrauma: ThreeWayOption;
+  traumaReinstatement: ThreeWayOption;
+  premiumWaiver: PremiumWaiverOption;
+  babyCare: BabyCareOption;
+  priority: TraumaPriority;
+}
+
+export interface TpdStandaloneOptions {
+  enabled: boolean;
+  sumInsured: string;
+  owner: OwnerOption;
+  rollover: RolloverOption;
+  structure: ExtendedPremiumStructure;
+  occupationType: TpdOccupationType;
+  premiumWaiver: PremiumWaiverOption;
+}
+
+export interface TraumaStandaloneOptions {
+  enabled: boolean;
+  sumInsured: string;
+  structure: ExtendedPremiumStructure;
+  traumaReinstatement: ThreeWayOption;
+  premiumWaiver: PremiumWaiverOption;
+  babyCare: BabyCareOption;
+  priority: TraumaPriority;
+}
+
+export interface IncomeProtectionOptions {
+  enabled: boolean;
+  monthlyBenefit: string;
+  superContributionOption: string;
+  owner: OwnerOption;
+  rollover: RolloverOption;
+  structure: 'Stepped' | 'Blended' | 'Level';
+  agreedValue: 'Indemnity if possible' | 'Indemnity';
+  accidentBenefit: 'Exclude if possible' | 'Include if possible' | 'Include' | 'Exclude';
+  increaseClaimBenefit: 'Exclude if possible' | 'Include if possible' | 'Include' | 'Exclude';
+  waitingPeriod: '14 days' | '30 days' | '60 days' | '90 days' | '180 days' | '1 year' | '2 years';
+  benefitPeriod: '1 year' | '2 years' | '5 years' | 'To age 55' | 'To age 60' | 'To age 65' | 'To age 67' | 'To age 70';
+  initialReplacementRatio: 'Any' | 'Greater than 75%' | '70% to 75%' | '60% to 69%' | 'Less than 60%';
+  priority: TraumaPriority;
+}
+
+export interface TpdExtensionTraumaOptions {
+  enabled: boolean;
+  sumInsured: string;
+  owner: OwnerOption;
+  rollover: RolloverOption;
+  structure: ExtendedPremiumStructure;
+  occupationType: TpdOccupationType;
+  premiumWaiver: PremiumWaiverOption;
+}
+
+export interface BusinessExpensesOptions {
+  enabled: boolean;
+  monthlyBenefit: string;
+  structure: 'Stepped' | 'Blended' | 'Level';
+  waitingPeriod: '14 days' | '30 days' | '60 days' | '90 days';
+  benefitPeriod: '1 year';
+}
+
+export interface NeedleStickOptions {
+  enabled: boolean;
+  sumInsured: string;
+  structure: 'Stepped' | 'Level';
+}
+
+export interface ChildTraumaChild {
+  id: string;
+  dateOfBirth: string;
+  age: string;
+  gender: 'Male' | 'Female';
+  sumInsured: string;
+}
+
+export interface ChildTraumaOptions {
+  enabled: boolean;
+  children: ChildTraumaChild[];
+}
+
+export type DisplayOption =
+  | 'hideLogos'
+  | 'hideInsurerColumn'
+  | 'hideFeatureScores'
+  | 'hideCombinedScores'
+  | 'hideUnmatchedProducts'
+  | 'hideProductNames'
+  | 'showSuperAndNonSuper';
+
+export interface InsuranceProvider {
+  id: string;
+  name: string;
+  shortName: string;
+  product: string;
+  premium: number;
+  featureScore: number;
+  combinedScore: number;
+  selected: boolean;
+  hasIcons: boolean;
+}
+
+// ── Seed data ─────────────────────────────────────────────────────────────────
+
+export const PROVIDER_LIST: InsuranceProvider[] = [
+  { id: 'integrity', name: 'Integrity', shortName: 'integrity.', product: '(Life: Life Cover and Care Support Package - TPD)', premium: 36.26, featureScore: 85, combinedScore: 82, selected: false, hasIcons: false },
+  { id: 'tal', name: 'TAL', shortName: 'TAL', product: '(Life: Life Insurance)', premium: 39.59, featureScore: 100, combinedScore: 100, selected: false, hasIcons: true },
+  { id: 'aia', name: 'AIA', shortName: 'AIA', product: '(Life: Life Cover Plan)', premium: 39.76, featureScore: 89, combinedScore: 93, selected: false, hasIcons: true },
+  { id: 'clearview', name: 'ClearView', shortName: 'ClearView', product: '(Life: Life Cover)', premium: 42.32, featureScore: 92, combinedScore: 83, selected: false, hasIcons: false },
+  { id: 'zurich', name: 'Zurich', shortName: 'ZURICH', product: '(Life: Protection Plus)', premium: 43.37, featureScore: 94, combinedScore: 93, selected: false, hasIcons: true },
+  { id: 'mlc', name: 'MLC', shortName: 'MLC', product: '(Life: Life Cover)', premium: 44.32, featureScore: 90, combinedScore: 80, selected: false, hasIcons: true },
+  { id: 'neos', name: 'NEOS', shortName: 'NEOS', product: '(Life: Life Cover)', premium: 44.47, featureScore: 87, combinedScore: 79, selected: false, hasIcons: false },
+  { id: 'onepath', name: 'OnePath', shortName: 'OnePath', product: '(Life: Life Cover)', premium: 46.35, featureScore: 90, combinedScore: 85, selected: false, hasIcons: false },
+  { id: 'metlife', name: 'MetLife', shortName: 'MetLife', product: '(Life: Life Cover)', premium: 46.53, featureScore: 89, combinedScore: 78, selected: false, hasIcons: true },
+  { id: 'bt', name: 'BT', shortName: 'BT', product: '(Life: Term Life - TPD)', premium: 76.52, featureScore: 95, combinedScore: 86, selected: false, hasIcons: true },
+  { id: 'pps', name: 'PPS Mutual', shortName: 'pps', product: '(Life: Life Cover - TPD)', premium: 74.62, featureScore: 84, combinedScore: 84, selected: false, hasIcons: false },
+  { id: 'amp-elevate', name: 'AMP Elevate (Members only)', shortName: 'AMP Life', product: '(Life: Life Insurance...)', premium: 82.05, featureScore: 82, combinedScore: 75, selected: false, hasIcons: false },
+  { id: 'amp-sig', name: 'AMP Signature Super', shortName: 'AMP', product: '', premium: 0, featureScore: 0, combinedScore: 0, selected: false, hasIcons: false },
+];
+
+export const PROVIDER_LIST_SUPER: InsuranceProvider[] = [
+  { id: 'integrity-s', name: 'Integrity', shortName: 'integrity.', product: '(Life: Life Cover and Care Support Package - TPD)', premium: 119.84, featureScore: 80, combinedScore: 88, selected: false, hasIcons: false },
+  { id: 'tal-s', name: 'TAL', shortName: 'TAL', product: '(Super) - Ordinary...', premium: 148.41, featureScore: 79, combinedScore: 84, selected: false, hasIcons: true },
+  { id: 'neos-s', name: 'NEOS', shortName: 'NEOS', product: '(Life: Life Cover (Super) - Linked TPD...)', premium: 148.83, featureScore: 80, combinedScore: 82, selected: false, hasIcons: false },
+  { id: 'aia-s', name: 'AIA', shortName: 'AIA', product: '(Life: Superannuation Life Cover Plan (Al...)', premium: 151.56, featureScore: 80, combinedScore: 83, selected: false, hasIcons: true },
+  { id: 'amp-elevate-s', name: 'AMP Elevate (Members only)', shortName: 'AMP Life', product: '(Life: Life Insurance...)', premium: 158.92, featureScore: 81, combinedScore: 81, selected: false, hasIcons: false },
+  { id: 'metlife-s', name: 'MetLife', shortName: 'MetLife', product: '(Life: Life Cover (Super) - Ordinary T...)', premium: 166.85, featureScore: 72, combinedScore: 73, selected: false, hasIcons: true },
+  { id: 'onepath-s', name: 'OnePath', shortName: 'OnePath', product: '(Life: Life Cover (Super) - Ordinary...)', premium: 166.97, featureScore: 85, combinedScore: 81, selected: false, hasIcons: false },
+  { id: 'mlc-s', name: 'MLC', shortName: 'MLC', product: '(Life: Life Cover (Super) - Linked TPD, I...)', premium: 170.83, featureScore: 81, combinedScore: 77, selected: false, hasIcons: true },
+  { id: 'clearview-s', name: 'ClearView', shortName: 'ClearView', product: '(Life: Life Cover (Super) - Ordinary...)', premium: 174.41, featureScore: 84, combinedScore: 78, selected: false, hasIcons: false },
+];
+
+// ── Insurance policy types (scenario detail view) ─────────────────────────────
+
+export type PolicyStatus = 'Alternative' | 'Replace' | 'Like For Like' | 'Recommend';
+
+export interface PolicyCoverDetail {
+  type: 'Life' | 'TPD' | 'Trauma' | 'IP';
+  definition?: string;
+  owner: string;
+  lifeInsured: string;
+  benefitAmount: number;
+  waitingPeriod?: string;
+  benefitPeriod?: string;
+}
+
+export interface InsurancePolicy {
+  id: string;
+  policyName: string;
+  insurer: string;
+  premiumPA: number;
+  frequency: 'Monthly' | 'Annual' | 'Fortnightly';
+  status: PolicyStatus;
+  covers: PolicyCoverDetail[];
+  expanded: boolean;
+}
+
+export const SEED_POLICIES: InsurancePolicy[] = [
+  {
+    id: 'pol-1',
+    policyName: 'Super Accelerator \u2013 Income Protection',
+    insurer: 'Netwealth Super',
+    premiumPA: 3365.64,
+    frequency: 'Monthly',
+    status: 'Alternative',
+    expanded: true,
+    covers: [
+      { type: 'IP', definition: 'Indemnity', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 5833.00, waitingPeriod: '30 days', benefitPeriod: 'Age 65' },
+    ],
+  },
+  {
+    id: 'pol-2',
+    policyName: 'Insurance policy name',
+    insurer: 'AIA Australia',
+    premiumPA: 3600.00,
+    frequency: 'Monthly',
+    status: 'Replace',
+    expanded: true,
+    covers: [
+      { type: 'Trauma', definition: 'Linked', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 100000.00 },
+    ],
+  },
+  {
+    id: 'pol-3',
+    policyName: 'Accelerated Protection - Health Sense Life & TPD & Critical Illness Premier',
+    insurer: 'TAL',
+    premiumPA: 12240.00,
+    frequency: 'Monthly',
+    status: 'Like For Like',
+    expanded: true,
+    covers: [
+      { type: 'Trauma', definition: 'FlexiLinked', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 355000.00 },
+      { type: 'TPD', definition: 'Any', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 605000.00 },
+      { type: 'Life', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 605000.00 },
+    ],
+  },
+  {
+    id: 'pol-4',
+    policyName: 'iQ Super \u2013 Death & TPD',
+    insurer: 'Russell Investments',
+    premiumPA: 968.04,
+    frequency: 'Monthly',
+    status: 'Recommend',
+    expanded: true,
+    covers: [
+      { type: 'TPD', definition: 'Any', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 400000.00 },
+      { type: 'Life', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 400000.00 },
+    ],
+  },
+  {
+    id: 'pol-5',
+    policyName: 'Protection \u2013 Income Support Super',
+    insurer: 'NEOS Life',
+    premiumPA: 3428.88,
+    frequency: 'Monthly',
+    status: 'Alternative',
+    expanded: false,
+    covers: [
+      { type: 'IP', definition: 'Indemnity', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 5000.00, waitingPeriod: '30 days', benefitPeriod: 'Age 65' },
+    ],
+  },
+  {
+    id: 'pol-6',
+    policyName: 'Accelerated Protection \u2013 IP Enhance',
+    insurer: 'TAL',
+    premiumPA: 3054.84,
+    frequency: 'Monthly',
+    status: 'Recommend',
+    expanded: false,
+    covers: [
+      { type: 'IP', definition: 'Agreed', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 5833.00, waitingPeriod: '30 days', benefitPeriod: 'Age 65' },
+    ],
+  },
+  {
+    id: 'pol-7',
+    policyName: 'Priority Protect w/ Vitality $500 Silver Reward \u2013 Healthier Life Super & TPD (linke\u2026',
+    insurer: 'AIA Australia',
+    premiumPA: 8397.24,
+    frequency: 'Monthly',
+    status: 'Alternative',
+    expanded: false,
+    covers: [
+      { type: 'Life', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 650000.00 },
+      { type: 'TPD', definition: 'Any', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 350000.00 },
+    ],
+  },
+  {
+    id: 'pol-8',
+    policyName: 'Priority Protect w/ Vitality $500 VSSR - Super Life Cover Plan - Term Level*',
+    insurer: 'AIA Australia',
+    premiumPA: 6000.00,
+    frequency: 'Monthly',
+    status: 'Like For Like',
+    expanded: false,
+    covers: [
+      { type: 'Life', owner: 'Client Example', lifeInsured: 'Client Example', benefitAmount: 650000.00 },
+    ],
+  },
+];
+
+export function buildPoliciesFromSelection(
+  selectedProviders: InsuranceProvider[],
+  lifeCover: LifeCoverOptions,
+  tpd: TpdOptions,
+  incomeProtection: IncomeProtectionOptions,
+  clientName: string,
+): InsurancePolicy[] {
+  const statuses: PolicyStatus[] = ['Recommend', 'Alternative', 'Like For Like', 'Replace'];
+  return selectedProviders.map((p, i) => {
+    const covers: PolicyCoverDetail[] = [];
+    if (lifeCover.enabled) {
+      covers.push({
+        type: 'Life',
+        owner: clientName,
+        lifeInsured: clientName,
+        benefitAmount: parseFloat(lifeCover.sumInsured.replace(/[$,]/g, '')) || 650000,
+      });
+    }
+    if (tpd.enabled) {
+      covers.push({
+        type: 'TPD',
+        definition: 'Any',
+        owner: clientName,
+        lifeInsured: clientName,
+        benefitAmount: parseFloat(tpd.sumInsured.replace(/[$,]/g, '')) || 350000,
+      });
+    }
+    if (incomeProtection.enabled) {
+      covers.push({
+        type: 'IP',
+        definition: 'Indemnity',
+        owner: clientName,
+        lifeInsured: clientName,
+        benefitAmount: parseFloat(incomeProtection.monthlyBenefit.replace(/[$,]/g, '')) || 4687,
+        waitingPeriod: incomeProtection.waitingPeriod,
+        benefitPeriod: incomeProtection.benefitPeriod,
+      });
+    }
+    return {
+      id: `pol-new-${p.id}`,
+      policyName: `${p.name} ${p.product}`.trim(),
+      insurer: p.name,
+      premiumPA: p.premium * 12,
+      frequency: 'Monthly' as const,
+      status: statuses[i % statuses.length],
+      covers,
+      expanded: i === 0,
+    };
+  });
+}
+
+// ── Cover Quote (Cover Selection) ────────────────────────────────────────────
+
+export interface CoverQuote {
+  id: string;
+  name: string;
+  lifeInsured: 'client' | 'partner';
+  lifeCover: LifeCoverOptions;
+  tpd: TpdOptions;
+  trauma: TraumaOptions;
+  tpdStandalone: TpdStandaloneOptions;
+  traumaStandalone: TraumaStandaloneOptions;
+  tpdExtensionTrauma: TpdExtensionTraumaOptions;
+  incomeProtection: IncomeProtectionOptions;
+  businessExpenses: BusinessExpensesOptions;
+  needleStick: NeedleStickOptions;
+  childTrauma: ChildTraumaOptions;
+}
+
+export function getDefaultCoverQuote(name: string, lifeInsured: 'client' | 'partner' = 'client'): CoverQuote {
+  return {
+    id: crypto.randomUUID(),
+    name,
+    lifeInsured,
+    lifeCover: getDefaultLifeCover(),
+    tpd: getDefaultTpd(),
+    trauma: getDefaultTraumaExtension(),
+    tpdStandalone: getDefaultTpdStandalone(),
+    traumaStandalone: getDefaultTraumaStandalone(),
+    tpdExtensionTrauma: getDefaultTpdExtensionTrauma(),
+    incomeProtection: { ...getDefaultIncomeProtection(), enabled: false },
+    businessExpenses: getDefaultBusinessExpenses(),
+    needleStick: getDefaultNeedleStick(),
+    childTrauma: { enabled: false, children: [] },
+  };
+}
+
+// ── Default helpers ───────────────────────────────────────────────────────────
+
+export function getDefaultClientData(
+  firstName: string,
+  lastName: string,
+  age: number,
+  overrides?: Partial<ClientFormData>,
+): ClientFormData {
+  const birthYear = new Date().getFullYear() - age;
+  return {
+    firstName,
+    lastName,
+    gender: 'Male',
+    smoker: 'No',
+    dateOfBirth: `15/06/${birthYear}`,
+    age,
+    occupation: 'Accountant',
+    occupationCode: 'Accountant',
+    employmentStatus: 'E',
+    healthDiscount: 'E',
+    annualIncome: '$100,000',
+    state: 'QLD',
+    loadings: { ...EMPTY_LOADINGS },
+    ...overrides,
+  };
+}
+
+export function getDefaultQuoteOptions(): QuoteOptions {
+  return { state: 'NSW', optionsMode: 'Flexible', multiSelect: 'No', autoRefreshQuote: 'Yes' };
+}
+
+export function getDefaultLifeCover(): LifeCoverOptions {
+  return { enabled: true, sumInsured: '$650,000', structure: 'Stepped', premiumWaiver: 'Exclude', ownership: 'Non-Super', payByRollover: 'Exclude' };
+}
+
+export function getDefaultTpd(): TpdOptions {
+  return { enabled: true, sumInsured: '$350,000', structure: 'Stepped', premiumWaiver: 'Exclude', ownership: 'Non-Super', lifeBuyBack: 'Exclude if possible', doubleTpd: 'Exclude if possible', occupationType: 'Best Available', payByRollover: 'Exclude' };
+}
+
+export function getDefaultIncomeProtection(): IncomeProtectionOptions {
+  return {
+    enabled: true,
+    monthlyBenefit: '$4,687',
+    superContributionOption: '',
+    owner: 'Non-Super',
+    rollover: 'Exclude',
+    structure: 'Stepped',
+    agreedValue: 'Indemnity',
+    accidentBenefit: 'Exclude if possible',
+    increaseClaimBenefit: 'Exclude if possible',
+    waitingPeriod: '30 days',
+    benefitPeriod: 'To age 65',
+    initialReplacementRatio: 'Any',
+    priority: 'Cheapest',
+  };
+}
+
+export function getDefaultTraumaExtension(): TraumaOptions {
+  return {
+    enabled: false,
+    sumInsured: '$200,000',
+    structure: 'Stepped',
+    lifeBuyBack: 'Exclude if possible',
+    doubleTrauma: 'Exclude if possible',
+    traumaReinstatement: 'Exclude if possible',
+    premiumWaiver: 'Exclude',
+    babyCare: 'Exclude if possible',
+    priority: 'Cheapest',
+  };
+}
+
+export function getDefaultTpdStandalone(): TpdStandaloneOptions {
+  return {
+    enabled: false,
+    sumInsured: '$350,000',
+    owner: 'Non-Super',
+    rollover: 'Exclude',
+    structure: 'Stepped',
+    occupationType: 'Best available',
+    premiumWaiver: 'Exclude',
+  };
+}
+
+export function getDefaultTraumaStandalone(): TraumaStandaloneOptions {
+  return {
+    enabled: false,
+    sumInsured: '$200,000',
+    structure: 'Stepped',
+    traumaReinstatement: 'Exclude if possible',
+    premiumWaiver: 'Exclude',
+    babyCare: 'Exclude if possible',
+    priority: 'Cheapest',
+  };
+}
+
+export function getDefaultTpdExtensionTrauma(): TpdExtensionTraumaOptions {
+  return {
+    enabled: false,
+    sumInsured: '$350,000',
+    owner: 'Non-Super',
+    rollover: 'Exclude',
+    structure: 'Stepped',
+    occupationType: 'Best available',
+    premiumWaiver: 'Exclude',
+  };
+}
+
+export function getDefaultBusinessExpenses(): BusinessExpensesOptions {
+  return {
+    enabled: false,
+    monthlyBenefit: '',
+    structure: 'Stepped',
+    waitingPeriod: '30 days',
+    benefitPeriod: '1 year',
+  };
+}
+
+export function getDefaultNeedleStick(): NeedleStickOptions {
+  return {
+    enabled: false,
+    sumInsured: '',
+    structure: 'Stepped',
+  };
+}

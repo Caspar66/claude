@@ -59,7 +59,7 @@ export function EditExistingPlanPage() {
 
       {/* Panel heading */}
       <div className="border border-border rounded">
-        <div className="px-4 py-3 bg-teal-700 text-white text-sm font-semibold rounded-t">
+        <div className="px-4 py-3 bg-navy text-white text-sm font-semibold rounded-t">
           Edit Existing Plan: {platform.name} ({platform.accountNumber})
         </div>
 
@@ -67,7 +67,7 @@ export function EditExistingPlanPage() {
           <TabsList className="w-full justify-start rounded-none border-b border-border bg-gray-50 h-auto p-1 gap-1">
             <TabsTrigger
               value="investments"
-              className="text-xs data-[state=active]:bg-teal-700 data-[state=active]:text-white"
+              className="text-xs data-[state=active]:bg-navy data-[state=active]:text-white"
             >
               Investment Funds Selection
             </TabsTrigger>
@@ -75,14 +75,14 @@ export function EditExistingPlanPage() {
               <TabsTrigger
                 key={label}
                 value={label}
-                className="text-xs data-[state=active]:bg-teal-700 data-[state=active]:text-white"
+                className="text-xs data-[state=active]:bg-navy data-[state=active]:text-white"
               >
                 {label}
               </TabsTrigger>
             ))}
             <TabsTrigger
               value="balances"
-              className="text-xs data-[state=active]:bg-teal-700 data-[state=active]:text-white"
+              className="text-xs data-[state=active]:bg-navy data-[state=active]:text-white"
             >
               Balances/Aggregation
             </TabsTrigger>

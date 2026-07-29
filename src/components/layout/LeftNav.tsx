@@ -8,6 +8,12 @@ interface NavItem {
 
 const navSections: { heading: string; items: NavItem[] }[] = [
   {
+    heading: 'Clients',
+    items: [
+      { label: 'Client Page', to: '/clients' },
+    ],
+  },
+  {
     heading: 'Scenario Modelling',
     items: [
       { label: 'Scenario Index', to: '/scenarios' },
@@ -18,6 +24,7 @@ const navSections: { heading: string; items: NavItem[] }[] = [
     items: [
       { label: 'View plans', to: '/research/plans' },
       { label: 'Investment data', to: '/research/investment-data' },
+      { label: 'Insurance Research', to: '/scenarios/scenario-1/research/insurance' },
     ],
   },
   {
@@ -42,8 +49,8 @@ export function LeftNav() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'block px-4 py-2 text-sm hover:bg-teal-700/10 hover:text-teal-800 transition-colors',
-                  isActive && 'bg-teal-700 text-white font-medium hover:bg-teal-800 hover:text-white'
+                  'block px-4 py-2 text-sm hover:bg-navy/10 hover:text-navy transition-colors',
+                  isActive && 'bg-navy text-white font-medium hover:bg-navy/90 hover:text-white'
                 )
               }
             >

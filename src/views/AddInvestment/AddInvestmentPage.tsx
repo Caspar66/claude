@@ -136,7 +136,7 @@ export function AddInvestmentPage() {
 
       {/* Add Investment panel */}
       <div className="border border-border rounded mb-4">
-        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">Add Investment</div>
+        <div className="px-4 py-2 bg-navy text-white text-sm font-semibold">Add Investment</div>
 
         <div className="p-4 border-b border-border">
           <select
@@ -158,7 +158,7 @@ export function AddInvestmentPage() {
 
       {/* Selected Investments */}
       <div className="border border-border rounded">
-        <div className="px-4 py-2 bg-teal-700 text-white text-sm font-semibold">
+        <div className="px-4 py-2 bg-navy text-white text-sm font-semibold">
           Selected Investments{selected.length > 0 ? ` (${selected.length})` : ''}
         </div>
         <table className="w-full text-sm">

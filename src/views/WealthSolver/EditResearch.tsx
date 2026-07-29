@@ -37,7 +37,7 @@ export function EditResearch({ plan }: Props) {
   }
 
   const labelClass = 'block text-xs font-medium text-muted-foreground mb-0.5';
-  const inputClass = 'w-full border border-border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-600';
+  const inputClass = 'w-full border border-border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400';
 
   function FieldRow({ label, k, children }: { label: string; k: string; children: React.ReactNode }) {
     return (
@@ -170,7 +170,7 @@ export function EditResearch({ plan }: Props) {
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-6">
-      <h3 className="text-sm font-semibold text-white bg-gradient-to-r from-teal-700 to-teal-600 px-3 py-1.5 rounded-t">{title}</h3>
+      <h3 className="text-sm font-semibold text-white bg-navy px-3 py-1.5 rounded-t">{title}</h3>
       <div className="border border-t-0 border-border rounded-b px-4 py-2">{children}</div>
     </div>
   );

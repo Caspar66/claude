@@ -83,7 +83,7 @@ function FilterPanel({
 
   return (
     <div className="w-72 shrink-0 border-r border-border overflow-y-auto">
-      <div className="px-4 py-3 bg-teal-700 text-white text-sm font-semibold">Filter</div>
+      <div className="px-4 py-3 bg-navy text-white text-sm font-semibold">Filter</div>
       <div className="p-4 space-y-3 text-sm">
         {/* Keyword */}
         <div>
@@ -95,7 +95,7 @@ function FilterPanel({
               placeholder="name, spin or abn"
               className="h-8 text-xs pr-8"
             />
-            <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-teal-600" />
+            <Search size={13} className="absolute right-2 top-1/2 -translate-y-1/2 text-teal-700" />
           </div>
         </div>
 
@@ -358,7 +358,7 @@ export function AddExistingPlanPage() {
       {/* Results panel */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-3 bg-teal-700 text-white shrink-0">
+        <div className="flex items-center justify-between px-6 py-3 bg-navy text-white shrink-0">
           <span className="text-sm font-semibold">
             {mode === 'proposed' ? `Add Proposed ${planTypeLabel}` : `Add Existing ${planTypeLabel}`}
           </span>
@@ -405,7 +405,7 @@ export function AddExistingPlanPage() {
               <div className="shrink-0 ml-4">
                 <button
                   onClick={() => handleSelect(plan.id)}
-                  className="border border-border rounded px-3 py-1.5 text-xs hover:bg-gray-50 transition-colors"
+                  className="border border-border rounded px-3 py-1.5 text-xs hover:bg-slate-50 transition-colors"
                 >
                   {selectLabel}
                 </button>

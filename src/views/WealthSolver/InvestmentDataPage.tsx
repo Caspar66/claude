@@ -37,7 +37,7 @@ function PctInput({
   return (
     <input
       type="text" inputMode="decimal"
-      className={`border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 ${className}`}
+      className={`border border-border rounded px-2 py-0.5 text-right text-xs focus:outline-none focus:ring-1 focus:ring-teal-400 ${className}`}
       value={editing ? raw : `${value.toFixed(decimals)}%`}
       onFocus={() => { setEditing(true); setRaw(String(value)); }}
       onChange={(e) => setRaw(e.target.value)}
@@ -153,7 +153,7 @@ export function InvestmentDataPage() {
         <div className="p-3 border-b border-border flex gap-2">
           <input
             type="text"
-            className="flex-1 border border-border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-600"
+            className="flex-1 border border-border rounded px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-teal-400"
             placeholder="Name or APIR…"
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
@@ -196,7 +196,7 @@ export function InvestmentDataPage() {
           {paged.map((opt) => (
             <button
               key={opt.id}
-              className={`w-full text-left px-3 py-2 border-b border-border hover:bg-gray-50 ${selectedId === opt.id ? 'border-l-4 border-l-teal-700 bg-teal-50' : 'border-l-4 border-l-transparent'}`}
+              className={`w-full text-left px-3 py-2 border-b border-border hover:bg-slate-50 ${selectedId === opt.id ? 'border-l-4 border-l-teal-700 bg-teal-50' : 'border-l-4 border-l-transparent'}`}
               onClick={() => setSelectedId(opt.id)}
             >
               <p className="text-sm font-medium leading-tight">{opt.name}</p>
@@ -344,7 +344,7 @@ export function InvestmentDataPage() {
                   </thead>
                   <tbody>
                     {usedByPlans.map((p) => (
-                      <tr key={p.id} className="border-b border-border last:border-0 hover:bg-gray-50">
+                      <tr key={p.id} className="border-b border-border last:border-0 hover:bg-slate-50">
                         <td className="px-3 py-1.5">
                           <input type="checkbox" className="accent-teal-700" checked={compareSet.has(p.id)} onChange={() => toggleCompare(p.id)} />
                         </td>
@@ -486,7 +486,7 @@ function InvestmentFormModal({
   const other     = allocOther(alloc);
   const total     = allocTotal(alloc);
 
-  const fieldCls    = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full';
+  const fieldCls    = 'border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400 w-full';
   const computedCls = 'border border-border rounded px-2 py-1 text-xs w-full text-right bg-gray-50 text-muted-foreground';
 
   function handleSave() {
@@ -522,7 +522,7 @@ function InvestmentFormModal({
     <Dialog open onOpenChange={onClose}>
       <DialogContent className="flex flex-col p-0 gap-0 overflow-hidden" style={{ width: 760, maxWidth: '95vw', height: 620, maxHeight: '95vh' }}>
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-2.5 bg-teal-700 text-white shrink-0">
+        <div className="flex items-center justify-between px-4 py-2.5 bg-navy text-white shrink-0">
           <span className="text-sm font-semibold">{title}</span>
           <DialogClose asChild>
             <button className="text-white/80 hover:text-white"><X size={16} /></button>
@@ -570,7 +570,7 @@ function InvestmentFormModal({
               <div className="mt-1">
                 <label className="text-xs text-muted-foreground block mb-1">Redemption Frequency</label>
                 <select
-                  className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600"
+                  className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400"
                   value={redemptionFreq}
                   onChange={(e) => setRedemptionFreq(e.target.value)}
                 >
@@ -586,7 +586,7 @@ function InvestmentFormModal({
           <div className="mb-4">
             <label className="text-xs text-muted-foreground block mb-1">Broad Objectives</label>
             <textarea
-              className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full h-16 resize-none"
+              className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400 w-full h-16 resize-none"
               value={broadObjectives}
               onChange={(e) => setBroadObjectives(e.target.value)}
             />
@@ -651,7 +651,7 @@ function InvestmentFormModal({
             <div>
               <label className="text-xs text-muted-foreground block mb-1">Manager Background</label>
               <textarea
-                className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-600 w-full h-14 resize-none"
+                className="border border-border rounded px-2 py-1 text-xs focus:outline-none focus:ring-1 focus:ring-teal-400 w-full h-14 resize-none"
                 value={managerBackground}
                 onChange={(e) => setManagerBackground(e.target.value)}
               />
@@ -693,7 +693,7 @@ function PaginationBtn({
 }) {
   return (
     <button
-      className={`px-2 py-1 text-xs rounded border ${active ? 'bg-teal-700 text-white border-teal-700' : 'border-border hover:bg-gray-100'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
+      className={`px-2 py-1 text-xs rounded border ${active ? 'bg-teal-700 text-white border-teal-700' : 'border-slate-300 hover:bg-slate-50'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
       onClick={onClick}
       disabled={disabled}
     >
